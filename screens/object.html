@@ -223,14 +223,6 @@
         openBlue(null);
       });
 
-      // click a spot on the capture to annotate it
-      stage.addEventListener("click", function (e) {
-        if (stage.__suppressClick) return;
-        if (e.target.tagName !== "CANVAS") return; // only direct clicks on the capture
-        var r = stage.getBoundingClientRect();
-        openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
-      });
-
       document.getElementById("blueCancel").addEventListener("click", closeBlue);
       document.getElementById("blueSave").addEventListener("click", function () {
         var title = document.getElementById("blueName").value.trim();

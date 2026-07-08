@@ -65,8 +65,9 @@
 .gal-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2.4vh 3vw;
+  grid-template-columns: repeat(4, minmax(0, 200px));
+  justify-content: space-between;
+  gap: 2.2vh 3vw;
   align-content: center;
 }
 
@@ -84,7 +85,7 @@
   width: 100%;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   border: none;
-  padding: 8px 8px 30px;
+  padding: 7px 7px 27px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   position: relative;
@@ -99,10 +100,14 @@
 .gal-card img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 0.72;
+  aspect-ratio: 1 / 1.02; /* portrait polaroid, like the source */
   object-fit: contain;
-  /* archive photos sit on the slate-violet reconstruction backdrop */
-  background: linear-gradient(180deg, #77778f 0%, #6b6b85 100%);
+  background: var(--photo-backdrop); /* archive: neutral gray backdrop */
+}
+
+/* community cards sit on the slate-violet backdrop - that's the color split */
+.gal--community .gal-card img {
+  background: linear-gradient(180deg, #7f7fa3 0%, #6b6b8f 100%);
 }
 
 .gal-caption {
