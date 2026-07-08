@@ -51,6 +51,22 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Lumend Demo";
+  src: url("../assets/fonts/Lumend-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lumend Rounded Drawn Demo";
+  src: url("../assets/fonts/LumendRoundedDrawn-Regular_demo.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ---------- Design tokens ---------- */
 
 :root {
@@ -61,9 +77,12 @@
   --photo-backdrop: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
     linear-gradient(180deg, rgba(29, 29, 61, 0.41), rgba(0, 0, 0, 0.41)),
     #8a8a8f;
+  --color-ink-blue: #2a48da;
   --font-display: "Vito Extended", "Helvetica Neue", Arial, sans-serif;
   --font-wide: "Vito Wide", "Helvetica Neue", Arial, sans-serif;
   --font-caption: "Lumend Blur Demo", "Segoe Script", cursive;
+  --font-ink: "Lumend Demo", "Courier New", monospace;
+  --font-drawn: "Lumend Rounded Drawn Demo", "Courier New", monospace;
 }
 
 /* ---------- Reset ---------- */

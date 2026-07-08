@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Describe what you captured</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/describe-capture.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/annotations.js" defer></script>
+</head>
+<body>
+
+  <div class="screen">
+
+    <div class="capture-canvas" data-crosshair id="captureCanvas">
+      <img class="capture-object" src="../assets/images/photo-chandelier-large.png"
+           alt="Captured object: an old living room chandelier">
+    </div>
+
+    <aside class="sidebar">
+      <h1>Describe what you captured</h1>
+      <hr class="rule">
+
+      <p class="field-label">Type of capture</p>
+      <div class="choice-row">
+        <label class="choice"><input type="radio" name="capture-type" value="object" checked> object</label>
+        <label class="choice"><input type="radio" name="capture-type" value="space"> space</label>
+      </div>
+      <hr class="rule rule--inset">
+
+      <p class="field-label">Give a title to your capture</p>
+      <input class="text-input" type="text" value="my old living lamp" aria-label="Capture title">
+
+      <p class="field-label">What are you feeling or remembering about this object&nbsp;?</p>
+      <textarea class="text-area" placeholder="What's special about this?" aria-label="Capture description"></textarea>
+
+      <p class="field-label">Annotations (<span id="annotationCount">0</span>)</p>
+      <ul class="annotations-hint">
+        <li>Click anywhere in the capture to add further detail</li>
+      </ul>
+      <hr class="rule rule--inset rule--dotted">
+      <div id="annotationList">
+        <p class="annotations-empty">no annotations yet</p>
+      </div>
+      <hr class="rule rule--inset rule--dotted">
+
+      <div class="spacer"></div>
+
+      <p class="field-label">Visibility</p>
+      <div class="choice-row">
+        <label class="choice"><input type="radio" name="visibility" value="private"> private</label>
+        <label class="choice"><input type="radio" name="visibility" value="community" checked> community</label>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="button">Retake scan</button>
+        <button class="btn btn--primary" type="button">Save to archive</button>
+      </div>
+    </aside>
+
+  </div>
+
+</body>
+</html>
