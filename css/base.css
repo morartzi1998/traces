@@ -1,0 +1,95 @@
+/*
+  traces — shared base styles
+  Fonts, design tokens, and resets used by every screen.
+  Keep this file and the assets/ folder together.
+*/
+
+/* ---------- Fonts ---------- */
+
+@font-face {
+  font-family: "Vito Extended";
+  src: url("../assets/fonts/VitoExtended-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vito Extended";
+  src: url("../assets/fonts/VitoExtended-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vito Wide";
+  src: url("../assets/fonts/VitoWide-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vito Wide";
+  src: url("../assets/fonts/VitoWide-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+  Lumend Blur is used for the handwritten blue polaroid captions.
+  Drop LumendBlur-Regular_demo.otf into assets/fonts/ and this rule
+  will pick it up automatically; until then a script fallback is used.
+*/
+@font-face {
+  font-family: "Lumend Blur Demo";
+  src: url("../assets/fonts/LumendBlur-Regular_demo.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Design tokens ---------- */
+
+:root {
+  --color-bg: #161616;
+  --color-cream: #f0eeea;
+  --color-caption-blue: #0a25b4;
+  --color-polaroid: #f0eeea;
+  --photo-backdrop: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+    linear-gradient(180deg, rgba(29, 29, 61, 0.41), rgba(0, 0, 0, 0.41)),
+    #8a8a8f;
+  --font-display: "Vito Extended", "Helvetica Neue", Arial, sans-serif;
+  --font-wide: "Vito Wide", "Helvetica Neue", Arial, sans-serif;
+  --font-caption: "Lumend Blur Demo", "Segoe Script", cursive;
+}
+
+/* ---------- Reset ---------- */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-cream);
+  font-family: var(--font-display);
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cream);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
