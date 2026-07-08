@@ -44,6 +44,8 @@
 
 .polaroid {
   position: absolute;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   padding: 14px 14px 46px 14px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
@@ -91,6 +93,20 @@
 
 .caption-front {
   transform: none;
+}
+
+.polaroid-front:hover,
+.polaroid-front:focus-visible {
+  transform: rotate(1.6deg) translateY(-8px) scale(1.025);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+  z-index: 3;
+}
+
+.polaroid-back:hover,
+.polaroid-back:focus-visible {
+  transform: rotate(-4deg) translateY(-8px) scale(1.025);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+  z-index: 3;
 }
 
 /* Headline / CTA */

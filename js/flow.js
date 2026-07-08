@@ -13,7 +13,13 @@ function goTo(page) {
   }
 }
 
-function openObject(item) {
+function openObject(item, target) {
   try { sessionStorage.setItem("traces-item", item); } catch (e) {}
-  goTo("object.html");
+  goTo(target || "object.html");
+}
+
+/* screens/* pages link between siblings; the root page needs the prefix */
+function locationPrefix() {
+  return window.location.pathname.indexOf("/screens/") === -1 && !window.__artifactGo
+    ? "screens/" : "";
 }

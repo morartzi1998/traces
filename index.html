@@ -27,12 +27,14 @@
           <div>[alexss's scan]</div>
         </div>
 
-        <div class="polaroid polaroid-back">
+        <div class="polaroid polaroid-back" role="button" tabindex="0"
+             onclick="openObject('souvenirs', locationPrefix() + 'object.html')">
           <img src="assets/images/photo-souvenirs.png" alt="Souvenirs from Europe, blue and white china plates">
           <div class="polaroid-caption caption-back">souvenirs from europe</div>
         </div>
 
-        <div class="polaroid polaroid-front">
+        <div class="polaroid polaroid-front" role="button" tabindex="0"
+             onclick="openObject('chandelier', locationPrefix() + 'object.html')">
           <img src="assets/images/photo-chandelier.png" alt="Old living room lamp, a brass chandelier">
           <div class="polaroid-caption caption-front">old living room lamp</div>
         </div>
@@ -50,7 +52,7 @@
     </main>
 
     <nav class="nav-bottom">
-      <button class="nav-link" type="button">Community</button>
+      <button class="nav-link" type="button" onclick="goTo('screens/community.html')">Community</button>
       <button class="nav-link" type="button">About</button>
     </nav>
 
