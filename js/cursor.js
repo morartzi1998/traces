@@ -1,9 +1,10 @@
 /*
   traces — custom cursor
-  A small square follows the pointer, leaving a short trail of shrinking,
-  fading squares behind it. The whole trail turns the interface blue over
-  interactive elements (links, buttons, inputs), white otherwise. Inside an
-  element marked with [data-crosshair] (the 3D capture canvas on annotation
+  A small square follows the pointer, dragging a soft ink-like smear
+  behind it on a canvas layer (blurred, tapering, fading over ~200ms).
+  The square and the smear turn the interface blue over interactive
+  elements (links, buttons, inputs), white otherwise. Inside an element
+  marked with [data-crosshair] (the 3D capture canvas on annotation
   screens), two perpendicular hairlines extend from the cursor to the
   edges of that element.
 
@@ -32,20 +33,24 @@
   document.body.appendChild(lineX);
   document.body.appendChild(lineY);
 
-  // Trail: a handful of squares that lag behind the cursor, each one
-  // chasing the point ahead of it, shrinking and fading with distance.
-  var TRAIL_LENGTH = reduceMotion ? 0 : 6;
-  var trail = [];
-  for (var i = 0; i < TRAIL_LENGTH; i++) {
-    var seg = document.createElement("div");
-    seg.className = "cursor-trail";
-    seg.setAttribute("aria-hidden", "true");
-    var size = 11 - i * 1.3;
-    seg.style.width = size + "px";
-    seg.style.height = size + "px";
-    seg.style.opacity = (0.5 - i * 0.075).toFixed(2);
-    document.body.appendChild(seg);
-    trail.push({ el: seg, x: -100, y: -100, size: size });
+  var canvas = null;
+  var ctx = null;
+  if (!reduceMotion) {
+    canvas = document.createElement("canvas");
+    canvas.className = "cursor-smear";
+    canvas.setAttribute("aria-hidden", "true");
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+    }
+    resize();
+    window.addEventListener("resize", resize);
   }
 
   document.body.appendChild(cursor);
@@ -56,6 +61,8 @@
   var mouseX = -100;
   var mouseY = -100;
   var isActive = false;
+  var LIFETIME = 220; // ms the smear takes to fully fade
+  var points = []; // { x, y, t }
 
   document.addEventListener("mousemove", function (e) {
     mouseX = e.clientX;
@@ -63,9 +70,11 @@
     cursor.style.left = mouseX + "px";
     cursor.style.top = mouseY + "px";
 
+    if (ctx) points.push({ x: mouseX, y: mouseY, t: performance.now() });
+
     var target = e.target;
 
-    // Blue square (and trail) over anything selectable.
+    // Blue square (and smear) over anything selectable.
     isActive = !!target.closest(INTERACTIVE);
     cursor.classList.toggle("cursor--active", isActive);
 
@@ -99,21 +108,36 @@
     cursor.style.display = "block";
   });
 
-  if (TRAIL_LENGTH) {
-    (function animateTrail() {
-      var leadX = mouseX;
-      var leadY = mouseY;
-      for (var i = 0; i < trail.length; i++) {
-        var seg = trail[i];
-        seg.x += (leadX - seg.x) * 0.32;
-        seg.y += (leadY - seg.y) * 0.32;
-        seg.el.style.transform =
-          "translate(" + (seg.x - seg.size / 2) + "px, " + (seg.y - seg.size / 2) + "px)";
-        seg.el.classList.toggle("cursor-trail--active", isActive);
-        leadX = seg.x;
-        leadY = seg.y;
+  if (ctx) {
+    (function paint() {
+      var now = performance.now();
+      while (points.length && now - points[0].t > LIFETIME) points.shift();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (points.length > 1) {
+        var color = isActive ? "10, 37, 180" : "240, 238, 234"; // rgb of --color-caption-blue / --color-cream
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.filter = "blur(2.5px)";
+
+        for (var i = 1; i < points.length; i++) {
+          var p0 = points[i - 1];
+          var p1 = points[i];
+          var age = (now - p1.t) / LIFETIME; // 0 = fresh, 1 = expired
+          var fade = Math.max(0, 1 - age);
+          ctx.globalAlpha = fade * 0.55;
+          ctx.lineWidth = Math.max(1, 10 * fade);
+          ctx.strokeStyle = "rgb(" + color + ")";
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.filter = "none";
       }
-      requestAnimationFrame(animateTrail);
+      requestAnimationFrame(paint);
     })();
   }
 })();

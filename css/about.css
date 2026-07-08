@@ -40,8 +40,9 @@
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 1 / 1.06; /* uniform frame, matching the welcome screen polaroids */
+  object-fit: cover;
   background: var(--photo-backdrop);
-  padding: 5px;
 }
 
 .ab-polaroid figcaption {

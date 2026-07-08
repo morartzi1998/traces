@@ -18,8 +18,13 @@
   overflow: hidden;
 }
 
-.capture-canvas canvas {
-  touch-action: none;
+.capture-canvas img.capture-object {
+  max-width: 78%;
+  max-height: 92%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.55));
 }
 
 .annotation-editor {

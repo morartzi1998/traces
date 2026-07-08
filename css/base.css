@@ -107,6 +107,11 @@ body {
   outline-offset: 3px;
 }
 
+/* The [hidden] attribute must win over any component's own display rule. */
+[hidden] {
+  display: none !important;
+}
+
 /* ---------- Custom cursor ---------- */
 
 /* js/cursor.js adds .has-custom-cursor and the .cursor / .cursor-line elements */
@@ -153,25 +158,12 @@ body {
   width: 1px;
 }
 
-.cursor-trail {
+.cursor-smear {
   position: fixed;
   left: 0;
   top: 0;
-  background: #ffffff;
   pointer-events: none;
   z-index: 9998;
-  transform: translate(-100px, -100px);
-  will-change: transform;
-}
-
-.cursor-trail--active {
-  background: var(--color-caption-blue);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cursor-trail {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

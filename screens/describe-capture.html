@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/describe-capture.css">
 <script src="../js/cursor.js" defer></script>
-<script src="../js/viewer3d.js" defer></script>
 <script src="../js/annotations.js" defer></script>
 <script src="../js/flow.js" defer></script>
 </head>
@@ -15,8 +14,10 @@
 
   <div class="screen">
 
-    <div class="capture-canvas" data-crosshair id="captureCanvas"
-         aria-label="Captured object: an old living room chandelier. Drag to rotate, scroll to zoom."></div>
+    <div class="capture-canvas" data-crosshair id="captureCanvas">
+      <img class="capture-object" src="../assets/images/photo-chandelier-large.png"
+           alt="Captured object: an old living room chandelier">
+    </div>
 
     <aside class="sidebar">
       <h1>Describe what you captured</h1>
@@ -60,20 +61,6 @@
     </aside>
 
   </div>
-
-<script>
-  (function () {
-    function boot() {
-      initPointCloudViewer(document.getElementById("captureCanvas"),
-        "../assets/images/photo-chandelier-large.png");
-    }
-    if (document.readyState === "loading") {
-      window.addEventListener("DOMContentLoaded", boot);
-    } else {
-      boot();
-    }
-  })();
-</script>
 
 </body>
 </html>

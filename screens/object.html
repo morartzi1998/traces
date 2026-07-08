@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="../css/chrome.css">
 <link rel="stylesheet" href="../css/object.css">
 <script src="../js/cursor.js" defer></script>
-<script src="../js/viewer3d.js" defer></script>
 <script src="../js/flow.js" defer></script>
 </head>
 <body>
@@ -43,8 +42,9 @@
     <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8249;</button>
     <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8250;</button>
 
-    <div class="obj-stage" id="objStage"
-         aria-label="Archived capture. Drag to rotate, scroll to zoom, click a tag to read its story."></div>
+    <div class="obj-stage" id="objStage">
+      <img class="obj-photo" id="objPhoto" src="" alt="">
+    </div>
 
     <div class="obj-tags" id="objTags"></div>
 
@@ -174,11 +174,14 @@
         }
       }
 
+      var photo = document.getElementById("objPhoto");
+
       function show(k) {
         key = k;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         document.getElementById("objTitle").textContent = catalog[k].title;
-        initPointCloudViewer(stage, catalog[k].img, { autoSpin: true });
+        photo.src = catalog[k].img;
+        photo.alt = catalog[k].title;
         closeBlue();
         white.hidden = true;
         fillWhite(catalog[k]);

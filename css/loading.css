@@ -50,9 +50,10 @@
 .load-polaroid img {
   display: block;
   width: 100%;
-  height: auto; /* keep each photo's own proportions */
+  height: auto;
+  aspect-ratio: 1 / 1.06; /* uniform frame, matching the welcome screen polaroids */
+  object-fit: cover;
   background: var(--photo-backdrop);
-  padding: 6px;
 }
 
 .load-polaroid figcaption {
