@@ -153,6 +153,27 @@ body {
   width: 1px;
 }
 
+.cursor-trail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-100px, -100px);
+  will-change: transform;
+}
+
+.cursor-trail--active {
+  background: var(--color-caption-blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-trail {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
