@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Capture your object</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/chrome.css">
+<link rel="stylesheet" href="../css/upload.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/flow.js" defer></script>
+</head>
+<body>
+
+  <div class="up-screen">
+
+    <nav class="nav-top">
+      <a class="logo logo--title up-logo" href="../index.html">Traces</a>
+      <button class="nav-link" type="button" onclick="goTo('gallery.html')">Archive</button>
+    </nav>
+
+    <main class="up-main">
+      <h1 class="up-heading">how do you want to capture<br>your object / space ?</h1>
+
+      <section class="up-option">
+        <button class="up-option-head" type="button" aria-expanded="false" data-acc="phone">
+          <span>Connect you phone</span>
+          <span class="up-toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="up-option-body" id="acc-phone" hidden>
+          <p class="up-hint">open the traces app on your phone and scan your object with the camera</p>
+        </div>
+      </section>
+
+      <section class="up-option">
+        <button class="up-option-head" type="button" aria-expanded="true" data-acc="upload">
+          <span>Upload Video / Image</span>
+          <span class="up-toggle" aria-hidden="true">&minus;</span>
+        </button>
+        <div class="up-option-body" id="acc-upload">
+          <label class="up-drop" id="dropZone">
+            <input type="file" id="fileInput" accept="video/*,image/*" multiple>
+            <span class="up-drop-line">Drag &amp; drop or click to browse</span>
+            <span class="up-drop-status" id="dropStatus">No file has been uploaded yet</span>
+          </label>
+        </div>
+      </section>
+    </main>
+
+    <nav class="nav-bottom">
+      <button class="nav-link" type="button">Community</button>
+      <button class="up-back" type="button" onclick="goTo('onboarding.html')">Back</button>
+      <button class="nav-link" type="button">About</button>
+    </nav>
+
+  </div>
+
+  <script>
+    (function () {
+      var drop0 = document.getElementById("dropZone");
+      if (drop0.__bound) return;
+      drop0.__bound = true;
+
+      document.querySelectorAll(".up-option-head").forEach(function (head) {
+        head.addEventListener("click", function () {
+          var body = document.getElementById("acc-" + head.dataset.acc);
+          var open = body.hidden;
+          body.hidden = !open;
+          head.setAttribute("aria-expanded", open);
+          head.querySelector(".up-toggle").innerHTML = open ? "&minus;" : "+";
+        });
+      });
+
+      var drop = document.getElementById("dropZone");
+      var input = document.getElementById("fileInput");
+      var status = document.getElementById("dropStatus");
+
+      function accept(files) {
+        if (!files || !files.length) return;
+        var names = [];
+        for (var i = 0; i < files.length; i++) names.push(files[i].name);
+        status.textContent = names.join(", ");
+        drop.classList.add("up-drop--ready");
+        setTimeout(function () { goTo("processing.html"); }, 900);
+      }
+
+      input.addEventListener("change", function () { accept(input.files); });
+      drop.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        drop.classList.add("up-drop--over");
+      });
+      drop.addEventListener("dragleave", function () {
+        drop.classList.remove("up-drop--over");
+      });
+      drop.addEventListener("drop", function (e) {
+        e.preventDefault();
+        drop.classList.remove("up-drop--over");
+        accept(e.dataTransfer.files);
+      });
+    })();
+  </script>
+
+</body>
+</html>

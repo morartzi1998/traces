@@ -26,7 +26,9 @@
       var pct = 63;
       var el = document.getElementById("procPct");
       var cloud = document.querySelector(".proc-cloud");
+      el.textContent = pct;
       var t = setInterval(function () {
+        if (!el.isConnected || el.offsetParent === null) { clearInterval(t); return; }
         pct += 1;
         el.textContent = pct;
         // the reconstruction sharpens as processing completes

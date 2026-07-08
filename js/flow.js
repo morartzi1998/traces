@@ -12,3 +12,8 @@ function goTo(page) {
     window.location.href = page;
   }
 }
+
+function openObject(item) {
+  try { sessionStorage.setItem("traces-item", item); } catch (e) {}
+  goTo("object.html");
+}

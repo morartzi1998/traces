@@ -1,0 +1,175 @@
+/* Object view — a single archived capture in 3D with its details */
+
+.obj-screen {
+  display: flex;
+  height: 100vh;
+  background: var(--color-bg);
+}
+
+.obj-stage {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.obj-stage canvas {
+  touch-action: none;
+}
+
+/* ---------- Details panel ---------- */
+
+.obj-panel {
+  width: clamp(340px, 27vw, 470px);
+  height: 100%;
+  overflow-y: auto;
+  padding: 30px 36px;
+  border-left: 1px solid rgba(240, 238, 234, 0.25);
+  color: var(--color-cream);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.obj-back {
+  color: var(--color-cream);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+.obj-back:hover {
+  opacity: 1;
+}
+
+.obj-kind {
+  font-size: 0.95rem;
+  text-transform: lowercase;
+  opacity: 0.8;
+}
+
+.obj-rule {
+  border: none;
+  border-top: 1px solid rgba(240, 238, 234, 0.4);
+  margin: 4px 0;
+}
+
+.obj-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-top: 14px;
+}
+
+.obj-title {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.obj-desc {
+  border: 1px solid rgba(240, 238, 234, 0.4);
+  padding: 16px;
+  min-height: 90px;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.obj-annotations {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.obj-annotations li {
+  border: 1px solid rgba(240, 238, 234, 0.4);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.obj-annotations li::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--color-ink-blue);
+  flex-shrink: 0;
+}
+
+.obj-annotations li.obj-none {
+  border: none;
+  opacity: 0.6;
+  text-transform: lowercase;
+}
+
+.obj-annotations li.obj-none::before {
+  display: none;
+}
+
+.obj-visibility {
+  display: flex;
+  gap: 36px;
+}
+
+.obj-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.obj-choice input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-cream);
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+
+.obj-choice input:checked {
+  background: var(--color-ink-blue);
+  border-color: var(--color-ink-blue);
+}
+
+.obj-edit {
+  margin-top: auto;
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--color-cream);
+  color: var(--color-cream);
+  font-family: var(--font-caption);
+  font-size: 1.3rem;
+  padding: 8px 42px;
+  cursor: pointer;
+}
+
+.obj-edit:hover {
+  background: rgba(240, 238, 234, 0.12);
+}
+
+@media (max-width: 900px) {
+  .obj-screen {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .obj-stage {
+    height: 55vh;
+  }
+
+  .obj-panel {
+    width: 100%;
+    height: auto;
+  }
+}

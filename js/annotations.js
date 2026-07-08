@@ -1,8 +1,9 @@
 /*
   traces — capture annotations
-  Click anywhere inside #captureCanvas to pin a note at that point.
-  Each pin shows a small blue square with its label on the capture,
-  and a matching row in the sidebar list (with a remove button).
+  Click anywhere inside #captureCanvas to pin a note at that point: a small
+  inline input opens where you clicked; Enter saves, Escape cancels. Each
+  pin shows a blue square with its label on the capture, and a matching row
+  in the sidebar list (with a remove button).
 */
 
 (function () {
@@ -13,6 +14,7 @@
 
   var empty = list.querySelector(".annotations-empty");
   var annotations = [];
+  var editor = null;
 
   function render() {
     count.textContent = annotations.length;
@@ -50,16 +52,49 @@
     });
   }
 
-  canvas.addEventListener("click", function (e) {
-    if (e.target.closest(".annotation-marker")) return;
-    var text = window.prompt("Add a note for this spot:");
-    if (!text) return;
-    var r = canvas.getBoundingClientRect();
-    annotations.push({
-      x: (e.clientX - r.left) / r.width,
-      y: (e.clientY - r.top) / r.height,
-      text: text.trim(),
+  function closeEditor() {
+    if (editor) {
+      editor.remove();
+      editor = null;
+    }
+  }
+
+  function openEditor(xPct, yPct) {
+    closeEditor();
+    editor = document.createElement("div");
+    editor.className = "annotation-editor";
+    editor.style.left = xPct * 100 + "%";
+    editor.style.top = yPct * 100 + "%";
+
+    var input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "add a note…";
+    input.setAttribute("aria-label", "Annotation text");
+    editor.appendChild(input);
+    canvas.appendChild(editor);
+    input.focus();
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        var text = input.value.trim();
+        if (text) {
+          annotations.push({ x: xPct, y: yPct, text: text });
+          render();
+        }
+        closeEditor();
+      } else if (e.key === "Escape") {
+        closeEditor();
+      }
     });
-    render();
+    input.addEventListener("blur", function () {
+      setTimeout(closeEditor, 100);
+    });
+  }
+
+  canvas.addEventListener("click", function (e) {
+    if (canvas.__suppressClick) return; // the 3D viewer was being orbited
+    if (e.target.closest(".annotation-marker") || e.target.closest(".annotation-editor")) return;
+    var r = canvas.getBoundingClientRect();
+    openEditor((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
   });
 })();

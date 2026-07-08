@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Capture</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/chrome.css">
+<link rel="stylesheet" href="../css/object.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/viewer3d.js" defer></script>
+<script src="../js/flow.js" defer></script>
+</head>
+<body>
+
+  <div class="obj-screen">
+
+    <div class="obj-stage" data-crosshair id="objStage"
+         aria-label="Archived capture. Drag to rotate, scroll to zoom."></div>
+
+    <aside class="obj-panel">
+      <a class="obj-back" href="#" onclick="goTo('gallery.html'); return false">&larr; back to archive</a>
+
+      <p class="obj-kind" id="objKind">object</p>
+      <hr class="obj-rule">
+
+      <p class="obj-label">Title</p>
+      <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
+      <hr class="obj-rule">
+
+      <div class="obj-desc" id="objDesc">A beloved family piece</div>
+
+      <p class="obj-label">Annotations (<span id="objAnnCount">2</span>)</p>
+      <ul class="obj-annotations" id="objAnnotations"></ul>
+
+      <p class="obj-label">Visibility</p>
+      <div class="obj-visibility">
+        <label class="obj-choice"><input type="radio" name="obj-vis" value="private"> private</label>
+        <label class="obj-choice"><input type="radio" name="obj-vis" value="community" checked> community</label>
+      </div>
+
+      <button class="obj-edit" type="button" onclick="goTo('describe-capture.html')">edit</button>
+    </aside>
+
+  </div>
+
+  <script>
+    (function () {
+      var catalog = {
+        chandelier: { kind: "object", title: "Old living room lamp", desc: "A beloved family piece",
+          img: "../assets/images/photo-chandelier-large.png",
+          annotations: ["grandmother's chandelier", "one bulb missing"] },
+        couch: { kind: "object", title: "Father's couch", desc: "Where every match was watched",
+          img: "../assets/images/photo-couch.png", annotations: ["worn armrest"] },
+        teddy: { kind: "object", title: "Childhood tedy", desc: "Slept beside me for years",
+          img: "../assets/images/photo-teddy.png", annotations: [] },
+        souvenirs: { kind: "object", title: "Souvenirs from europe", desc: "Collected across three summers",
+          img: "../assets/images/photo-souvenirs.png", annotations: ["delft windmill"] },
+        bed: { kind: "object", title: "20 year old bed", desc: "It creaks, but it stays",
+          img: "../assets/images/photo-bed.png", annotations: [] },
+        cabinet: { kind: "object", title: "Souvenirs storage", desc: "Glass doors, old treasures",
+          img: "../assets/images/photo-cabinet.png", annotations: [] },
+        curtain: { kind: "space", title: "Favorite corner", desc: "Morning light through the curtains",
+          img: "../assets/images/photo-curtain.png", annotations: [] },
+        table: { kind: "object", title: "Old table", desc: "Dinner, homework, everything",
+          img: "../assets/images/photo-table.png", annotations: [] },
+      };
+
+      var key = "chandelier";
+      try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
+      var item = catalog[key] || catalog.chandelier;
+
+      document.getElementById("objKind").textContent = item.kind;
+      document.getElementById("objTitle").textContent = item.title;
+      document.getElementById("objDesc").textContent = item.desc;
+      document.getElementById("objAnnCount").textContent = item.annotations.length;
+      var ul = document.getElementById("objAnnotations");
+      if (item.annotations.length) {
+        item.annotations.forEach(function (a) {
+          var li = document.createElement("li");
+          li.textContent = a;
+          ul.appendChild(li);
+        });
+      } else {
+        var li = document.createElement("li");
+        li.className = "obj-none";
+        li.textContent = "no annotations yet";
+        ul.appendChild(li);
+      }
+
+      function boot() {
+        initPointCloudViewer(document.getElementById("objStage"), item.img, { autoSpin: true });
+      }
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+
+</body>
+</html>

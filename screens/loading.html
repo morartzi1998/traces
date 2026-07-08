@@ -53,11 +53,12 @@
       var pct = 0;
       var el = document.getElementById("loadPct");
       var t = setInterval(function () {
+        if (!el.isConnected || el.offsetParent === null) { clearInterval(t); return; }
         pct += 1 + Math.floor(Math.random() * 3);
         if (pct >= 100) {
           pct = 100;
           clearInterval(t);
-          setTimeout(function () { goTo("processing.html"); }, 400);
+          setTimeout(function () { goTo("../index.html"); }, 400);
         }
         el.textContent = pct;
       }, 90);
