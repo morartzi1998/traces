@@ -9,35 +9,7 @@
   padding: 2.5vw 5vw;
 }
 
-/* ---------- Top nav ---------- */
 
-.nav-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-}
-
-.logo {
-  font-size: clamp(2.2rem, 5vw, 4.375rem);
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
-  cursor: pointer;
-}
-
-.nav-link {
-  font-size: 1.1rem;
-  letter-spacing: 0.05em;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-transform: uppercase;
-  color: var(--color-cream);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
 
 /* ---------- Main content ---------- */
 
@@ -155,15 +127,6 @@
 
 .cta:hover {
   opacity: 0.8;
-}
-
-/* ---------- Bottom nav ---------- */
-
-.nav-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  width: 100%;
 }
 
 /* Mobile */

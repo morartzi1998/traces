@@ -1,0 +1,54 @@
+/* Loading — the archive polaroids fan out while the capture uploads */
+
+.load-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9vh;
+  padding: 4vw;
+}
+
+.load-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 14px);
+}
+
+.load-polaroid {
+  background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
+  padding: 8px 8px 30px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  transform: rotate(var(--tilt, 0deg));
+  width: clamp(90px, 10.5vw, 185px);
+  position: relative;
+}
+
+.load-polaroid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1.15;
+  object-fit: contain;
+  background: var(--photo-backdrop);
+}
+
+.load-polaroid figcaption {
+  position: absolute;
+  bottom: 5px;
+  left: 8px;
+  right: 8px;
+  font-family: var(--font-caption);
+  font-size: clamp(0.55rem, 0.8vw, 0.85rem);
+  color: var(--color-caption-blue);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.load-status {
+  font-family: var(--font-drawn);
+  font-size: clamp(1.6rem, 2.6vw, 2.5rem);
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}

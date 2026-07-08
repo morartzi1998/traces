@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Welcome, tell us about you</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/chrome.css">
+<link rel="stylesheet" href="../css/onboarding.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/flow.js" defer></script>
+</head>
+<body>
+
+  <div class="onb-screen">
+
+    <nav class="nav-top">
+      <a class="logo" href="../index.html">traces</a>
+      <button class="nav-link" type="button" onclick="goTo('gallery.html')">Archive</button>
+    </nav>
+
+    <main class="onb-main">
+      <h1 class="onb-heading">Hey! its yor first time here,<br>please fill the details below</h1>
+
+      <form class="onb-form" onsubmit="event.preventDefault(); goTo('loading.html')">
+        <label class="onb-label" for="onbName">What Is Your Name ?</label>
+        <input class="onb-input" id="onbName" type="text" autocomplete="name">
+
+        <label class="onb-label" for="onbCountry">What Country Are You From?</label>
+        <input class="onb-input" id="onbCountry" type="text" autocomplete="country-name">
+
+        <div class="onb-actions">
+          <button class="onb-btn onb-btn--ghost" type="button" onclick="goTo('../index.html')">Back</button>
+          <button class="onb-btn onb-btn--solid" type="submit">Proceed</button>
+        </div>
+      </form>
+    </main>
+
+    <nav class="nav-bottom">
+      <button class="nav-link" type="button">Community</button>
+      <button class="nav-link" type="button">About</button>
+    </nav>
+
+  </div>
+
+</body>
+</html>

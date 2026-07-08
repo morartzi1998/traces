@@ -1,0 +1,46 @@
+/* Shared page chrome: corner navigation and logo, used by full-bleed screens */
+
+.nav-top,
+.nav-bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.nav-top {
+  align-items: flex-start;
+}
+
+.nav-bottom {
+  align-items: flex-end;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 4.375rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The archive/gallery header uses title case instead */
+.logo--title {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.nav-link {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  background: none;
+  border: none;
+  cursor: pointer;
+}

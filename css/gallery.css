@@ -1,0 +1,114 @@
+/* Archive gallery — grid of community captures */
+
+.gal-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.8vw 3.2vw 2.2vw;
+  gap: 2.5vh;
+}
+
+.gal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.gal-logo {
+  font-size: clamp(1.8rem, 2.6vw, 2.6rem);
+}
+
+.gal-tools {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.gal-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  color: var(--color-cream);
+}
+
+.gal-search input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-cream);
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 1rem;
+  width: clamp(120px, 14vw, 220px);
+  padding: 2px 4px;
+}
+
+/* ---------- Grid ---------- */
+
+.gal-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2.4vh 3vw;
+  align-content: center;
+}
+
+.gal-meta {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--color-cream);
+  margin-bottom: 8px;
+  min-height: 3.2em;
+}
+
+.gal-card {
+  display: block;
+  width: 100%;
+  background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
+  border: none;
+  padding: 8px 8px 30px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+  transition: transform 0.15s ease;
+}
+
+.gal-card:hover {
+  transform: translateY(-4px);
+}
+
+.gal-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 0.72;
+  object-fit: contain;
+  /* archive photos sit on the slate-violet reconstruction backdrop */
+  background: linear-gradient(180deg, #77778f 0%, #6b6b85 100%);
+}
+
+.gal-caption {
+  position: absolute;
+  bottom: 7px;
+  left: 10px;
+  right: 10px;
+  font-family: var(--font-caption);
+  font-size: 0.85rem;
+  color: var(--color-caption-blue);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 1100px) {
+  .gal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .gal-grid {
+    grid-template-columns: 1fr;
+  }
+}

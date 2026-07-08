@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Processing</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/processing.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/flow.js" defer></script>
+</head>
+<body>
+
+  <div class="proc-screen">
+
+    <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true">
+
+    <p class="proc-status">Prossesing&nbsp;<span id="procPct">63</span>%</p>
+
+    <button class="proc-cancel" type="button" onclick="goTo('../index.html')">Cancel</button>
+
+  </div>
+
+  <script>
+    (function () {
+      var pct = 63;
+      var el = document.getElementById("procPct");
+      var cloud = document.querySelector(".proc-cloud");
+      var t = setInterval(function () {
+        pct += 1;
+        el.textContent = pct;
+        // the reconstruction sharpens as processing completes
+        cloud.style.filter = "blur(" + Math.max(0, (100 - pct) * 0.45) + "px) saturate(0.85)";
+        if (pct >= 100) {
+          clearInterval(t);
+          setTimeout(function () { goTo("describe-capture.html"); }, 600);
+        }
+      }, 160);
+    })();
+  </script>
+
+</body>
+</html>

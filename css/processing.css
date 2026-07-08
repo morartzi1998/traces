@@ -1,0 +1,56 @@
+/* Processing — the point cloud sharpens on a dark drafting grid */
+
+.proc-screen {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #211d16;
+  /* drafting grid: fine lines with node dots at the intersections */
+  background-image:
+    radial-gradient(circle, rgba(240, 238, 234, 0.16) 1.2px, transparent 1.4px),
+    linear-gradient(rgba(240, 238, 234, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 238, 234, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px, 72px 72px, 72px 72px;
+  display: flex;
+  align-items: center;
+}
+
+.proc-cloud {
+  position: absolute;
+  right: 4vw;
+  bottom: 0;
+  height: 78vh;
+  filter: blur(17px) saturate(0.85);
+  opacity: 0.9;
+  pointer-events: none;
+  user-select: none;
+}
+
+.proc-status {
+  position: relative;
+  font-family: var(--font-drawn);
+  font-size: clamp(3rem, 6.5vw, 6rem);
+  color: #ffffff;
+  padding-left: 5vw;
+  font-variant-numeric: tabular-nums;
+}
+
+.proc-cancel {
+  position: absolute;
+  left: 50%;
+  bottom: 4.5vh;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(240, 238, 234, 0.8);
+  color: var(--color-cream);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 9px 34px;
+  cursor: pointer;
+}
+
+.proc-cancel:hover {
+  background: rgba(240, 238, 234, 0.15);
+}

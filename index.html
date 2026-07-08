@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/chrome.css">
 <link rel="stylesheet" href="css/s01-welcome.css">
 <script src="js/cursor.js" defer></script>
+<script src="js/flow.js" defer></script>
 </head>
 <body>
 
   <div class="screen">
 
     <nav class="nav-top">
-      <div class="logo" tabindex="0">traces</div>
-      <button class="nav-link" type="button">Archive</button>
+      <a class="logo" href="index.html">traces</a>
+      <button class="nav-link" type="button" onclick="goTo('screens/gallery.html')">Archive</button>
     </nav>
 
     <main class="main">
@@ -42,7 +44,7 @@
           <span class="cap">home</span> and all<br>
           within it <span class="cap">forever</span>
         </h1>
-        <button class="cta" type="button">+ add your capture</button>
+        <button class="cta" type="button" onclick="goTo('screens/onboarding.html')">+ add your capture</button>
       </div>
 
     </main>
