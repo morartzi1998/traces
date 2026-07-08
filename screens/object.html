@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="../css/chrome.css">
 <link rel="stylesheet" href="../css/object.css">
 <script src="../js/cursor.js" defer></script>
+<script src="../js/tilt3d.js" defer></script>
 <script src="../js/flow.js" defer></script>
 </head>
 <body>
@@ -42,7 +43,8 @@
     <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8249;</button>
     <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8250;</button>
 
-    <div class="obj-stage" id="objStage">
+    <div class="obj-stage" id="objStage" data-crosshair
+         aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click a spot to add an annotation.">
       <img class="obj-photo" id="objPhoto" src="" alt="">
     </div>
 
@@ -142,7 +144,10 @@
           b.style.left = a.x * 100 + "%";
           b.style.top = a.y * 100 + "%";
           b.textContent = a.title;
-          b.addEventListener("click", function () { openBlue(a); });
+          b.addEventListener("click", function (e) {
+            e.stopPropagation(); // don't also trigger the stage's add-new-annotation click
+            openBlue(a);
+          });
           tags.appendChild(b);
         });
       }
@@ -175,6 +180,15 @@
       }
 
       var photo = document.getElementById("objPhoto");
+
+      // click a spot on the capture to annotate it — same crosshair + pick-a-point
+      // flow as the describe screen right after a scan, just opening the fuller
+      // story/remark panel instead of the small inline editor.
+      stage.addEventListener("click", function (e) {
+        if (stage.__suppressClick) return;
+        var r = stage.getBoundingClientRect();
+        openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+      });
 
       function show(k) {
         key = k;
@@ -247,7 +261,10 @@
         closeBlue();
       });
 
-      function boot() { show(key); }
+      function boot() {
+        initTilt3D(stage, photo);
+        show(key);
+      }
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", boot);
       } else {

@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/describe-capture.css">
 <script src="../js/cursor.js" defer></script>
+<script src="../js/tilt3d.js" defer></script>
 <script src="../js/annotations.js" defer></script>
 <script src="../js/flow.js" defer></script>
 </head>
@@ -60,7 +61,52 @@
       </div>
     </aside>
 
+    <!-- the sidebar swaps to this blue variant while pinning a new annotation -->
+    <aside class="sidebar sidebar--blue" id="annotateSidebar" hidden>
+      <h1>Describe your thought and memories in this particular annotations</h1>
+      <hr class="rule">
+
+      <p class="field-label">Type of annotation</p>
+      <div class="choice-row">
+        <label class="choice"><input type="checkbox" id="daStory" checked> story</label>
+        <label class="choice"><input type="checkbox" id="daRemark"> remark</label>
+      </div>
+      <hr class="rule rule--inset">
+
+      <p class="field-label">Annotation's title</p>
+      <input class="text-input" id="daName" type="text" aria-label="Annotation title">
+
+      <p class="field-label">Explain what this part evokes in you</p>
+      <textarea class="text-area" id="daText" placeholder="what's special about this spot?" aria-label="Annotation text"></textarea>
+
+      <div class="actions">
+        <button class="btn" type="button" id="daCancel">Cancel</button>
+        <button class="btn btn--primary" type="button" id="daSave">Save annotation</button>
+      </div>
+
+      <div class="spacer"></div>
+
+      <hr class="rule rule--inset rule--dotted">
+      <div class="actions">
+        <button class="btn" type="button" onclick="goTo('upload.html')">Retake scan</button>
+        <button class="btn btn--primary" type="button" onclick="goTo('gallery.html')">Save to archive</button>
+      </div>
+    </aside>
+
   </div>
+
+  <script>
+    (function () {
+      function boot() {
+        initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
+      }
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
 
 </body>
 </html>

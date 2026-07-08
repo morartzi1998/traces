@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .capture-canvas img.capture-object {
@@ -27,22 +27,6 @@
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.55));
 }
 
-.annotation-editor {
-  position: absolute;
-  transform: translate(6px, -50%);
-  z-index: 5;
-}
-
-.annotation-editor input {
-  background: rgba(22, 22, 22, 0.85);
-  border: 1px solid var(--color-ink-blue);
-  color: #ffffff;
-  font-family: var(--font-ink);
-  font-size: 14px;
-  padding: 5px 9px;
-  width: 190px;
-}
-
 /* Annotation markers placed by clicking the capture */
 
 .annotation-marker {
@@ -52,6 +36,7 @@
   align-items: center;
   gap: 4px;
   pointer-events: none;
+  z-index: 5;
 }
 
 .annotation-marker::before {
@@ -69,6 +54,11 @@
   background: rgba(22, 22, 22, 0.7);
   padding: 1px 5px;
   white-space: nowrap;
+}
+
+/* while composing a new annotation, only the pin shows — no label yet */
+.annotation-marker--pending .label {
+  display: none;
 }
 
 /* ---------- Sidebar (right) ---------- */
@@ -243,6 +233,53 @@
 
 .btn:hover {
   opacity: 0.85;
+}
+
+/* ---------- Blue annotation variant of the sidebar ---------- */
+/* Swapped in over the cream sidebar while pinning a new annotation. */
+
+.sidebar.sidebar--blue {
+  background: var(--color-ink-blue);
+  color: #ffffff;
+}
+
+.sidebar.sidebar--blue h1,
+.sidebar.sidebar--blue .field-label,
+.sidebar.sidebar--blue .choice {
+  color: #ffffff;
+}
+
+.sidebar.sidebar--blue .rule {
+  border-top-color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar.sidebar--blue .choice input {
+  border-color: #ffffff;
+}
+
+.sidebar.sidebar--blue .choice input:checked {
+  background: #ffffff;
+}
+
+.sidebar.sidebar--blue .text-input,
+.sidebar.sidebar--blue .text-area {
+  border-color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
+}
+
+.sidebar.sidebar--blue .text-input::placeholder,
+.sidebar.sidebar--blue .text-area::placeholder {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.sidebar.sidebar--blue .btn {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.sidebar.sidebar--blue .btn--primary {
+  background: #ffffff;
+  color: var(--color-ink-blue);
 }
 
 /* ---------- Small screens ---------- */

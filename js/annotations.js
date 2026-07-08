@@ -1,26 +1,30 @@
 /*
   traces — capture annotations
-  Click anywhere inside #captureCanvas to pin a note at that point: a small
-  inline input opens where you clicked; Enter saves, Escape cancels. Each
-  pin shows a blue square with its label on the capture, and a matching row
-  in the sidebar list (with a remove button).
+  Click anywhere inside #captureCanvas to pin a note: the sidebar swaps
+  from the cream "Describe what you captured" form to the blue "Describe
+  your thought and memories in this particular annotations" panel, with a
+  pending marker shown at the clicked spot. Save adds it to the
+  annotations list (and the capture); Cancel reverts to the cream form.
 */
 
 (function () {
   var canvas = document.getElementById("captureCanvas");
+  var defaultSidebar = document.querySelector(".sidebar:not(.sidebar--blue)");
+  var blueSidebar = document.getElementById("annotateSidebar");
   var list = document.getElementById("annotationList");
   var count = document.getElementById("annotationCount");
-  if (!canvas || !list || !count) return;
+  if (!canvas || !list || !count || !blueSidebar || !defaultSidebar) return;
 
   var empty = list.querySelector(".annotations-empty");
   var annotations = [];
-  var editor = null;
+  var pendingSpot = null;
+  var pendingMarker = null;
 
   function render() {
     count.textContent = annotations.length;
     empty.style.display = annotations.length ? "none" : "";
     list.querySelectorAll(".annotation-row").forEach(function (n) { n.remove(); });
-    canvas.querySelectorAll(".annotation-marker").forEach(function (n) { n.remove(); });
+    canvas.querySelectorAll(".annotation-marker:not(.annotation-marker--pending)").forEach(function (n) { n.remove(); });
 
     annotations.forEach(function (a, i) {
       var marker = document.createElement("div");
@@ -29,14 +33,14 @@
       marker.style.top = a.y * 100 + "%";
       var label = document.createElement("span");
       label.className = "label";
-      label.textContent = a.text;
+      label.textContent = a.title;
       marker.appendChild(label);
       canvas.appendChild(marker);
 
       var row = document.createElement("div");
       row.className = "annotation-row";
       var text = document.createElement("span");
-      text.textContent = a.text;
+      text.textContent = a.title;
       var remove = document.createElement("button");
       remove.className = "remove";
       remove.type = "button";
@@ -52,49 +56,59 @@
     });
   }
 
-  function closeEditor() {
-    if (editor) {
-      editor.remove();
-      editor = null;
+  function showPendingMarker(spot) {
+    clearPendingMarker();
+    pendingMarker = document.createElement("div");
+    pendingMarker.className = "annotation-marker annotation-marker--pending";
+    pendingMarker.style.left = spot.x * 100 + "%";
+    pendingMarker.style.top = spot.y * 100 + "%";
+    var label = document.createElement("span");
+    label.className = "label";
+    pendingMarker.appendChild(label);
+    canvas.appendChild(pendingMarker);
+  }
+
+  function clearPendingMarker() {
+    if (pendingMarker) {
+      pendingMarker.remove();
+      pendingMarker = null;
     }
   }
 
-  function openEditor(xPct, yPct) {
-    closeEditor();
-    editor = document.createElement("div");
-    editor.className = "annotation-editor";
-    editor.style.left = xPct * 100 + "%";
-    editor.style.top = yPct * 100 + "%";
+  function openBlue(spot) {
+    pendingSpot = spot;
+    showPendingMarker(spot);
+    document.getElementById("daName").value = "";
+    document.getElementById("daText").value = "";
+    defaultSidebar.hidden = true;
+    blueSidebar.hidden = false;
+    document.getElementById("daName").focus();
+  }
 
-    var input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "add a note…";
-    input.setAttribute("aria-label", "Annotation text");
-    editor.appendChild(input);
-    canvas.appendChild(editor);
-    input.focus();
-
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        var text = input.value.trim();
-        if (text) {
-          annotations.push({ x: xPct, y: yPct, text: text });
-          render();
-        }
-        closeEditor();
-      } else if (e.key === "Escape") {
-        closeEditor();
-      }
-    });
-    input.addEventListener("blur", function () {
-      setTimeout(closeEditor, 100);
-    });
+  function closeBlue() {
+    blueSidebar.hidden = true;
+    defaultSidebar.hidden = false;
+    clearPendingMarker();
+    pendingSpot = null;
   }
 
   canvas.addEventListener("click", function (e) {
-    if (canvas.__suppressClick) return; // the 3D viewer was being orbited
-    if (e.target.closest(".annotation-marker") || e.target.closest(".annotation-editor")) return;
+    if (canvas.__suppressClick) return; // a drag on the capture, not a pick
+    if (e.target.closest(".annotation-marker")) return;
     var r = canvas.getBoundingClientRect();
-    openEditor((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+    openBlue({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
   });
+
+  document.getElementById("daCancel").addEventListener("click", closeBlue);
+  document.getElementById("daSave").addEventListener("click", function () {
+    var title = document.getElementById("daName").value.trim();
+    var text = document.getElementById("daText").value.trim();
+    if (title && pendingSpot) {
+      annotations.push({ x: pendingSpot.x, y: pendingSpot.y, title: title, text: text });
+      render();
+    }
+    closeBlue();
+  });
+
+  render();
 })();
