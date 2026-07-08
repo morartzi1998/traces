@@ -88,6 +88,52 @@ body {
   outline-offset: 3px;
 }
 
+/* ---------- Custom cursor ---------- */
+
+/* js/cursor.js adds .has-custom-cursor and the .cursor / .cursor-line elements */
+
+.has-custom-cursor,
+.has-custom-cursor * {
+  cursor: none;
+}
+
+.cursor {
+  position: fixed;
+  left: -100px;
+  top: -100px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.cursor--active {
+  background: var(--color-caption-blue);
+}
+
+.cursor--crosshair {
+  width: 8px;
+  height: 8px;
+}
+
+.cursor-line {
+  position: fixed;
+  display: none;
+  background: rgba(240, 238, 234, 0.35);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.cursor-line--x {
+  height: 1px;
+}
+
+.cursor-line--y {
+  width: 1px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
