@@ -121,3 +121,75 @@
 .up-back:hover {
   opacity: 0.85;
 }
+
+/* ---------- PDF-aligned additions ---------- */
+
+.up-qr {
+  width: 110px;
+  height: 110px;
+  display: block;
+}
+
+.up-selected {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.up-file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.up-thumb {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  background: #6b6b85;
+}
+
+.up-filename {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.up-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.up-btn {
+  font-family: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.up-btn--solid {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: var(--color-ink-blue);
+}
+
+.up-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--color-cream);
+  color: var(--color-cream);
+}
+
+.up-btn:hover {
+  opacity: 0.85;
+}

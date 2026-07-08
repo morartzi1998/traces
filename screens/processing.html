@@ -15,9 +15,12 @@
 
     <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true">
 
-    <p class="proc-status">Prossesing&nbsp;<span id="procPct">63</span>%</p>
+    <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
 
-    <button class="proc-cancel" type="button" onclick="goTo('../index.html')">Cancel</button>
+    <div class="proc-actions">
+      <button class="proc-cancel" type="button" onclick="goTo('../index.html')">Cancel</button>
+      <button class="proc-proceed" type="button" id="procProceed" onclick="goTo('describe-capture.html')" hidden>Proceed</button>
+    </div>
 
   </div>
 
@@ -25,19 +28,27 @@
     (function () {
       var pct = 63;
       var el = document.getElementById("procPct");
+      var status = document.getElementById("procStatus");
+      var proceed = document.getElementById("procProceed");
       var cloud = document.querySelector(".proc-cloud");
       el.textContent = pct;
+      proceed.hidden = true;
+      status.innerHTML = 'Processing&nbsp;&nbsp;<span id="procPct">' + pct + "%</span>";
+      el = status.querySelector("#procPct");
+      cloud.style.filter = "blur(17px) saturate(0.85)";
+
       var t = setInterval(function () {
-        if (!el.isConnected || el.offsetParent === null) { clearInterval(t); return; }
+        if (!status.isConnected || status.offsetParent === null) { clearInterval(t); return; }
         pct += 1;
-        el.textContent = pct;
+        el.textContent = pct + "%";
         // the reconstruction sharpens as processing completes
         cloud.style.filter = "blur(" + Math.max(0, (100 - pct) * 0.45) + "px) saturate(0.85)";
         if (pct >= 100) {
           clearInterval(t);
-          setTimeout(function () { goTo("describe-capture.html"); }, 600);
+          status.textContent = "Capturing complete";
+          proceed.hidden = false;
         }
-      }, 160);
+      }, 140);
     })();
   </script>
 

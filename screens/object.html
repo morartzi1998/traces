@@ -15,82 +15,180 @@
 
   <div class="obj-screen">
 
-    <div class="obj-stage" data-crosshair id="objStage"
-         aria-label="Archived capture. Drag to rotate, scroll to zoom."></div>
+    <nav class="nav-top obj-chrome">
+      <a class="logo obj-logo" href="../index.html">traces</a>
+      <button class="nav-link" type="button" onclick="goTo('gallery.html')">Archive</button>
+    </nav>
 
-    <aside class="obj-panel">
-      <a class="obj-back" href="#" onclick="goTo('gallery.html'); return false">&larr; back to archive</a>
-
-      <p class="obj-kind" id="objKind">object</p>
-      <hr class="obj-rule">
-
-      <p class="obj-label">Title</p>
-      <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
-      <hr class="obj-rule">
-
-      <div class="obj-desc" id="objDesc">A beloved family piece</div>
-
-      <p class="obj-label">Annotations (<span id="objAnnCount">2</span>)</p>
-      <ul class="obj-annotations" id="objAnnotations"></ul>
-
-      <p class="obj-label">Visibility</p>
-      <div class="obj-visibility">
-        <label class="obj-choice"><input type="radio" name="obj-vis" value="private"> private</label>
-        <label class="obj-choice"><input type="radio" name="obj-vis" value="community" checked> community</label>
+    <header class="obj-head">
+      <p class="obj-updated">[updated 15 days ago]</p>
+      <div class="obj-title-row">
+        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions">&#9776;</button>
+        <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
       </div>
+      <ul class="obj-menu" id="objMenu" hidden>
+        <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
+        <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
+        <li><button type="button">Make a visual merge from object's history</button></li>
+        <li><button type="button">Connect previous captured object</button></li>
+      </ul>
+    </header>
 
-      <button class="obj-edit" type="button" onclick="goTo('describe-capture.html')">edit</button>
+    <div class="obj-timeline" aria-label="Capture history">
+      <span class="obj-year obj-year--active" data-year="2021">2021</span>
+      <span class="obj-year" data-year="2023">2023</span>
+      <span class="obj-year" data-year="2026">2026</span>
+    </div>
+
+    <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8249;</button>
+    <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8250;</button>
+
+    <div class="obj-stage" id="objStage"
+         aria-label="Archived capture. Drag to rotate, scroll to zoom, click a tag to read its story."></div>
+
+    <div class="obj-tags" id="objTags"></div>
+
+    <!-- blue annotation panel: read or write a story (p24 / p26) -->
+    <aside class="obj-blue" id="objBlue" hidden>
+      <header class="obj-blue-head">
+        <h2 id="blueTitle">Describe your thought and memories in this particular annotations</h2>
+      </header>
+      <div class="obj-blue-body">
+        <p class="obj-blue-label">Type of annotation</p>
+        <div class="obj-blue-choices">
+          <label><input type="checkbox" id="blueStory" checked> story</label>
+          <label><input type="checkbox" id="blueRemark"> remark</label>
+        </div>
+        <p class="obj-blue-label">Annotation's title</p>
+        <input class="obj-blue-input" id="blueName" type="text">
+        <p class="obj-blue-label">Explain what this part evokes in you</p>
+        <textarea class="obj-blue-text" id="blueText"></textarea>
+        <div class="obj-blue-actions">
+          <button class="obj-blue-btn" type="button" id="blueCancel">Cancel</button>
+          <button class="obj-blue-btn obj-blue-btn--solid" type="button" id="blueSave">Save annotation</button>
+        </div>
+      </div>
     </aside>
+
+    <nav class="nav-bottom obj-chrome">
+      <button class="nav-link" type="button" onclick="goTo('community.html')">Community</button>
+      <button class="nav-link" type="button" onclick="goTo('about.html')">About</button>
+    </nav>
 
   </div>
 
   <script>
     (function () {
+      var order = ["chandelier", "couch", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
       var catalog = {
-        chandelier: { kind: "object", title: "Old living room lamp", desc: "A beloved family piece",
-          img: "../assets/images/photo-chandelier-large.png",
-          annotations: ["grandmother's chandelier", "one bulb missing"] },
-        couch: { kind: "object", title: "Father's couch", desc: "Where every match was watched",
-          img: "../assets/images/photo-couch.png", annotations: ["worn armrest"] },
-        teddy: { kind: "object", title: "Childhood tedy", desc: "Slept beside me for years",
-          img: "../assets/images/photo-teddy.png", annotations: [] },
-        souvenirs: { kind: "object", title: "Souvenirs from europe", desc: "Collected across three summers",
-          img: "../assets/images/photo-souvenirs.png", annotations: ["delft windmill"] },
-        bed: { kind: "object", title: "20 year old bed", desc: "It creaks, but it stays",
-          img: "../assets/images/photo-bed.png", annotations: [] },
-        cabinet: { kind: "object", title: "Souvenirs storage", desc: "Glass doors, old treasures",
-          img: "../assets/images/photo-cabinet.png", annotations: [] },
-        curtain: { kind: "space", title: "Favorite corner", desc: "Morning light through the curtains",
-          img: "../assets/images/photo-curtain.png", annotations: [] },
-        table: { kind: "object", title: "Old table", desc: "Dinner, homework, everything",
-          img: "../assets/images/photo-table.png", annotations: [] },
+        chandelier: { title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
+          annotations: [
+            { x: 0.46, y: 0.72, title: "missing", text: "one bulb has been missing for years - we never replaced it." },
+            { x: 0.58, y: 0.4, title: "lights", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
+          ] },
+        couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
+          annotations: [{ x: 0.35, y: 0.5, title: "worn armrest", text: "his side. always his side." }] },
+        teddy: { title: "Childhood tedy", img: "../assets/images/photo-teddy.png", annotations: [] },
+        souvenirs: { title: "Souvenirs from europe", img: "../assets/images/photo-souvenirs.png",
+          annotations: [{ x: 0.3, y: 0.45, title: "delft windmill", text: "bought in amsterdam, summer 2009." }] },
+        bed: { title: "20 year old bed", img: "../assets/images/photo-bed.png", annotations: [] },
+        cabinet: { title: "Souvenirs storage", img: "../assets/images/photo-cabinet.png", annotations: [] },
+        curtain: { title: "Favorite corner", img: "../assets/images/photo-curtain.png", annotations: [] },
+        table: { title: "Old table", img: "../assets/images/photo-table.png", annotations: [] },
       };
 
+      var stage = document.getElementById("objStage");
+      var tags = document.getElementById("objTags");
+      var blue = document.getElementById("objBlue");
+      var menu = document.getElementById("objMenu");
       var key = "chandelier";
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
-      var item = catalog[key] || catalog.chandelier;
+      if (!catalog[key]) key = "chandelier";
+      var pendingSpot = null;
 
-      document.getElementById("objKind").textContent = item.kind;
-      document.getElementById("objTitle").textContent = item.title;
-      document.getElementById("objDesc").textContent = item.desc;
-      document.getElementById("objAnnCount").textContent = item.annotations.length;
-      var ul = document.getElementById("objAnnotations");
-      if (item.annotations.length) {
-        item.annotations.forEach(function (a) {
-          var li = document.createElement("li");
-          li.textContent = a;
-          ul.appendChild(li);
+      function renderTags() {
+        tags.innerHTML = "";
+        catalog[key].annotations.forEach(function (a) {
+          var b = document.createElement("button");
+          b.className = "obj-tag";
+          b.type = "button";
+          b.style.left = a.x * 100 + "%";
+          b.style.top = a.y * 100 + "%";
+          b.textContent = a.title;
+          b.addEventListener("click", function () { openBlue(a); });
+          tags.appendChild(b);
         });
-      } else {
-        var li = document.createElement("li");
-        li.className = "obj-none";
-        li.textContent = "no annotations yet";
-        ul.appendChild(li);
       }
 
-      function boot() {
-        initPointCloudViewer(document.getElementById("objStage"), item.img, { autoSpin: true });
+      function show(k) {
+        key = k;
+        try { sessionStorage.setItem("traces-item", k); } catch (e) {}
+        document.getElementById("objTitle").textContent = catalog[k].title;
+        initPointCloudViewer(stage, catalog[k].img, { autoSpin: true });
+        closeBlue();
+        renderTags();
       }
+
+      function openBlue(annotation, spot) {
+        pendingSpot = spot || null;
+        blue.hidden = false;
+        document.getElementById("blueTitle").textContent = annotation
+          ? annotation.title
+          : "Describe your thought and memories in this particular annotations";
+        document.getElementById("blueName").value = annotation ? annotation.title : "";
+        document.getElementById("blueText").value = annotation ? annotation.text : "";
+        document.getElementById("blueSave").textContent = annotation ? "Save changes" : "Save annotation";
+      }
+
+      function closeBlue() {
+        blue.hidden = true;
+        pendingSpot = null;
+      }
+
+      document.getElementById("objPrev").addEventListener("click", function () {
+        show(order[(order.indexOf(key) + order.length - 1) % order.length]);
+      });
+      document.getElementById("objNext").addEventListener("click", function () {
+        show(order[(order.indexOf(key) + 1) % order.length]);
+      });
+
+      document.getElementById("objMenuBtn").addEventListener("click", function () {
+        menu.hidden = !menu.hidden;
+      });
+      document.getElementById("menuAddAnnotation").addEventListener("click", function () {
+        menu.hidden = true;
+        openBlue(null);
+      });
+
+      // click a spot on the capture to annotate it
+      stage.addEventListener("click", function (e) {
+        if (stage.__suppressClick) return;
+        var r = stage.getBoundingClientRect();
+        openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+      });
+
+      document.getElementById("blueCancel").addEventListener("click", closeBlue);
+      document.getElementById("blueSave").addEventListener("click", function () {
+        var title = document.getElementById("blueName").value.trim();
+        var text = document.getElementById("blueText").value.trim();
+        if (title) {
+          var existing = catalog[key].annotations.find(function (a) { return a.title === title; });
+          if (existing) {
+            existing.text = text;
+          } else {
+            catalog[key].annotations.push({
+              x: pendingSpot ? pendingSpot.x : 0.5,
+              y: pendingSpot ? pendingSpot.y : 0.5,
+              title: title,
+              text: text,
+            });
+          }
+          renderTags();
+        }
+        closeBlue();
+      });
+
+      function boot() { show(key); }
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", boot);
       } else {

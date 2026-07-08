@@ -1,0 +1,94 @@
+/* About — the story behind traces */
+
+.ab-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.8vw 3.2vw 2.2vw;
+}
+
+.ab-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4vw;
+  padding: 3vh 0;
+}
+
+/* Polaroid pile on the left */
+
+.ab-pile {
+  position: relative;
+  flex: 0 0 34%;
+  min-height: 62vh;
+}
+
+.ab-polaroid {
+  position: absolute;
+  left: var(--x, 0);
+  top: var(--y, 0);
+  width: clamp(130px, 11vw, 190px);
+  margin: 0;
+  background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
+  padding: 8px 8px 28px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+  transform: rotate(var(--tilt, 0deg));
+}
+
+.ab-polaroid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--photo-backdrop);
+  padding: 5px;
+}
+
+.ab-polaroid figcaption {
+  position: absolute;
+  bottom: 5px;
+  left: 8px;
+  right: 8px;
+  font-family: var(--font-caption);
+  font-size: 0.75rem;
+  color: var(--color-caption-blue);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Story text */
+
+.ab-text {
+  flex: 1;
+  max-width: 700px;
+}
+
+.ab-text h1 {
+  font-size: clamp(1.6rem, 2.4vw, 2.3rem);
+  font-weight: 400;
+  margin-bottom: 3.5vh;
+}
+
+.ab-brand {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ab-text p {
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  line-height: 1.65;
+  margin-bottom: 2.2vh;
+  opacity: 0.92;
+  max-width: 65ch;
+}
+
+@media (max-width: 900px) {
+  .ab-main {
+    flex-direction: column;
+  }
+
+  .ab-pile {
+    width: 100%;
+    min-height: 46vh;
+  }
+}

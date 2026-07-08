@@ -1,48 +1,56 @@
-/* Processing — the point cloud sharpens on a dark drafting grid */
+/* Processing — the point cloud sharpens on a light drafting grid */
 
 .proc-screen {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #211d16;
+  background-color: #d9d5cc;
   /* drafting grid: fine lines with node dots at the intersections */
   background-image:
-    radial-gradient(circle, rgba(240, 238, 234, 0.16) 1.2px, transparent 1.4px),
-    linear-gradient(rgba(240, 238, 234, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240, 238, 234, 0.05) 1px, transparent 1px);
+    radial-gradient(circle, rgba(60, 56, 48, 0.35) 1.2px, transparent 1.4px),
+    linear-gradient(rgba(60, 56, 48, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 56, 48, 0.12) 1px, transparent 1px);
   background-size: 72px 72px, 72px 72px, 72px 72px;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .proc-cloud {
   position: absolute;
-  right: 4vw;
-  bottom: 0;
-  height: 78vh;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  height: 82vh;
   filter: blur(17px) saturate(0.85);
-  opacity: 0.9;
   pointer-events: none;
   user-select: none;
 }
 
 .proc-status {
   position: relative;
-  font-family: var(--font-drawn);
-  font-size: clamp(3rem, 6.5vw, 6rem);
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5vw, 4.5rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: #ffffff;
-  padding-left: 5vw;
+  text-shadow: 0 2px 22px rgba(40, 36, 28, 0.55), 0 0 3px rgba(40, 36, 28, 0.4);
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
-.proc-cancel {
+.proc-actions {
   position: absolute;
   left: 50%;
   bottom: 4.5vh;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(240, 238, 234, 0.8);
-  color: var(--color-cream);
+  display: flex;
+  gap: 16px;
+}
+
+.proc-cancel,
+.proc-proceed {
   font-family: var(--font-display);
   font-size: 0.85rem;
   letter-spacing: 0.1em;
@@ -51,6 +59,19 @@
   cursor: pointer;
 }
 
-.proc-cancel:hover {
-  background: rgba(240, 238, 234, 0.15);
+.proc-cancel {
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid #4a463e;
+  color: #33302a;
+}
+
+.proc-proceed {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: var(--color-ink-blue);
+}
+
+.proc-cancel:hover,
+.proc-proceed:hover {
+  opacity: 0.85;
 }

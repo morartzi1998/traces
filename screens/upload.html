@@ -15,12 +15,12 @@
   <div class="up-screen">
 
     <nav class="nav-top">
-      <a class="logo logo--title up-logo" href="../index.html">Traces</a>
+      <a class="logo" href="../index.html">traces</a>
       <button class="nav-link" type="button" onclick="goTo('gallery.html')">Archive</button>
     </nav>
 
     <main class="up-main">
-      <h1 class="up-heading">how do you want to capture<br>your object / space ?</h1>
+      <h1 class="up-heading">How do you want to capture<br>your object / space ?</h1>
 
       <section class="up-option">
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="phone">
@@ -28,21 +28,36 @@
           <span class="up-toggle" aria-hidden="true">+</span>
         </button>
         <div class="up-option-body" id="acc-phone" hidden>
-          <p class="up-hint">open the traces app on your phone and scan your object with the camera</p>
+          <svg class="up-qr" viewBox="0 0 21 21" aria-label="Scan with your phone to connect">
+            <rect width="21" height="21" fill="#f0eeea"/>
+            <path fill="#0a25b4" d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1zM2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM8 1h1v2H8zM10 1h2v1h-2zM13 2h1v3h-1zM8 4h2v1H8zM11 3h1v2h-1zM7 7h2v2H7zM10 7h1v1h-1zM12 7h2v1h-2zM15 8h2v1h-2zM18 7h2v2h-2zM1 8h2v1H1zM4 8h2v2H4zM1 10h1v2H1zM3 11h2v1H3zM6 10h2v2H6zM9 9h2v2H9zM12 9h1v3h-1zM14 11h2v1h-2zM17 10h1v2h-1zM19 11h1v1h-1zM8 12h1v2H8zM10 12h1v1h-1zM7 15h2v1H7zM10 14h2v2h-2zM13 14h1v2h-1zM15 14h2v2h-2zM18 14h2v1h-2zM8 17h1v2H8zM10 17h2v1h-2zM13 17h3v1h-3zM17 17h1v2h-1zM19 17h1v3h-1zM10 19h1v1h-1zM13 19h2v1h-2z"/>
+          </svg>
         </div>
       </section>
 
       <section class="up-option">
-        <button class="up-option-head" type="button" aria-expanded="true" data-acc="upload">
+        <button class="up-option-head" type="button" aria-expanded="false" data-acc="upload">
           <span>Upload Video / Image</span>
-          <span class="up-toggle" aria-hidden="true">&minus;</span>
+          <span class="up-toggle" aria-hidden="true">+</span>
         </button>
-        <div class="up-option-body" id="acc-upload">
+        <div class="up-option-body" id="acc-upload" hidden>
+
           <label class="up-drop" id="dropZone">
             <input type="file" id="fileInput" accept="video/*,image/*" multiple>
-            <span class="up-drop-line">Drag &amp; drop or click to browse</span>
-            <span class="up-drop-status" id="dropStatus">No file has been uploaded yet</span>
+            <span class="up-drop-line">click to browse &mdash; no file has been uploaded yet</span>
           </label>
+
+          <div class="up-selected" id="upSelected" hidden>
+            <div class="up-file">
+              <img class="up-thumb" id="upThumb" src="../assets/images/photo-chandelier.png" alt="">
+              <span class="up-filename" id="upFilename"></span>
+            </div>
+            <div class="up-actions">
+              <button class="up-btn up-btn--solid" type="button" onclick="goTo('processing.html')">Proceed</button>
+              <button class="up-btn up-btn--ghost" type="button" id="upCancel">Cancel</button>
+            </div>
+          </div>
+
         </div>
       </section>
     </main>
@@ -50,16 +65,16 @@
     <nav class="nav-bottom">
       <button class="nav-link" type="button" onclick="goTo('community.html')">Community</button>
       <button class="up-back" type="button" onclick="goTo('onboarding.html')">Back</button>
-      <button class="nav-link" type="button">About</button>
+      <button class="nav-link" type="button" onclick="goTo('about.html')">About</button>
     </nav>
 
   </div>
 
   <script>
     (function () {
-      var drop0 = document.getElementById("dropZone");
-      if (drop0.__bound) return;
-      drop0.__bound = true;
+      var drop = document.getElementById("dropZone");
+      if (drop.__bound) return;
+      drop.__bound = true;
 
       document.querySelectorAll(".up-option-head").forEach(function (head) {
         head.addEventListener("click", function () {
@@ -71,17 +86,20 @@
         });
       });
 
-      var drop = document.getElementById("dropZone");
       var input = document.getElementById("fileInput");
-      var status = document.getElementById("dropStatus");
+      var selected = document.getElementById("upSelected");
+      var thumb = document.getElementById("upThumb");
+      var filename = document.getElementById("upFilename");
 
       function accept(files) {
         if (!files || !files.length) return;
-        var names = [];
-        for (var i = 0; i < files.length; i++) names.push(files[i].name);
-        status.textContent = names.join(", ");
-        drop.classList.add("up-drop--ready");
-        setTimeout(function () { goTo("processing.html"); }, 900);
+        var f = files[0];
+        filename.textContent = f.name;
+        if (f.type && f.type.indexOf("image/") === 0) {
+          try { thumb.src = URL.createObjectURL(f); } catch (e) {}
+        }
+        drop.hidden = true;
+        selected.hidden = false;
       }
 
       input.addEventListener("change", function () { accept(input.files); });
@@ -96,6 +114,12 @@
         e.preventDefault();
         drop.classList.remove("up-drop--over");
         accept(e.dataTransfer.files);
+      });
+
+      document.getElementById("upCancel").addEventListener("click", function () {
+        selected.hidden = true;
+        drop.hidden = false;
+        input.value = "";
       });
     })();
   </script>
