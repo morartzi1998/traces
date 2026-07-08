@@ -119,15 +119,15 @@
         var color = isActive ? "10, 37, 180" : "240, 238, 234"; // rgb of --color-caption-blue / --color-cream
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.filter = "blur(2.5px)";
+        ctx.filter = "blur(0.6px)";
 
         for (var i = 1; i < points.length; i++) {
           var p0 = points[i - 1];
           var p1 = points[i];
           var age = (now - p1.t) / LIFETIME; // 0 = fresh, 1 = expired
           var fade = Math.max(0, 1 - age);
-          ctx.globalAlpha = fade * 0.55;
-          ctx.lineWidth = Math.max(1, 10 * fade);
+          ctx.globalAlpha = Math.min(1, fade * 1.1);
+          ctx.lineWidth = Math.max(0.6, 3 * fade);
           ctx.strokeStyle = "rgb(" + color + ")";
           ctx.beginPath();
           ctx.moveTo(p0.x, p0.y);
