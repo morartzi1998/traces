@@ -48,6 +48,28 @@
 
     <div class="obj-tags" id="objTags"></div>
 
+    <!-- white details panel (video t=36): title, connection, feeling, annotations, edit -->
+    <aside class="obj-white" id="objWhite" hidden>
+      <h2 class="obj-white-title" id="whiteTitle">Old living room lamp</h2>
+      <p class="obj-white-sub" id="whiteSub">connected to the space "my old living room"</p>
+      <hr class="obj-white-rule">
+      <p class="obj-white-label">Type of capture</p>
+      <div class="obj-white-choices" id="whiteKind">
+        <label><input type="checkbox" checked disabled> object</label>
+        <label><input type="checkbox" disabled> space</label>
+      </div>
+      <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
+      <p class="obj-white-feeling" id="whiteFeeling"></p>
+      <p class="obj-white-label">Annotations (<span id="whiteAnnCount">0</span>)</p>
+      <ul class="obj-white-list" id="whiteAnnotations"></ul>
+      <p class="obj-white-label">Visibility</p>
+      <div class="obj-white-choices">
+        <label><input type="checkbox" disabled> private</label>
+        <label><input type="checkbox" checked disabled> community</label>
+      </div>
+      <button class="obj-white-edit" type="button" onclick="goTo('describe-capture.html')">Edit</button>
+    </aside>
+
     <!-- blue annotation panel: read or write a story (p24 / p26) -->
     <aside class="obj-blue" id="objBlue" hidden>
       <header class="obj-blue-head">
@@ -79,9 +101,14 @@
 
   <script>
     (function () {
-      var order = ["chandelier", "couch", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
+      var order = ["chandelier", "room", "couch", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
       var catalog = {
-        chandelier: { title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
+        room: { kind: "space", title: "My old living room", img: "../assets/images/photo-room.png",
+          connected: "", feeling: "the room where everything happened - dinners, naps, matches on tv.",
+          annotations: [] },
+        chandelier: { kind: "object", title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
+          connected: "my old living room",
+          feeling: "old lamp from georgia at soviet union times that my father brought from his childhood home. it was in the house for 30 years but recently was replaced.",
           annotations: [
             { x: 0.46, y: 0.72, title: "missing", text: "one bulb has been missing for years - we never replaced it." },
             { x: 0.58, y: 0.4, title: "lights", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
@@ -120,18 +147,54 @@
         });
       }
 
+      var white = document.getElementById("objWhite");
+
+      function fillWhite(item) {
+        document.getElementById("whiteTitle").textContent = item.title;
+        document.getElementById("whiteSub").textContent =
+          item.connected ? 'connected to the space "' + item.connected + '"' : "";
+        document.getElementById("whiteFeeling").textContent = item.feeling || "";
+        var kindBoxes = document.querySelectorAll("#whiteKind input");
+        kindBoxes[0].checked = item.kind !== "space";
+        kindBoxes[1].checked = item.kind === "space";
+        document.getElementById("whiteAnnCount").textContent = item.annotations.length;
+        var ul = document.getElementById("whiteAnnotations");
+        ul.innerHTML = "";
+        if (item.annotations.length) {
+          item.annotations.forEach(function (a) {
+            var li = document.createElement("li");
+            li.textContent = a.title;
+            ul.appendChild(li);
+          });
+        } else {
+          var li = document.createElement("li");
+          li.className = "obj-white-none";
+          li.textContent = "no annotations yet";
+          ul.appendChild(li);
+        }
+      }
+
       function show(k) {
         key = k;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         document.getElementById("objTitle").textContent = catalog[k].title;
         initPointCloudViewer(stage, catalog[k].img, { autoSpin: true });
         closeBlue();
+        white.hidden = true;
+        fillWhite(catalog[k]);
         renderTags();
       }
+
+      document.getElementById("objTitle").addEventListener("click", function () {
+        fillWhite(catalog[key]);
+        white.hidden = !white.hidden;
+        if (!white.hidden) closeBlue();
+      });
 
       function openBlue(annotation, spot) {
         pendingSpot = spot || null;
         blue.hidden = false;
+        white.hidden = true;
         document.getElementById("blueTitle").textContent = annotation
           ? annotation.title
           : "Describe your thought and memories in this particular annotations";
@@ -163,6 +226,7 @@
       // click a spot on the capture to annotate it
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
+        if (e.target.tagName !== "CANVAS") return; // only direct clicks on the capture
         var r = stage.getBoundingClientRect();
         openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
       });
