@@ -43,8 +43,8 @@
     <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8249;</button>
     <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8250;</button>
 
-    <div class="obj-stage" id="objStage" data-crosshair
-         aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click a spot to add an annotation.">
+    <div class="obj-stage" id="objStage"
+         aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">
       <img class="obj-photo" id="objPhoto" src="" alt="">
     </div>
 
@@ -161,6 +161,17 @@
       if (!catalog[key]) key = "chandelier";
       var pendingSpot = null;
       var editingAnnotation = null; // the saved annotation currently open in edit mode, if any
+      var annotateMode = false; // true only between "Add an annotations" and the point-picking click
+
+      function enterAnnotateMode() {
+        annotateMode = true;
+        stage.setAttribute("data-crosshair", "");
+      }
+
+      function exitAnnotateMode() {
+        annotateMode = false;
+        stage.removeAttribute("data-crosshair");
+      }
 
       function renderTags() {
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
@@ -228,14 +239,22 @@
 
       var photo = document.getElementById("objPhoto");
 
-      // click a spot on the capture to annotate it — same crosshair + pick-a-point
-      // flow as the describe screen right after a scan, just opening the fuller
-      // story/remark panel instead of the small inline editor.
+      // plain click on the capture toggles its info panel (like clicking the
+      // title); the crosshair pick-a-point flow only runs while annotateMode
+      // is active, entered via the menu's "Add an annotations" item.
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
         closeRemarkCard();
-        var r = stage.getBoundingClientRect();
-        openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+        if (annotateMode) {
+          var r = stage.getBoundingClientRect();
+          var spot = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+          exitAnnotateMode();
+          openBlueEdit(null, spot);
+        } else {
+          fillWhite(catalog[key]);
+          white.hidden = !white.hidden;
+          if (!white.hidden) closeBlue();
+        }
       });
 
       function show(k) {
@@ -244,6 +263,7 @@
         document.getElementById("objTitle").textContent = catalog[k].title;
         photo.src = catalog[k].img;
         photo.alt = catalog[k].title;
+        exitAnnotateMode();
         closeBlue();
         closeRemarkCard();
         white.hidden = true;
@@ -252,6 +272,7 @@
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
+        exitAnnotateMode();
         fillWhite(catalog[key]);
         white.hidden = !white.hidden;
         if (!white.hidden) { closeBlue(); closeRemarkCard(); }
@@ -343,7 +364,13 @@
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
         closeRemarkCard();
-        openBlue(null);
+        closeBlue();
+        white.hidden = true;
+        enterAnnotateMode();
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && annotateMode) exitAnnotateMode();
       });
 
       document.getElementById("blueCancel").addEventListener("click", closeBlue);
