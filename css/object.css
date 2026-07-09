@@ -473,20 +473,34 @@
 
 .obj-white {
   position: absolute;
-  top: 8vh;
-  right: 3vw;
-  width: clamp(280px, 22vw, 360px);
-  max-height: 82vh;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: clamp(320px, 26vw, 440px);
   overflow-y: auto;
   z-index: 5;
-  background: #f5f3ef url("../assets/images/paper-texture.png") center / cover;
+  /* translucent frosted paper so the space behind shows through */
+  background: rgba(240, 238, 234, 0.82);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   color: var(--color-ink-blue);
   font-family: var(--font-caption);
-  padding: 22px 24px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  padding: 28px 30px;
+  box-shadow: -14px 0 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* faint paper grain kept over the translucent panel */
+.obj-white::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("../assets/images/paper-texture.png") center / cover;
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .obj-white-title {

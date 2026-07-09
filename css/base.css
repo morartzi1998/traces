@@ -176,22 +176,22 @@ body {
   pointer-events: none;
   z-index: 9997;
   mix-blend-mode: soft-light;
-  opacity: 0.5;
-  animation: grain-flicker 3.2s steps(1) infinite;
+  opacity: 0.22;
+  image-rendering: pixelated;
+  animation: grain-flicker 3.4s steps(1) infinite;
 }
 
 /* the layer's strength gently breathes so it reads as a quiet flicker */
 @keyframes grain-flicker {
-  0%   { opacity: 0.45; }
-  20%  { opacity: 0.6; }
-  40%  { opacity: 0.4; }
-  60%  { opacity: 0.62; }
-  80%  { opacity: 0.48; }
-  100% { opacity: 0.55; }
+  0%   { opacity: 0.16; }
+  25%  { opacity: 0.26; }
+  50%  { opacity: 0.14; }
+  75%  { opacity: 0.24; }
+  100% { opacity: 0.19; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .grain-overlay { animation: none; opacity: 0.45; }
+  .grain-overlay { animation: none; opacity: 0.18; }
 }
 
 @media (prefers-reduced-motion: reduce) {
