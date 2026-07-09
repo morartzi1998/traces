@@ -26,6 +26,7 @@ function initTilt3D(container, img) {
   if (ownsCursor) container.style.cursor = "grab";
 
   container.addEventListener("pointerdown", function (e) {
+    if (container.dataset.mode === "model") return; // model-viewer handles its own orbit
     dragging = true;
     moved = 0;
     lx = e.clientX;
@@ -58,6 +59,7 @@ function initTilt3D(container, img) {
   container.addEventListener("pointerleave", release);
 
   container.addEventListener("wheel", function (e) {
+    if (container.dataset.mode === "model") return;
     e.preventDefault();
     tZoom = Math.max(0.6, Math.min(1.8, tZoom * (e.deltaY > 0 ? 0.94 : 1.06)));
   }, { passive: false });

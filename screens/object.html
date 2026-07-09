@@ -10,6 +10,7 @@
 <script src="../js/cursor.js" defer></script>
 <script src="../js/tilt3d.js" defer></script>
 <script src="../js/flow.js" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js"></script>
 </head>
 <body>
 
@@ -46,6 +47,8 @@
     <div class="obj-stage" id="objStage"
          aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">
       <img class="obj-photo" id="objPhoto" src="" alt="">
+      <model-viewer class="obj-model" id="objModel" camera-controls disable-pan
+        interaction-prompt="none" shadow-intensity="1" exposure="1" hidden></model-viewer>
     </div>
 
     <div class="obj-tags" id="objTags">
@@ -137,6 +140,7 @@
           connected: "", feeling: "the room where everything happened - dinners, naps, matches on tv.",
           annotations: [] },
         chandelier: { kind: "object", title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
+          model: "../assets/models/chandelier.glb",
           connected: "my old living room",
           feeling: "old lamp from georgia at soviet union times that my father brought from his childhood home. it was in the house for 30 years but recently was replaced.",
           annotations: [
@@ -144,11 +148,15 @@
             { x: 0.58, y: 0.4, title: "lights", type: "story", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
           ] },
         couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
+          model: "../assets/models/couch.glb",
           annotations: [{ x: 0.35, y: 0.5, title: "worn armrest", type: "story", text: "his side. always his side." }] },
         teddy: { title: "Childhood tedy", img: "../assets/images/photo-teddy.png", annotations: [] },
         souvenirs: { title: "Souvenirs from europe", img: "../assets/images/photo-souvenirs.png",
+          model: "../assets/models/souvenirs.glb",
           annotations: [{ x: 0.3, y: 0.45, title: "delft windmill", type: "remark", text: "bought in amsterdam, summer 2009." }] },
-        bed: { title: "20 year old bed", img: "../assets/images/photo-bed.png", annotations: [] },
+        bed: { title: "20 year old bed", img: "../assets/images/photo-bed.png",
+          model: "../assets/models/bed.glb",
+          annotations: [] },
         cabinet: { title: "Souvenirs storage", img: "../assets/images/photo-cabinet.png", annotations: [] },
         curtain: { title: "Favorite corner", img: "../assets/images/photo-curtain.png", annotations: [] },
         table: { title: "Old table", img: "../assets/images/photo-table.png", annotations: [] },
@@ -255,6 +263,25 @@
       }
 
       var photo = document.getElementById("objPhoto");
+      var modelViewer = document.getElementById("objModel");
+
+      // model-viewer handles its own drag-to-orbit; suppress the stage's
+      // click-to-toggle-info handler after a real drag, same as tilt3d does
+      // for the flat-photo fallback.
+      var mvDown = null;
+      modelViewer.addEventListener("pointerdown", function (e) {
+        mvDown = { x: e.clientX, y: e.clientY };
+      });
+      modelViewer.addEventListener("pointerup", function (e) {
+        if (mvDown) {
+          var moved = Math.abs(e.clientX - mvDown.x) + Math.abs(e.clientY - mvDown.y);
+          if (moved > 6) {
+            stage.__suppressClick = true;
+            setTimeout(function () { stage.__suppressClick = false; }, 0);
+          }
+        }
+        mvDown = null;
+      });
 
       // plain click on the capture toggles its info panel (like clicking the
       // title); the crosshair pick-a-point flow only runs while annotateMode
@@ -278,8 +305,18 @@
         key = k;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         document.getElementById("objTitle").textContent = catalog[k].title;
-        photo.src = catalog[k].img;
-        photo.alt = catalog[k].title;
+        if (catalog[k].model) {
+          stage.dataset.mode = "model";
+          photo.hidden = true;
+          modelViewer.src = catalog[k].model;
+          modelViewer.hidden = false;
+        } else {
+          stage.dataset.mode = "photo";
+          modelViewer.hidden = true;
+          photo.hidden = false;
+          photo.src = catalog[k].img;
+          photo.alt = catalog[k].title;
+        }
         exitAnnotateMode();
         closeBlue();
         closeRemarkCard();
