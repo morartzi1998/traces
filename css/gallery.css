@@ -60,6 +60,20 @@
   padding: 2px 4px;
 }
 
+/* ---------- Connect screen heading ---------- */
+
+.gal-connect-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 3.6vw, 3.4rem);
+  color: var(--color-ink-blue);
+  filter: brightness(1.5);
+  text-align: center;
+  margin: 1vh auto 2.5vh;
+  max-width: 1100px;
+  line-height: 1.1;
+}
+
 /* ---------- Grid ---------- */
 
 .gal-grid {

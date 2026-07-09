@@ -200,6 +200,15 @@
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.55));
 }
 
+/* a capture connected to another glows blue */
+.obj-stage.obj-connected .obj-photo {
+  filter: drop-shadow(0 0 22px rgba(42, 72, 218, 0.95)) drop-shadow(0 0 44px rgba(42, 72, 218, 0.6));
+}
+
+.obj-stage.obj-connected .obj-model {
+  filter: drop-shadow(0 0 22px rgba(42, 72, 218, 0.9));
+}
+
 .obj-model {
   width: 100%;
   height: 100%;

@@ -4,12 +4,12 @@
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #d9d5cc;
+  background-color: #6f6c62;
   /* drafting grid: fine lines with node dots at the intersections */
   background-image:
-    radial-gradient(circle, rgba(60, 56, 48, 0.35) 1.2px, transparent 1.4px),
-    linear-gradient(rgba(60, 56, 48, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(60, 56, 48, 0.12) 1px, transparent 1px);
+    radial-gradient(circle, rgba(30, 28, 24, 0.4) 1.2px, transparent 1.4px),
+    linear-gradient(rgba(30, 28, 24, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 28, 24, 0.18) 1px, transparent 1px);
   background-size: 72px 72px, 72px 72px, 72px 72px;
   display: flex;
   align-items: center;
@@ -60,9 +60,9 @@
 }
 
 .proc-cancel {
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid #4a463e;
-  color: #33302a;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: #ffffff;
 }
 
 .proc-proceed {

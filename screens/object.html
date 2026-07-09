@@ -39,7 +39,7 @@
         <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
-        <li><button type="button">Connect previous captured object</button></li>
+        <li><button type="button" onclick="goTo('connect.html')">Connect previous captured object</button></li>
       </ul>
     </header>
 
@@ -342,6 +342,12 @@
           photo.src = catalog[k].img;
           photo.alt = catalog[k].title;
         }
+        // a capture linked to another (via the connect screen) glows blue
+        var conn = null;
+        try { conn = sessionStorage.getItem("traces-conn-" + k); } catch (e) {}
+        stage.classList.toggle("obj-connected", !!conn);
+        if (conn && catalog[conn]) catalog[k].connected = catalog[conn].title;
+
         exitAnnotateMode();
         exitWhiteEdit();
         closeBlue();

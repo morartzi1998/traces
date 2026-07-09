@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Connect a capture</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/chrome.css">
+<link rel="stylesheet" href="../css/gallery.css">
+<script src="../js/cursor.js" defer></script>
+<script src="../js/grain.js" defer></script>
+<script src="../js/flow.js" defer></script>
+</head>
+<body>
+
+  <div class="gal-screen gal--archive gal--connect">
+
+    <header class="gal-header">
+      <a class="logo gal-logo" href="../index.html">traces</a>
+      <div class="gal-tools">
+        <span class="nav-link" type="button" onclick="goTo('gallery.html')">Archive</span>
+      </div>
+    </header>
+
+    <h1 class="gal-connect-title">Choose Captured Object That You Wish To Connect</h1>
+
+    <main class="gal-grid">
+
+      <article class="gal-item">
+        <p class="gal-meta">[01]<br>2 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('chandelier')">
+          <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
+          <span class="gal-caption">old living room lamp</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[02]<br>13 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('room')">
+          <img src="../assets/images/photo-room.png" alt="My old living room">
+          <span class="gal-caption">my living room</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[03]<br>25 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('teddy')">
+          <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
+          <span class="gal-caption">childhood tedy</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[04]<br>36 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('souvenirs')">
+          <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
+          <span class="gal-caption">souvenirs from europe</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[05]<br>42 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('bed')">
+          <img src="../assets/images/photo-bed.png" alt="20 year old bed">
+          <span class="gal-caption">20 year old bed</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[06]<br>140 days ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('couch')">
+          <img src="../assets/images/photo-couch.png" alt="Father's couch">
+          <span class="gal-caption">father's couch</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[07]<br>a year ago</p>
+        <button class="gal-card" type="button" onclick="connectObject('curtain')">
+          <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
+          <span class="gal-caption">favorite corner</span>
+        </button>
+      </article>
+
+    </main>
+
+    <footer class="nav-bottom">
+      <button class="nav-link" type="button" onclick="goTo('community.html')">Community</button>
+      <button class="nav-link" type="button" onclick="goTo('about.html')">About</button>
+    </footer>
+
+  </div>
+
+  <script>
+    function connectObject(pickedKey) {
+      try {
+        var cur = sessionStorage.getItem("traces-item") || "chandelier";
+        sessionStorage.setItem("traces-conn-" + cur, pickedKey);
+      } catch (e) {}
+      goTo("object.html");
+    }
+  </script>
+
+</body>
+</html>
