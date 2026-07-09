@@ -49,15 +49,15 @@
     </div>
 
     <div class="obj-tags" id="objTags">
-      <!-- compact card for a saved "remark" annotation: pops up next to its pin -->
+      <!-- the tag pill itself expands into this when a "remark" annotation is opened -->
       <div class="remark-card" id="remarkCard" hidden>
-        <div class="remark-card-head">
-          <h3 id="remarkTitle"></h3>
+        <div class="remark-card-row">
           <button class="remark-card-close" type="button" id="remarkClose" aria-label="Close">&minus;</button>
-        </div>
-        <div class="remark-card-choices">
-          <label><input type="checkbox" id="remarkStoryBox" disabled> story</label>
-          <label><input type="checkbox" id="remarkRemarkBox" disabled> remark</label>
+          <span class="remark-card-title" id="remarkTitle"></span>
+          <div class="remark-card-choices">
+            <label><input type="checkbox" id="remarkStoryBox" disabled> story</label>
+            <label><input type="checkbox" id="remarkRemarkBox" disabled> remark</label>
+          </div>
         </div>
         <p class="remark-card-text" id="remarkText"></p>
       </div>
@@ -73,10 +73,13 @@
         <label><input type="checkbox" checked disabled> object</label>
         <label><input type="checkbox" disabled> space</label>
       </div>
+      <hr class="obj-white-rule">
       <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
       <p class="obj-white-feeling" id="whiteFeeling"></p>
+      <hr class="obj-white-rule">
       <p class="obj-white-label">Annotations (<span id="whiteAnnCount">0</span>)</p>
       <ul class="obj-white-list" id="whiteAnnotations"></ul>
+      <hr class="obj-white-rule">
       <p class="obj-white-label">Visibility</p>
       <div class="obj-white-choices">
         <label><input type="checkbox" disabled> private</label>
@@ -182,6 +185,7 @@
           b.style.left = a.x * 100 + "%";
           b.style.top = a.y * 100 + "%";
           b.textContent = a.title;
+          a.__btn = b;
           b.addEventListener("click", function (e) {
             e.stopPropagation(); // don't also trigger the stage's add-new-annotation click
             if (a.type === "remark") {
@@ -196,7 +200,10 @@
         });
       }
 
+      var openRemarkAnnotation = null;
+
       function openRemarkCard(annotation) {
+        closeRemarkCard();
         remarkCard.style.left = annotation.x * 100 + "%";
         remarkCard.style.top = annotation.y * 100 + "%";
         document.getElementById("remarkTitle").textContent = annotation.title;
@@ -204,10 +211,14 @@
         document.getElementById("remarkStoryBox").checked = false;
         document.getElementById("remarkRemarkBox").checked = true;
         remarkCard.hidden = false;
+        openRemarkAnnotation = annotation;
+        if (annotation.__btn) annotation.__btn.hidden = true; // the pill becomes this card
       }
 
       function closeRemarkCard() {
         remarkCard.hidden = true;
+        if (openRemarkAnnotation && openRemarkAnnotation.__btn) openRemarkAnnotation.__btn.hidden = false;
+        openRemarkAnnotation = null;
       }
 
       var white = document.getElementById("objWhite");
@@ -226,7 +237,13 @@
         if (item.annotations.length) {
           item.annotations.forEach(function (a) {
             var li = document.createElement("li");
-            li.textContent = a.title;
+            var text = document.createElement("span");
+            text.textContent = a.title;
+            var dash = document.createElement("span");
+            dash.className = "obj-white-list-dash";
+            dash.textContent = "−";
+            li.appendChild(text);
+            li.appendChild(dash);
             ul.appendChild(li);
           });
         } else {
