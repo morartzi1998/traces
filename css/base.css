@@ -166,6 +166,19 @@ body {
   z-index: 9998;
 }
 
+/* ---------- Animated film grain (js/grain.js) ---------- */
+
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9997;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
