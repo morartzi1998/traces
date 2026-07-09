@@ -63,12 +63,15 @@
 /* ---------- Grid ---------- */
 
 .gal-grid {
-  flex: 1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 200px));
-  justify-content: space-between;
-  gap: 2.2vh 3vw;
-  align-content: center;
+  grid-template-columns: repeat(4, minmax(0, 215px));
+  justify-content: center;
+  column-gap: clamp(20px, 2vw, 40px);
+  row-gap: clamp(24px, 3vh, 44px);
+  align-content: start;
+  max-width: 1040px;
+  margin: 1vh auto 0;
+  width: 100%;
 }
 
 .gal-meta {
@@ -85,23 +88,25 @@
   width: 100%;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   border: none;
-  padding: 7px 7px 27px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  /* thick lower frame like the welcome-screen polaroids */
+  padding: 12px 12px 42px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   position: relative;
   text-align: left;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .gal-card:hover {
-  transform: translateY(-4px);
+  transform: rotate(-0.8deg) translateY(-8px) scale(1.02);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
 }
 
 .gal-card img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1.02; /* portrait polaroid, like the source */
-  object-fit: contain;
+  aspect-ratio: 1 / 1.06; /* portrait polaroid, like the welcome cards */
+  object-fit: cover;
   background: var(--photo-backdrop); /* archive: neutral gray backdrop */
 }
 
@@ -112,14 +117,16 @@
 
 .gal-caption {
   position: absolute;
-  bottom: 7px;
-  left: 10px;
-  right: 10px;
+  bottom: 10px;
+  left: 14px;
+  right: 12px;
   font-family: var(--font-caption);
-  font-size: 0.85rem;
+  font-size: 1.15rem;
+  line-height: 1;
   color: var(--color-caption-blue);
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------- Small screens ---------- */
