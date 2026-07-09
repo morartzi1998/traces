@@ -72,12 +72,12 @@
 :root {
   --color-bg: #161616;
   --color-cream: #f0eeea;
-  --color-caption-blue: #2a48da;
+  --color-caption-blue: #0a25b4;
   --color-polaroid: #f0eeea;
   --photo-backdrop: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
     linear-gradient(180deg, rgba(29, 29, 61, 0.41), rgba(0, 0, 0, 0.41)),
     #8a8a8f;
-  --color-ink-blue: #2a48da;
+  --color-ink-blue: #0a25b4;
   --font-display: "Vito Extended", "Helvetica Neue", Arial, sans-serif;
   --font-wide: "Vito Wide", "Helvetica Neue", Arial, sans-serif;
   --font-caption: "Lumend Blur Demo", "Segoe Script", cursive;

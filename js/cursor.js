@@ -116,7 +116,7 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (points.length > 1) {
-        var color = isActive ? "42, 72, 218" : "240, 238, 234"; // rgb of --color-caption-blue / --color-cream
+        var color = isActive ? "10, 37, 180" : "240, 238, 234"; // rgb of --color-caption-blue / --color-cream
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.filter = "blur(0.6px)";

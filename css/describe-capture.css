@@ -152,7 +152,7 @@
 
 .text-input::placeholder,
 .text-area::placeholder {
-  color: rgba(42, 72, 218, 0.5);
+  color: rgba(10, 37, 180, 0.5);
   text-transform: lowercase;
 }
 
