@@ -12,6 +12,13 @@
 <script src="../js/tilt3d.js" defer></script>
 <script src="../js/flow.js" defer></script>
 <script type="module" src="../js/vendor/model-viewer.min.js"></script>
+<script type="module">
+  // serve the Draco decoder locally (the "my old living room" space scan is
+  // Draco-compressed) instead of depending on an external CDN.
+  customElements.whenDefined("model-viewer").then(function () {
+    customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
+  });
+</script>
 </head>
 <body>
 
@@ -138,6 +145,7 @@
       var order = ["chandelier", "room", "couch", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
       var catalog = {
         room: { kind: "space", title: "My old living room", img: "../assets/images/photo-room.png",
+          model: "../assets/models/room.glb",
           connected: "", feeling: "the room where everything happened - dinners, naps, matches on tv.",
           annotations: [] },
         chandelier: { kind: "object", title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
