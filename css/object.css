@@ -240,7 +240,8 @@
   bottom: 0;
   width: clamp(320px, 26vw, 440px);
   z-index: 5;
-  background: var(--color-ink-blue);
+  background: var(--color-ink-blue) url("../assets/images/paper-texture.png") center / cover;
+  background-blend-mode: overlay;
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -479,10 +480,7 @@
   width: clamp(320px, 26vw, 440px);
   overflow-y: auto;
   z-index: 5;
-  /* translucent frosted paper so the space behind shows through */
-  background: rgba(240, 238, 234, 0.82);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  background: #f0eeea url("../assets/images/paper-texture.png") center / cover;
   color: var(--color-ink-blue);
   font-family: var(--font-caption);
   padding: 28px 30px;
@@ -490,17 +488,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-/* faint paper grain kept over the translucent panel */
-.obj-white::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: url("../assets/images/paper-texture.png") center / cover;
-  opacity: 0.22;
-  pointer-events: none;
-  z-index: -1;
 }
 
 .obj-white-title {
@@ -613,5 +600,59 @@
 }
 
 .obj-white-edit:hover {
+  opacity: 0.88;
+}
+
+/* ---------- White panel edit-in-place mode ---------- */
+
+.obj-white .wo-edit { display: none; }
+.obj-white.editing .wo-read { display: none; }
+.obj-white.editing .wo-edit { display: block; }
+.obj-white.editing .obj-white-actions.wo-edit { display: flex; }
+.obj-white.editing .obj-white-choices input { opacity: 1; }
+
+.obj-white-input,
+.obj-white-text {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--color-ink-blue);
+  color: var(--color-ink-blue);
+  font-family: var(--font-caption);
+  font-size: 0.9rem;
+  padding: 8px 11px;
+  border-radius: 0;
+}
+
+.obj-white-text {
+  min-height: 120px;
+  resize: none;
+  line-height: 1.45;
+}
+
+.obj-white-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.obj-white-btn {
+  flex: 1;
+  font-family: var(--font-drawn);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  padding: 11px 8px;
+  border: 1px solid var(--color-ink-blue);
+  background: transparent;
+  color: var(--color-ink-blue);
+  cursor: pointer;
+}
+
+.obj-white-btn--solid {
+  background: var(--color-ink-blue);
+  color: #ffffff;
+}
+
+.obj-white-btn:hover {
   opacity: 0.88;
 }

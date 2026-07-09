@@ -239,7 +239,8 @@
 /* Swapped in over the cream sidebar while pinning a new annotation. */
 
 .sidebar.sidebar--blue {
-  background: var(--color-ink-blue);
+  background: var(--color-ink-blue) url("../assets/images/paper-texture.png") center / cover;
+  background-blend-mode: overlay;
   color: #ffffff;
 }
 
