@@ -1,12 +1,12 @@
 /*
-  traces — animated film grain
-  A faint monochrome grain flickers across the whole interface, giving the
-  cream surfaces the living, analog "paper under light" quality from the
-  reference. The grain is regenerated a few times a second (not every
-  frame) so it reads as a gentle flicker rather than harsh TV static.
+  traces — background flicker
+  A very faint, low-contrast noise sits over the whole interface and
+  gently flickers, giving the background a living, analog shimmer. It is
+  deliberately subtle: a soft-light blend at low opacity whose strength
+  also breathes over time, so it reads as a quiet flicker rather than
+  visible static. Honours prefers-reduced-motion (one static, still layer).
 
   Include on every screen: <script src="js/grain.js" defer></script>
-  Honours prefers-reduced-motion (renders one static grain, no flicker).
 */
 
 (function () {
@@ -15,27 +15,22 @@
   var view = document.createElement("canvas");
   view.className = "grain-overlay";
   view.setAttribute("aria-hidden", "true");
-
-  function mount() {
-    (document.body || document.documentElement).appendChild(view);
-    start();
-  }
-
   var vctx = view.getContext("2d");
 
-  // small noise buffer, scaled up over the viewport for a soft, filmic grain
+  // small noise buffer, softly scaled up over the viewport
   var noise = document.createElement("canvas");
-  noise.width = 140;
-  noise.height = 80;
+  noise.width = 90;
+  noise.height = 52;
   var nctx = noise.getContext("2d");
 
   function drawNoise() {
     var img = nctx.createImageData(noise.width, noise.height);
     var d = img.data;
     for (var i = 0; i < d.length; i += 4) {
-      var v = 120 + Math.random() * 135; // light-ish grey specks
+      // low-contrast grey clustered around mid so soft-light barely nudges
+      var v = 118 + Math.random() * 40;
       d[i] = d[i + 1] = d[i + 2] = v;
-      d[i + 3] = Math.random() * 255; // varied alpha = uneven grain
+      d[i + 3] = 40 + Math.random() * 90;
     }
     nctx.putImageData(img, 0, 0);
   }
@@ -45,14 +40,13 @@
     view.height = Math.ceil(window.innerHeight / 2);
     drawNoise();
     vctx.clearRect(0, 0, view.width, view.height);
-    // random sub-pixel offset each redraw adds to the flicker
-    var ox = (Math.random() * 12 - 6) | 0;
-    var oy = (Math.random() * 12 - 6) | 0;
-    vctx.drawImage(noise, ox, oy, view.width + 12, view.height + 12);
+    var ox = (Math.random() * 10 - 5) | 0;
+    var oy = (Math.random() * 10 - 5) | 0;
+    vctx.drawImage(noise, ox, oy, view.width + 10, view.height + 10);
   }
 
   var last = 0;
-  var INTERVAL = 90; // ms between grain redraws (~11 fps flicker)
+  var INTERVAL = 130; // ms between redraws (~7-8 fps: a quiet flicker, not static)
 
   function start() {
     if (reduce) { paint(); return; }
@@ -61,6 +55,11 @@
       if (t - last > INTERVAL) { paint(); last = t; }
       requestAnimationFrame(loop);
     })(0);
+  }
+
+  function mount() {
+    (document.body || document.documentElement).appendChild(view);
+    start();
   }
 
   window.addEventListener("resize", function () { if (!reduce) paint(); });
