@@ -48,7 +48,20 @@
       <img class="obj-photo" id="objPhoto" src="" alt="">
     </div>
 
-    <div class="obj-tags" id="objTags"></div>
+    <div class="obj-tags" id="objTags">
+      <!-- compact card for a saved "remark" annotation: pops up next to its pin -->
+      <div class="remark-card" id="remarkCard" hidden>
+        <div class="remark-card-head">
+          <h3 id="remarkTitle"></h3>
+          <button class="remark-card-close" type="button" id="remarkClose" aria-label="Close">&minus;</button>
+        </div>
+        <div class="remark-card-choices">
+          <label><input type="checkbox" id="remarkStoryBox" disabled> story</label>
+          <label><input type="checkbox" id="remarkRemarkBox" disabled> remark</label>
+        </div>
+        <p class="remark-card-text" id="remarkText"></p>
+      </div>
+    </div>
 
     <!-- white details panel (video t=36): title, connection, feeling, annotations, edit -->
     <aside class="obj-white" id="objWhite" hidden>
@@ -72,10 +85,11 @@
       <button class="obj-white-edit" type="button" onclick="goTo('describe-capture.html')">Edit</button>
     </aside>
 
-    <!-- blue annotation panel: read or write a story (p24 / p26) -->
+    <!-- blue annotation panel: write a new one, or view/edit a saved "story" (p24 / p26) -->
     <aside class="obj-blue" id="objBlue" hidden>
       <header class="obj-blue-head">
         <h2 id="blueTitle">Describe your thought and memories in this particular annotations</h2>
+        <button class="obj-blue-close" type="button" id="blueClose" aria-label="Collapse" hidden>&minus;</button>
       </header>
       <div class="obj-blue-body">
         <p class="obj-blue-label">Type of annotation</p>
@@ -83,13 +97,24 @@
           <label><input type="checkbox" id="blueStory" checked> story</label>
           <label><input type="checkbox" id="blueRemark"> remark</label>
         </div>
-        <p class="obj-blue-label">Annotation's title</p>
-        <input class="obj-blue-input" id="blueName" type="text">
-        <p class="obj-blue-label">Explain what this part evokes in you</p>
-        <textarea class="obj-blue-text" id="blueText"></textarea>
-        <div class="obj-blue-actions">
-          <button class="obj-blue-btn" type="button" id="blueCancel">Cancel</button>
-          <button class="obj-blue-btn obj-blue-btn--solid" type="button" id="blueSave">Save annotation</button>
+
+        <div id="blueEditFields">
+          <p class="obj-blue-label">Annotation's title</p>
+          <input class="obj-blue-input" id="blueName" type="text">
+          <p class="obj-blue-label">Explain what this part evokes in you</p>
+          <textarea class="obj-blue-text" id="blueText"></textarea>
+          <div class="obj-blue-actions">
+            <button class="obj-blue-btn" type="button" id="blueCancel">Cancel</button>
+            <button class="obj-blue-btn obj-blue-btn--solid" type="button" id="blueSave">Save annotation</button>
+          </div>
+        </div>
+
+        <div id="blueViewFields" hidden>
+          <p class="obj-blue-label">Explain what this part evokes in you</p>
+          <p class="obj-blue-view-text" id="blueViewText"></p>
+          <div class="obj-blue-actions">
+            <button class="obj-blue-btn obj-blue-btn--solid obj-blue-btn--full" type="button" id="blueEdit">Edit</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -112,14 +137,14 @@
           connected: "my old living room",
           feeling: "old lamp from georgia at soviet union times that my father brought from his childhood home. it was in the house for 30 years but recently was replaced.",
           annotations: [
-            { x: 0.46, y: 0.72, title: "missing", text: "one bulb has been missing for years - we never replaced it." },
-            { x: 0.58, y: 0.4, title: "lights", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
+            { x: 0.46, y: 0.72, title: "missing", type: "remark", text: "one bulb has been missing for years - we never replaced it." },
+            { x: 0.58, y: 0.4, title: "lights", type: "story", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
           ] },
         couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
-          annotations: [{ x: 0.35, y: 0.5, title: "worn armrest", text: "his side. always his side." }] },
+          annotations: [{ x: 0.35, y: 0.5, title: "worn armrest", type: "story", text: "his side. always his side." }] },
         teddy: { title: "Childhood tedy", img: "../assets/images/photo-teddy.png", annotations: [] },
         souvenirs: { title: "Souvenirs from europe", img: "../assets/images/photo-souvenirs.png",
-          annotations: [{ x: 0.3, y: 0.45, title: "delft windmill", text: "bought in amsterdam, summer 2009." }] },
+          annotations: [{ x: 0.3, y: 0.45, title: "delft windmill", type: "remark", text: "bought in amsterdam, summer 2009." }] },
         bed: { title: "20 year old bed", img: "../assets/images/photo-bed.png", annotations: [] },
         cabinet: { title: "Souvenirs storage", img: "../assets/images/photo-cabinet.png", annotations: [] },
         curtain: { title: "Favorite corner", img: "../assets/images/photo-curtain.png", annotations: [] },
@@ -129,14 +154,16 @@
       var stage = document.getElementById("objStage");
       var tags = document.getElementById("objTags");
       var blue = document.getElementById("objBlue");
+      var remarkCard = document.getElementById("remarkCard");
       var menu = document.getElementById("objMenu");
       var key = "chandelier";
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
       if (!catalog[key]) key = "chandelier";
       var pendingSpot = null;
+      var editingAnnotation = null; // the saved annotation currently open in edit mode, if any
 
       function renderTags() {
-        tags.innerHTML = "";
+        tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
         catalog[key].annotations.forEach(function (a) {
           var b = document.createElement("button");
           b.className = "obj-tag";
@@ -146,10 +173,30 @@
           b.textContent = a.title;
           b.addEventListener("click", function (e) {
             e.stopPropagation(); // don't also trigger the stage's add-new-annotation click
-            openBlue(a);
+            if (a.type === "remark") {
+              closeBlue();
+              openRemarkCard(a);
+            } else {
+              closeRemarkCard();
+              openBlue(a);
+            }
           });
           tags.appendChild(b);
         });
+      }
+
+      function openRemarkCard(annotation) {
+        remarkCard.style.left = annotation.x * 100 + "%";
+        remarkCard.style.top = annotation.y * 100 + "%";
+        document.getElementById("remarkTitle").textContent = annotation.title;
+        document.getElementById("remarkText").textContent = annotation.text;
+        document.getElementById("remarkStoryBox").checked = false;
+        document.getElementById("remarkRemarkBox").checked = true;
+        remarkCard.hidden = false;
+      }
+
+      function closeRemarkCard() {
+        remarkCard.hidden = true;
       }
 
       var white = document.getElementById("objWhite");
@@ -186,6 +233,7 @@
       // story/remark panel instead of the small inline editor.
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
+        closeRemarkCard();
         var r = stage.getBoundingClientRect();
         openBlue(null, { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
       });
@@ -197,6 +245,7 @@
         photo.src = catalog[k].img;
         photo.alt = catalog[k].title;
         closeBlue();
+        closeRemarkCard();
         white.hidden = true;
         fillWhite(catalog[k]);
         renderTags();
@@ -205,25 +254,81 @@
       document.getElementById("objTitle").addEventListener("click", function () {
         fillWhite(catalog[key]);
         white.hidden = !white.hidden;
-        if (!white.hidden) closeBlue();
+        if (!white.hidden) { closeBlue(); closeRemarkCard(); }
       });
 
-      function openBlue(annotation, spot) {
+      var blueHead = document.querySelector(".obj-blue-head");
+      var blueClose = document.getElementById("blueClose");
+      var blueEditFields = document.getElementById("blueEditFields");
+      var blueViewFields = document.getElementById("blueViewFields");
+      var blueStoryBox = document.getElementById("blueStory");
+      var blueRemarkBox = document.getElementById("blueRemark");
+
+      blueStoryBox.addEventListener("change", function () {
+        if (blueStoryBox.checked) blueRemarkBox.checked = false;
+      });
+      blueRemarkBox.addEventListener("change", function () {
+        if (blueRemarkBox.checked) blueStoryBox.checked = false;
+      });
+
+      // create a new annotation, or edit a saved one (annotation + edit === true)
+      function openBlueEdit(annotation, spot) {
         pendingSpot = spot || null;
+        editingAnnotation = annotation || null;
         blue.hidden = false;
         white.hidden = true;
-        document.getElementById("blueTitle").textContent = annotation
-          ? annotation.title
-          : "Describe your thought and memories in this particular annotations";
+        blueHead.classList.remove("obj-blue-head--view");
+        blueClose.hidden = true;
+        blueEditFields.hidden = false;
+        blueViewFields.hidden = true;
+        document.getElementById("blueTitle").textContent =
+          "Describe your thought and memories in this particular annotations";
+        blueStoryBox.disabled = false;
+        blueRemarkBox.disabled = false;
+        var type = annotation ? annotation.type : "story";
+        blueStoryBox.checked = type !== "remark";
+        blueRemarkBox.checked = type === "remark";
         document.getElementById("blueName").value = annotation ? annotation.title : "";
         document.getElementById("blueText").value = annotation ? annotation.text : "";
         document.getElementById("blueSave").textContent = annotation ? "Save changes" : "Save annotation";
       }
 
+      // view a saved "story" annotation: read-only, collapsible, with an Edit button
+      function openBlueView(annotation) {
+        pendingSpot = null;
+        editingAnnotation = annotation;
+        blue.hidden = false;
+        white.hidden = true;
+        blueHead.classList.add("obj-blue-head--view");
+        blueClose.hidden = false;
+        blueEditFields.hidden = true;
+        blueViewFields.hidden = false;
+        document.getElementById("blueTitle").textContent = annotation.title;
+        blueStoryBox.disabled = true;
+        blueRemarkBox.disabled = true;
+        blueStoryBox.checked = annotation.type !== "remark";
+        blueRemarkBox.checked = annotation.type === "remark";
+        document.getElementById("blueViewText").textContent = annotation.text;
+      }
+
+      function openBlue(annotation, spot) {
+        if (annotation) {
+          openBlueView(annotation);
+        } else {
+          openBlueEdit(null, spot);
+        }
+      }
+
       function closeBlue() {
         blue.hidden = true;
         pendingSpot = null;
+        editingAnnotation = null;
       }
+
+      blueClose.addEventListener("click", closeBlue);
+      document.getElementById("blueEdit").addEventListener("click", function () {
+        openBlueEdit(editingAnnotation);
+      });
 
       document.getElementById("objPrev").addEventListener("click", function () {
         show(order[(order.indexOf(key) + order.length - 1) % order.length]);
@@ -237,6 +342,7 @@
       });
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
+        closeRemarkCard();
         openBlue(null);
       });
 
@@ -244,15 +350,18 @@
       document.getElementById("blueSave").addEventListener("click", function () {
         var title = document.getElementById("blueName").value.trim();
         var text = document.getElementById("blueText").value.trim();
+        var type = blueRemarkBox.checked ? "remark" : "story";
         if (title) {
-          var existing = catalog[key].annotations.find(function (a) { return a.title === title; });
-          if (existing) {
-            existing.text = text;
+          if (editingAnnotation) {
+            editingAnnotation.title = title;
+            editingAnnotation.text = text;
+            editingAnnotation.type = type;
           } else {
             catalog[key].annotations.push({
               x: pendingSpot ? pendingSpot.x : 0.5,
               y: pendingSpot ? pendingSpot.y : 0.5,
               title: title,
+              type: type,
               text: text,
             });
           }
@@ -260,6 +369,8 @@
         }
         closeBlue();
       });
+
+      document.getElementById("remarkClose").addEventListener("click", closeRemarkCard);
 
       function boot() {
         initTilt3D(stage, photo);
