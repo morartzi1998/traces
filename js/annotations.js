@@ -16,7 +16,12 @@
   if (!canvas || !list || !count || !blueSidebar || !defaultSidebar) return;
 
   var empty = list.querySelector(".annotations-empty");
-  var annotations = [];
+  // the freshly-scanned capture already carries its annotations, shown as
+  // pins on the object straight away (matches the object view).
+  var annotations = [
+    { x: 0.46, y: 0.72, title: "missing", text: "one bulb has been missing for years - we never replaced it." },
+    { x: 0.58, y: 0.4, title: "lights", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
+  ];
   var pendingSpot = null;
   var pendingMarker = null;
 
