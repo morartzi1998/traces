@@ -80,9 +80,11 @@
   --color-ink-blue: #0a25b4;
   --font-display: "Vito Extended", "Helvetica Neue", Arial, sans-serif;
   --font-wide: "Vito Wide", "Helvetica Neue", Arial, sans-serif;
-  --font-caption: "Lumend Blur Demo", "Segoe Script", cursive;
-  --font-ink: "Lumend Demo", "Courier New", monospace;
-  --font-drawn: "Lumend Rounded Drawn Demo", "Courier New", monospace;
+  /* Lumend is the real design face; until its files are added, fall back to a
+     clean neutral sans (never Courier / cursive, which aren't in the design). */
+  --font-caption: "Lumend Blur Demo", "Helvetica Neue", Arial, sans-serif;
+  --font-ink: "Lumend Demo", "Helvetica Neue", Arial, sans-serif;
+  --font-drawn: "Lumend Rounded Drawn Demo", "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ---------- Reset ---------- */
