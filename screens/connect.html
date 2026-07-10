@@ -95,7 +95,7 @@
     function connectObject(pickedKey) {
       try {
         var cur = sessionStorage.getItem("traces-item") || "chandelier";
-        sessionStorage.setItem("traces-conn-" + cur, pickedKey);
+        localStorage.setItem("traces-conn-" + cur, pickedKey);
       } catch (e) {}
       goTo("object.html");
     }

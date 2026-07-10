@@ -167,7 +167,7 @@
           feeling: "old lamp from georgia at soviet union times that my father brought from his childhood home. it was in the house for 30 years but recently was replaced.",
           annotations: [
             { x: 0.46, y: 0.72, title: "missing", type: "remark", text: "one bulb has been missing for years - we never replaced it." },
-            { x: 0.58, y: 0.4, title: "lights", type: "story", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
+            { x: 0.5, y: 0.4, title: "lights", type: "story", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
           ] },
         couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
           model: "../assets/models/couch.glb",
@@ -186,6 +186,39 @@
         curtain: { title: "Favorite corner", img: "../assets/images/photo-curtain.png", annotations: [] },
         table: { title: "Old table", img: "../assets/images/photo-table.png", annotations: [] },
       };
+
+      // ----- persistence: edits, annotations and connections survive reloads -----
+      var STORE = "traces-store-v1";
+      function loadStore() {
+        try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; }
+      }
+      function saveStore(s) {
+        try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
+      }
+      (function applyStore() {
+        var s = loadStore();
+        Object.keys(s).forEach(function (k) {
+          if (!catalog[k]) return;
+          var o = s[k];
+          if (o.title != null) catalog[k].title = o.title;
+          if (o.feeling != null) catalog[k].feeling = o.feeling;
+          if (o.kind != null) catalog[k].kind = o.kind;
+          if (o.connected != null) catalog[k].connected = o.connected;
+          if (Array.isArray(o.annotations)) catalog[k].annotations = o.annotations;
+        });
+      })();
+      function persist(k) {
+        var s = loadStore();
+        var it = catalog[k];
+        s[k] = {
+          title: it.title, feeling: it.feeling, kind: it.kind, connected: it.connected,
+          annotations: it.annotations.map(function (a) {
+            return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
+              pos: a.pos || null, normal: a.normal || null };
+          }),
+        };
+        saveStore(s);
+      }
 
       var stage = document.getElementById("objStage");
       var tags = document.getElementById("objTags");
@@ -209,25 +242,80 @@
         stage.removeAttribute("data-crosshair");
       }
 
-      function renderTags() {
+      // a marker = a small blue colour cube next to a label strip
+      function buildMarker(el, title) {
+        var cube = document.createElement("span");
+        cube.className = "obj-tag-cube";
+        var label = document.createElement("span");
+        label.className = "obj-tag-label";
+        label.textContent = title;
+        el.appendChild(cube);
+        el.appendChild(label);
+      }
+
+      function onAnnotationClick(a) {
+        if (a.type === "remark") { closeBlue(); openRemarkCard(a); }
+        else { closeRemarkCard(); openBlue(a); }
+      }
+
+      function clearHotspots() {
+        modelViewer.querySelectorAll(".obj-hotspot").forEach(function (n) { n.remove(); });
+      }
+
+      // raycast a stored fractional (x,y) onto the loaded mesh so an older
+      // 2D annotation gains a 3D anchor that tracks the model when it rotates
+      function convertTo3D(a) {
+        var rect = modelViewer.getBoundingClientRect();
+        var cx = rect.left + a.x * rect.width, cy = rect.top + a.y * rect.height;
+        // the stored point may land just off the mesh (between arms, etc.);
+        // spiral outward a little to snap onto the nearest surface
+        var offs = [[0, 0], [0, -14], [0, 14], [-14, 0], [14, 0], [-12, -12],
+          [12, -12], [-12, 12], [12, 12], [0, -28], [0, 28], [-26, 0], [26, 0],
+          [0, -44], [0, 44], [-42, 0], [42, 0]];
+        for (var i = 0; i < offs.length; i++) {
+          var hit = modelViewer.positionAndNormalFromPoint(cx + offs[i][0], cy + offs[i][1]);
+          if (hit && hit.position) {
+            a.pos = hit.position.toString();
+            a.normal = hit.normal ? hit.normal.toString() : null;
+            return;
+          }
+        }
+      }
+
+      // annotations render as model-viewer hotspots on a 3D capture (so they
+      // stay pinned to the surface as it turns), or as flat pins on a photo
+      function renderAnnotations() {
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
-        catalog[key].annotations.forEach(function (a) {
+        clearHotspots();
+        var isModel = !!catalog[key].model && !modelViewer.hidden;
+        var ready = isModel && modelViewer.loaded;
+        catalog[key].annotations.forEach(function (a, i) {
+          if (ready) {
+            if (!a.pos) convertTo3D(a);
+            if (a.pos) {
+              var h = document.createElement("button");
+              h.className = "obj-hotspot";
+              h.type = "button";
+              h.slot = "hotspot-" + i;
+              h.dataset.position = a.pos;
+              if (a.normal) h.dataset.normal = a.normal;
+              buildMarker(h, a.title);
+              a.__btn = h;
+              h.addEventListener("click", function (e) { e.stopPropagation(); onAnnotationClick(a); });
+              modelViewer.appendChild(h);
+              return;
+            }
+          }
           var b = document.createElement("button");
           b.className = "obj-tag";
           b.type = "button";
           b.style.left = a.x * 100 + "%";
           b.style.top = a.y * 100 + "%";
-          b.textContent = a.title;
+          buildMarker(b, a.title);
           a.__btn = b;
           b.addEventListener("click", function (e) {
             e.stopPropagation(); // don't also trigger the stage's add-new-annotation click
-            if (a.type === "remark") {
-              closeBlue();
-              openRemarkCard(a);
-            } else {
-              closeRemarkCard();
-              openBlue(a);
-            }
+            onAnnotationClick(a);
           });
           tags.appendChild(b);
         });
@@ -308,6 +396,11 @@
         mvDown = null;
       });
 
+      // once the mesh is ready, (re)draw annotations as 3D-anchored hotspots
+      modelViewer.addEventListener("load", function () {
+        if (catalog[key].model) renderAnnotations();
+      });
+
       // plain click on the capture toggles its info panel (like clicking the
       // title); the crosshair pick-a-point flow only runs while annotateMode
       // is active, entered via the menu's "Add an annotations" item.
@@ -317,6 +410,14 @@
         if (annotateMode) {
           var r = stage.getBoundingClientRect();
           var spot = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+          // on a 3D capture, anchor the new pin to the picked surface point
+          if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
+            var hit = modelViewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+            if (hit && hit.position) {
+              spot.pos = hit.position.toString();
+              spot.normal = hit.normal ? hit.normal.toString() : null;
+            }
+          }
           exitAnnotateMode();
           openBlueEdit(null, spot);
         } else {
@@ -329,6 +430,7 @@
       function show(k) {
         key = k;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
+        clearHotspots();
         document.getElementById("objTitle").textContent = catalog[k].title;
         if (catalog[k].model) {
           stage.dataset.mode = "model";
@@ -344,9 +446,9 @@
         }
         // a capture linked to another (via the connect screen) glows blue
         var conn = null;
-        try { conn = sessionStorage.getItem("traces-conn-" + k); } catch (e) {}
+        try { conn = localStorage.getItem("traces-conn-" + k); } catch (e) {}
         stage.classList.toggle("obj-connected", !!conn);
-        if (conn && catalog[conn]) catalog[k].connected = catalog[conn].title;
+        if (conn && catalog[conn]) { catalog[k].connected = catalog[conn].title; persist(k); }
 
         exitAnnotateMode();
         exitWhiteEdit();
@@ -354,7 +456,7 @@
         closeRemarkCard();
         white.hidden = true;
         fillWhite(catalog[k]);
-        renderTags();
+        renderAnnotations();
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
@@ -396,6 +498,7 @@
         if (t) item.title = t;
         item.feeling = document.getElementById("whiteFeelingInput").value.trim();
         item.kind = document.getElementById("whiteSpace").checked ? "space" : "object";
+        persist(key);
         exitWhiteEdit();
         document.getElementById("objTitle").textContent = item.title;
         fillWhite(item);
@@ -513,12 +616,15 @@
             catalog[key].annotations.push({
               x: pendingSpot ? pendingSpot.x : 0.5,
               y: pendingSpot ? pendingSpot.y : 0.5,
+              pos: pendingSpot ? pendingSpot.pos : null,
+              normal: pendingSpot ? pendingSpot.normal : null,
               title: title,
               type: type,
               text: text,
             });
           }
-          renderTags();
+          persist(key);
+          renderAnnotations();
         }
         closeBlue();
       });
