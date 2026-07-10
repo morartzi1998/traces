@@ -1,43 +1,42 @@
-/* Processing — the point cloud sharpens on a light drafting grid */
+/* Processing — the point cloud sharpens on a dark drafting grid */
 
 .proc-screen {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background-color: #6f6c62;
-  /* drafting grid: fine lines with node dots at the intersections */
+  background-color: #131210;
+  /* faint drafting grid with node dots at the intersections */
   background-image:
-    radial-gradient(circle, rgba(30, 28, 24, 0.4) 1.2px, transparent 1.4px),
-    linear-gradient(rgba(30, 28, 24, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 28, 24, 0.18) 1px, transparent 1px);
-  background-size: 72px 72px, 72px 72px, 72px 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    radial-gradient(circle, rgba(255, 255, 255, 0.16) 1.1px, transparent 1.4px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 74px 74px, 74px 74px, 74px 74px;
 }
 
+/* the reconstructing capture sits to the right */
 .proc-cloud {
   position: absolute;
-  left: 50%;
-  bottom: 6vh;
-  transform: translateX(-50%);
-  height: 82vh;
+  right: 4vw;
+  bottom: 8vh;
+  height: 78vh;
   filter: blur(17px) saturate(0.85);
   pointer-events: none;
   user-select: none;
 }
 
+/* status text sits on the left */
 .proc-status {
-  position: relative;
+  position: absolute;
+  left: 4vw;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 1;
   font-family: var(--font-display);
-  font-size: clamp(2.6rem, 5vw, 4.5rem);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: clamp(2.6rem, 5.5vw, 5rem);
   color: #ffffff;
-  text-shadow: 0 2px 22px rgba(40, 36, 28, 0.55), 0 0 3px rgba(40, 36, 28, 0.4);
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  text-align: left;
+  letter-spacing: 0.01em;
 }
 
 .proc-actions {
@@ -55,13 +54,13 @@
   font-size: 0.85rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 9px 34px;
+  padding: 9px 40px;
   cursor: pointer;
 }
 
 .proc-cancel {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.75);
   color: #ffffff;
 }
 
