@@ -22,37 +22,25 @@
   letter-spacing: 0.06em;
 }
 
-/* Add-new-capture is its own polaroid card: a dimmed placeholder photo with
-   the blue call-to-action laid over it, so it always reads as a layer on an
-   image (same frame and size as the surrounding captures). */
+/* Add-new-capture is a blue text layer that overlaps the last polaroid and
+   spills past it, keeping the layering play (never a standalone card). */
 .gal-add {
-  align-items: stretch;
-}
-
-.gal-add-photo {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  background: var(--photo-backdrop);
-  filter: brightness(0.62);
-}
-
-.gal-add-label {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  align-self: center;
+  justify-self: start;
+  margin-left: -150px;  /* pull it back over the previous polaroid */
+  z-index: 6;           /* sit on top of that card */
+  position: relative;
   font-family: var(--font-display);
-  font-size: clamp(1.1rem, 1.5vw, 1.55rem);
+  font-size: clamp(1.3rem, 2vw, 2rem);
   color: var(--color-ink-blue);
   text-decoration: underline;
-  text-underline-offset: 4px;
-  text-align: center;
-  line-height: 1.25;
+  text-underline-offset: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .gal-tools {
@@ -159,6 +147,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- Brick-laid rows ----------
+   Each wrapped row is offset sideways from the one above, like courses of
+   bricks, instead of lining up in rigid symmetric columns. Applied only on
+   the wide 4-column layout. */
+@media (min-width: 1200px) {
+  .gal-item:nth-child(-n+4) { transform: translateX(-62px); }               /* row 1 */
+  .gal-item:nth-child(n+5):nth-child(-n+8) { transform: translateX(62px); } /* row 2 */
+  .gal-item:nth-child(n+9):nth-child(-n+12) { transform: translateX(-62px); } /* row 3 */
 }
 
 /* ---------- Small screens ---------- */
