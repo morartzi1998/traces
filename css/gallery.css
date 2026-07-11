@@ -26,8 +26,7 @@
    spills past it, keeping the layering play (never a standalone card). */
 .gal-add {
   align-self: center;
-  justify-self: start;
-  margin-left: -150px;  /* pull it back over the previous polaroid */
+  margin-left: -46px;   /* overlap the right edge of the last polaroid, spill past it */
   z-index: 6;           /* sit on top of that card */
   position: relative;
   font-family: var(--font-display);
@@ -82,16 +81,25 @@
 
 /* ---------- Grid ---------- */
 
+/* Flex-wrap with centered rows gives the rule the design wants for free:
+   a full row of four fills the width and reads as aligned columns, while a
+   partial row (three, two, one) centres and therefore sits offset from the
+   row above — the brick-course stagger, only where the row isn't full. */
 .gal-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 192px));
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-content: center;
   column-gap: clamp(34px, 3.6vw, 72px);
   row-gap: clamp(22px, 3vh, 40px);
-  align-content: center;
   max-width: 1120px;
   margin: 0 auto;
   width: 100%;
+}
+
+.gal-item {
+  width: 192px;
+  flex: 0 0 auto;
 }
 
 .gal-meta {
@@ -149,26 +157,8 @@
   text-overflow: ellipsis;
 }
 
-/* ---------- Brick-laid rows ----------
-   Each wrapped row is offset sideways from the one above, like courses of
-   bricks, instead of lining up in rigid symmetric columns. Applied only on
-   the wide 4-column layout. */
-@media (min-width: 1200px) {
-  .gal-item:nth-child(-n+4) { transform: translateX(-62px); }               /* row 1 */
-  .gal-item:nth-child(n+5):nth-child(-n+8) { transform: translateX(62px); } /* row 2 */
-  .gal-item:nth-child(n+9):nth-child(-n+12) { transform: translateX(-62px); } /* row 3 */
-}
-
 /* ---------- Small screens ---------- */
 
 @media (max-width: 1100px) {
-  .gal-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 560px) {
-  .gal-grid {
-    grid-template-columns: 1fr;
-  }
+  .gal-item { width: clamp(150px, 40vw, 200px); }
 }
