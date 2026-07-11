@@ -26,12 +26,13 @@
 /* Add-new-capture is a blue text layer that overlaps the last polaroid and
    spills past it, keeping the layering play (never a standalone card). */
 .gal-add {
-  align-self: center;
-  margin-left: -46px;   /* overlap the right edge of the last polaroid, spill past it */
-  z-index: 6;           /* sit on top of that card */
+  align-self: flex-start;    /* sit high, on the upper third of the last polaroid */
+  margin-top: 4.6rem;
+  margin-left: -13vw;        /* overlap onto that polaroid */
+  z-index: 6;                /* layered on top of the card */
   position: relative;
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 2vw, 2rem);
+  font-size: clamp(1.3rem, 2vw, 2.1rem);
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 5px;
@@ -91,15 +92,15 @@
   flex-wrap: wrap;
   justify-content: center;
   align-content: flex-start;
-  column-gap: clamp(30px, 3.2vw, 84px);
+  column-gap: clamp(28px, 3vw, 80px);
   row-gap: clamp(26px, 3.2vh, 52px);
-  max-width: 1720px;
+  max-width: min(1850px, 92vw);
   margin: 0 auto;
   width: 100%;
 }
 
 .gal-item {
-  width: clamp(210px, 17vw, 350px);
+  width: clamp(220px, 17vw, 372px);
   flex: 0 0 auto;
 }
 

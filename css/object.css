@@ -65,11 +65,20 @@
   gap: 16px;
 }
 
+/* menu lives bottom-left (above COMMUNITY) and opens upward */
+.obj-menu-wrap {
+  position: absolute;
+  left: 3.2vw;
+  bottom: 8.5vh;
+  z-index: 20;
+}
+
 .obj-menu-btn {
   background: none;
   border: none;
   color: var(--color-cream);
-  font-size: 1.2rem;
+  font-size: 1.7rem;
+  line-height: 1;
   cursor: pointer;
   padding: 2px;
 }
@@ -83,7 +92,10 @@
 
 .obj-menu {
   list-style: none;
-  margin-top: 14px;
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 14px;
   width: min(360px, 60vw);
 }
 
@@ -120,18 +132,33 @@
 
 .obj-timeline {
   position: absolute;
-  left: 3.4vw;
-  top: 38vh;
+  right: 3.2vw;
+  top: 15vh;
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 8vh;
+  align-items: flex-end;
 }
 
-.obj-timeline::before {
+.obj-history-label {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  margin-bottom: 3vh;
+}
+
+.obj-years {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7vh;
+  padding-right: 20px; /* room for the markers + line on the right */
+}
+
+.obj-years::before {
   content: "";
   position: absolute;
-  left: 4px;
+  right: 4px;
   top: 10px;
   bottom: 10px;
   width: 1px;
@@ -140,8 +167,9 @@
 
 .obj-year {
   position: relative;
-  padding-left: 22px;
-  font-size: 0.8rem;
+  padding-right: 22px;
+  text-align: right;
+  font-size: 0.85rem;
   letter-spacing: 0.06em;
   opacity: 0.75;
   cursor: pointer;
@@ -150,7 +178,7 @@
 .obj-year::before {
   content: "";
   position: absolute;
-  left: 0;
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 9px;
@@ -169,6 +197,7 @@
 
 /* ---------- Arrows ---------- */
 
+/* thin line arrows (← →) like the source, not bold chevrons */
 .obj-arrow {
   position: absolute;
   top: 50%;
@@ -177,7 +206,9 @@
   background: none;
   border: none;
   color: var(--color-cream);
-  font-size: 3.4rem;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 2.9rem;
+  font-weight: 200;
   line-height: 1;
   cursor: pointer;
   padding: 10px 14px;
@@ -188,8 +219,8 @@
   opacity: 1;
 }
 
-.obj-arrow--prev { left: 1.1vw; }
-.obj-arrow--next { right: 1.1vw; }
+.obj-arrow--prev { left: 2.4vw; }
+.obj-arrow--next { right: 2.4vw; }
 
 /* ---------- Stage + tags ---------- */
 
