@@ -122,7 +122,9 @@
 .obj-timeline {
   position: absolute;
   left: 3.4vw;
-  top: 26vh;
+  /* a fixed gap below the title (not a viewport-height offset) so the space
+     between the title and the timeline stays the same on any window shape */
+  top: calc(13vh + 7rem);
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -133,7 +135,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12vh;
+  gap: 5.5rem; /* fixed, so the timeline stays a compact block */
   padding-right: 24px; /* room for the markers + line to the right of the years */
 }
 
