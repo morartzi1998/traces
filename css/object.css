@@ -137,6 +137,7 @@
   flex-direction: column;
   gap: 5.5rem; /* fixed, so the timeline stays a compact block */
   padding-right: 24px; /* room for the markers + line to the right of the years */
+  padding-bottom: 3.2rem; /* the line runs on down to meet the prev arrow */
 }
 
 .obj-years::before {
@@ -144,7 +145,7 @@
   position: absolute;
   right: 4px;
   top: 10px;
-  bottom: 10px;
+  bottom: 0; /* extends past the last year, down toward the arrow */
   width: 1px;
   background: rgba(240, 238, 234, 0.5);
 }
@@ -206,7 +207,17 @@
   opacity: 1;
 }
 
-.obj-arrow--prev { left: 2.4vw; }
+/* the prev arrow is the tail of the timeline: it sits just under the years and
+   its line joins the bottom of the timeline's vertical line */
+.obj-arrow--prev {
+  position: static;
+  transform: none;
+  align-self: flex-start;
+  margin-top: -0.2rem;
+  margin-left: 20px; /* line up the arrow's right end with the vertical line */
+  padding: 6px 0;
+}
+
 .obj-arrow--next { right: 2.4vw; }
 
 /* ---------- Stage + tags ---------- */
