@@ -195,7 +195,7 @@
 
 .obj-stage {
   position: absolute;
-  inset: 10vh 8vw;
+  inset: 0;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -229,7 +229,7 @@
 
 .obj-tags {
   position: absolute;
-  inset: 10vh 8vw;
+  inset: 0;
   z-index: 2;
   pointer-events: none;
 }

@@ -16,17 +16,8 @@
   <div class="gal-screen gal--archive">
 
     <header class="gal-header">
-      <a class="logo gal-logo" href="../index.html">traces</a>
-      <div class="gal-tools">
-        <label class="gal-search">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/>
-            <line x1="15" y1="15" x2="22" y2="22" stroke="currentColor" stroke-width="1.6"/>
-          </svg>
-          <input type="search" aria-label="Search the archive">
-        </label>
-        <span class="nav-link" style="text-decoration:none;opacity:.55">Archive</span>
-      </div>
+      <a class="logo gal-logo nav-corner nav-corner--tl" href="../index.html">traces</a>
+      <span class="nav-link nav-corner nav-corner--tr" style="text-decoration:none;opacity:.55">Archive</span>
     </header>
 
     <main class="gal-grid">
@@ -103,13 +94,16 @@
         </button>
       </article>
 
-      <button class="gal-add" type="button" onclick="goTo('upload.html')">Add New<br>Capture +</button>
+      <button class="gal-card gal-add" type="button" onclick="goTo('upload.html')">
+        <span class="gal-add-photo"></span>
+        <span class="gal-add-label">Add New<br>Capture +</span>
+      </button>
 
     </main>
 
     <footer class="nav-bottom">
-      <button class="nav-link" type="button" onclick="goTo('community.html')">Community</button>
-      <button class="nav-link" type="button" onclick="goTo('about.html')">About</button>
+      <button class="nav-link nav-corner nav-corner--bl" type="button" onclick="goTo('community.html')">Community</button>
+      <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
 
   </div>

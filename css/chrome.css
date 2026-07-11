@@ -15,6 +15,27 @@
   align-items: flex-end;
 }
 
+/* ---------- Consistent corner navigation ----------
+   The logo + three nav links are pinned to the four screen corners,
+   identically on every app screen, so the chrome never shifts in size or
+   position between views and always stays on screen. */
+.nav-corner {
+  position: fixed;
+  z-index: 30;
+}
+
+.nav-corner--tl { top: 2.6vh; left: 2.8vw; }
+.nav-corner--tr { top: 3vh; right: 2.8vw; }
+.nav-corner--bl { bottom: 3.2vh; left: 2.8vw; }
+.nav-corner--br { bottom: 3.2vh; right: 2.8vw; }
+
+/* one consistent logo size for every app screen (welcome keeps its own) */
+.logo.nav-corner--tl {
+  font-size: clamp(1.9rem, 2.6vw, 2.7rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .logo {
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 5vw, 4.375rem);
