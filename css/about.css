@@ -1,39 +1,50 @@
 /* About — the story behind traces */
 
+/* base.css pins html/body to height:100%; let this page grow and scroll */
+html,
+body {
+  height: auto;
+  min-height: 100%;
+}
+
 .ab-screen {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1.8vw 3.2vw 2.2vw;
+  /* room top and bottom so content clears the fixed corner chrome */
+  padding: 10vh 3.2vw 12vh;
 }
 
 .ab-main {
-  flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4vw;
-  padding: 3vh 0;
 }
 
-/* Polaroid pile on the left */
+/* Polaroid pile on the left — stays in view and fans open as you scroll */
 
 .ab-pile {
-  position: relative;
-  flex: 0 0 34%;
-  min-height: 62vh;
+  position: sticky;
+  top: 14vh;
+  align-self: flex-start;
+  flex: 0 0 32%;
+  height: 74vh;
 }
 
 .ab-polaroid {
   position: absolute;
   left: var(--x, 0);
-  top: var(--y, 0);
+  top: 0;
   width: clamp(130px, 11vw, 190px);
   margin: 0;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   padding: 8px 8px 28px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
   transform: rotate(var(--tilt, 0deg));
+  transition: filter 0.25s ease;
+}
+
+/* a soft blur while scrolling, clearing when it stops */
+.ab-pile.is-scrolling .ab-polaroid {
+  filter: blur(1.1px);
 }
 
 .ab-polaroid img {
@@ -65,9 +76,9 @@
 }
 
 .ab-text h1 {
-  font-size: clamp(1.6rem, 2.4vw, 2.3rem);
+  font-size: clamp(2rem, 2.9vw, 2.9rem);
   font-weight: 400;
-  margin-bottom: 3.5vh;
+  margin-bottom: 5vh;
 }
 
 .ab-brand {
@@ -76,12 +87,47 @@
 }
 
 .ab-text p {
-  font-size: clamp(0.85rem, 1vw, 1rem);
-  line-height: 1.65;
-  margin-bottom: 2.2vh;
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.75;
+  margin-bottom: 2.8vh;
   opacity: 0.92;
-  max-width: 52ch;
+  max-width: 46ch;
+  text-transform: lowercase;
   text-wrap: pretty; /* avoid a lone short word stranded on its own line */
+}
+
+/* ---------- Custom blue scroll indicator ---------- */
+
+/* hide the native scrollbar in favour of the blue indicator */
+.ab-screen { scrollbar-width: none; }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar { width: 0; height: 0; }
+
+.ab-scroll {
+  position: fixed;
+  top: 16vh;
+  bottom: 16vh;
+  right: 2.4vw;
+  width: 3px;
+  background: rgba(240, 238, 234, 0.12);
+  z-index: 30;
+  pointer-events: none;
+}
+
+.ab-scroll-thumb {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 5px;
+  height: 60px;
+  background: var(--color-ink-blue);
+  transition: filter 0.25s ease;
+  will-change: transform;
+}
+
+/* blur while scrolling, like the cursor smear */
+.ab-scroll-thumb.is-scrolling {
+  filter: blur(2.4px);
 }
 
 @media (max-width: 900px) {
@@ -90,7 +136,9 @@
   }
 
   .ab-pile {
+    position: relative;
+    top: 0;
     width: 100%;
-    min-height: 46vh;
+    height: 46vh;
   }
 }
