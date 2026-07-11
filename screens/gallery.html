@@ -106,21 +106,13 @@
   </div>
 
   <script>
-    // "Add New Capture" trails the cursor over empty archive space and hides
-    // over a card; clicking the empty space adds a capture.
+    // Clicking anywhere in the empty archive space (where the mouse is) adds a
+    // capture; clicking a card opens that capture.
     (function () {
-      var label = document.querySelector(".gal-add");
       var screen = document.querySelector(".gal-screen");
-      if (!label || !screen) return;
-      screen.addEventListener("mousemove", function (e) {
-        if (e.target.closest(".gal-card")) { label.style.opacity = "0"; return; }
-        label.style.left = e.clientX + "px";
-        label.style.top = e.clientY + "px";
-        label.style.opacity = "1";
-      });
-      screen.addEventListener("mouseleave", function () { label.style.opacity = "0"; });
+      if (!screen) return;
       screen.addEventListener("click", function (e) {
-        if (e.target.closest(".gal-card")) return; // card clicks open the capture
+        if (e.target.closest(".gal-card")) return;
         goTo("upload.html");
       });
     })();

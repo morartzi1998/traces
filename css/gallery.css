@@ -23,26 +23,24 @@
   letter-spacing: 0.06em;
 }
 
-/* Add-new-capture follows the cursor: it trails the mouse over empty archive
-   space (and hides over a card), and clicking the empty space adds a capture. */
+/* Add-new-capture is a static blue text layer on the upper third of the last
+   polaroid; clicking anywhere in the empty archive space also adds a capture. */
 .gal-add {
-  position: fixed;
-  left: 0;
-  top: 0;
-  transform: translate(20px, 16px); /* sit just off the cursor tip */
-  z-index: 40;
-  pointer-events: none;             /* clicks are handled on the screen */
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  align-self: flex-start;
+  margin-top: 4.6rem;
+  margin-left: -13vw;
+  z-index: 6;
+  position: relative;
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 1.8vw, 2rem);
+  font-size: clamp(1.3rem, 2vw, 2.1rem);
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 5px;
   background: none;
   border: none;
+  cursor: pointer;
   text-align: left;
-  line-height: 1.15;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
