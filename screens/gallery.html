@@ -105,18 +105,5 @@
 
   </div>
 
-  <script>
-    // Clicking anywhere in the empty archive space (where the mouse is) adds a
-    // capture; clicking a card opens that capture.
-    (function () {
-      var screen = document.querySelector(".gal-screen");
-      if (!screen) return;
-      screen.addEventListener("click", function (e) {
-        if (e.target.closest(".gal-card")) return;
-        goTo("upload.html");
-      });
-    })();
-  </script>
-
 </body>
 </html>
