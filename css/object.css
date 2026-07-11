@@ -137,16 +137,15 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 5.5rem; /* fixed, so the timeline stays a compact block */
-  padding-bottom: 3.4rem; /* the line continues below the last cube to the chevron */
 }
 
-/* the connecting line runs vertically through the centres of the cubes */
+/* the connecting line runs through the cube centres and stops at the last cube */
 .obj-years::before {
   content: "";
   position: absolute;
   right: 6px;
   top: 6px;
-  bottom: 0;
+  bottom: 6px;
   width: 1px;
   background: rgba(240, 238, 234, 0.7);
 }
@@ -220,8 +219,8 @@
   position: static;
   transform: none;
   align-self: flex-end;
-  margin-top: -0.4rem;
-  margin-right: -3px; /* the chevron's right side meets the vertical line */
+  margin-top: 1.4rem; /* sit just below the last cube, no line between */
+  margin-right: -4px; /* centre the chevron under the cube column */
   padding: 4px 0;
 }
 
