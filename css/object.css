@@ -75,7 +75,7 @@
 }
 
 .obj-title {
-  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  font-size: 1.4rem; /* fixed, so it stays uniform across window widths */
   font-weight: 400;
   letter-spacing: 0.12em;
   text-transform: uppercase;
