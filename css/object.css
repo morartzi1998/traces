@@ -199,7 +199,7 @@
 
 .obj-arrow svg {
   display: block;
-  width: clamp(42px, 3.4vw, 60px);
+  width: 54px; /* fixed, so the prev arrow lines up with the timeline exactly */
   height: auto;
 }
 
@@ -212,10 +212,10 @@
 .obj-arrow--prev {
   position: static;
   transform: none;
-  align-self: flex-start;
-  margin-top: -0.2rem;
-  margin-left: 20px; /* line up the arrow's right end with the vertical line */
-  padding: 6px 0;
+  align-self: flex-end; /* right edge = the timeline's vertical line */
+  margin-top: -1.35rem; /* pull up so the arrow's line meets the line's bottom */
+  margin-right: -3px;   /* nudge the line end onto the vertical line */
+  padding: 0;
 }
 
 .obj-arrow--next { right: 2.4vw; }

@@ -29,7 +29,7 @@
 .gal-add {
   position: fixed;
   top: 20vh;
-  left: 73vw;
+  left: 80vw; /* straddle the teddy's right edge, spilling onto the black */
   z-index: 25;
   font-family: var(--font-display);
   font-size: clamp(1.3rem, 2vw, 2.1rem);
