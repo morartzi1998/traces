@@ -29,23 +29,26 @@
   }
 
   function layout() {
-    var p = progress();
+    var raw = progress();
+    // the fan reaches full spread a little before the very end, so the whole
+    // stack is open while you read the last of the story
+    var p = Math.min(1, raw / 0.8);
 
-    // fan the polaroids downward: compact near the top, spread as p -> 1
+    // fan the polaroids downward: compact near the top, fully open as p -> 1
     cards.forEach(function (card, i) {
-      var compact = i * 24;
-      var spread = i * (window.innerHeight * 0.17);
+      var compact = i * 20;
+      var spread = i * (window.innerHeight * 0.185);
       var y = compact + p * spread;
       card.style.transform = "translateY(" + y + "px) rotate(var(--tilt, 0deg))";
     });
 
-    // custom scroll indicator
+    // custom scroll indicator tracks real scroll position
     if (track && thumb) {
       var trackH = track.clientHeight;
       var ratio = window.innerHeight / scroller().scrollHeight;
       var thumbH = Math.max(44, Math.round(trackH * ratio));
       thumb.style.height = thumbH + "px";
-      thumb.style.transform = "translateY(" + p * (trackH - thumbH) + "px)";
+      thumb.style.transform = "translateY(" + raw * (trackH - thumbH) + "px)";
     }
   }
 

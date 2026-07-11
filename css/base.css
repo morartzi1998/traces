@@ -112,6 +112,26 @@ body {
   outline-offset: 3px;
 }
 
+/* ---------- Blue scroll bar on every scrolling screen ---------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-blue) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-blue);
+}
+
 /* The [hidden] attribute must win over any component's own display rule. */
 [hidden] {
   display: none !important;
