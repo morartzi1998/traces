@@ -32,13 +32,19 @@
     <header class="obj-head">
       <p class="obj-updated">[updated 15 days ago]</p>
       <div class="obj-title-row">
+        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions">&#9776;</button>
         <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
       </div>
+      <ul class="obj-menu" id="objMenu" hidden>
+        <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
+        <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
+        <li><button type="button">Make a visual merge from object's history</button></li>
+        <li><button type="button" onclick="goTo('connect.html')">Connect previous captured object</button></li>
+      </ul>
     </header>
 
-    <!-- capture history timeline, pinned to the right like the source design -->
+    <!-- capture history timeline, pinned to the left -->
     <div class="obj-timeline" aria-label="Capture history">
-      <span class="obj-history-label">[history]</span>
       <div class="obj-years">
         <span class="obj-year obj-year--active" data-year="2021">2021</span>
         <span class="obj-year" data-year="2023">2023</span>
@@ -48,17 +54,6 @@
 
     <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8592;</button>
     <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8594;</button>
-
-    <!-- capture actions menu, pinned to the bottom-left, opens upward -->
-    <div class="obj-menu-wrap">
-      <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions">&#9776;</button>
-      <ul class="obj-menu" id="objMenu" hidden>
-        <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
-        <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
-        <li><button type="button">Make a visual merge from object's history</button></li>
-        <li><button type="button" onclick="goTo('connect.html')">Connect previous captured object</button></li>
-      </ul>
-    </div>
 
     <div class="obj-stage" id="objStage"
          aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">

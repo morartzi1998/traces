@@ -65,19 +65,11 @@
   gap: 16px;
 }
 
-/* menu lives bottom-left (above COMMUNITY) and opens upward */
-.obj-menu-wrap {
-  position: absolute;
-  left: 3.2vw;
-  bottom: 8.5vh;
-  z-index: 20;
-}
-
 .obj-menu-btn {
   background: none;
   border: none;
   color: var(--color-cream);
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
   padding: 2px;
@@ -92,10 +84,7 @@
 
 .obj-menu {
   list-style: none;
-  position: absolute;
-  left: 0;
-  bottom: 100%;
-  margin-bottom: 14px;
+  margin-top: 14px;
   width: min(360px, 60vw);
 }
 
@@ -132,19 +121,12 @@
 
 .obj-timeline {
   position: absolute;
-  right: 3.2vw;
-  top: 15vh;
+  left: 3.4vw;
+  top: 30vh;
   z-index: 4;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-}
-
-.obj-history-label {
-  font-size: 0.9rem;
-  letter-spacing: 0.04em;
-  opacity: 0.8;
-  margin-bottom: 3vh;
+  align-items: flex-start;
 }
 
 .obj-years {
@@ -152,7 +134,7 @@
   display: flex;
   flex-direction: column;
   gap: 7vh;
-  padding-right: 20px; /* room for the markers + line on the right */
+  padding-right: 24px; /* room for the markers + line to the right of the years */
 }
 
 .obj-years::before {
@@ -167,8 +149,8 @@
 
 .obj-year {
   position: relative;
-  padding-right: 22px;
-  text-align: right;
+  padding-right: 24px;
+  text-align: left;
   font-size: 0.85rem;
   letter-spacing: 0.06em;
   opacity: 0.75;

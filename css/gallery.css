@@ -23,24 +23,26 @@
   letter-spacing: 0.06em;
 }
 
-/* Add-new-capture is a blue text layer that overlaps the last polaroid and
-   spills past it, keeping the layering play (never a standalone card). */
+/* Add-new-capture follows the cursor: it trails the mouse over empty archive
+   space (and hides over a card), and clicking the empty space adds a capture. */
 .gal-add {
-  align-self: flex-start;    /* sit high, on the upper third of the last polaroid */
-  margin-top: 4.6rem;
-  margin-left: -13vw;        /* overlap onto that polaroid */
-  z-index: 6;                /* layered on top of the card */
-  position: relative;
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(20px, 16px); /* sit just off the cursor tip */
+  z-index: 40;
+  pointer-events: none;             /* clicks are handled on the screen */
+  opacity: 0;
+  transition: opacity 0.15s ease;
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 2vw, 2.1rem);
+  font-size: clamp(1.3rem, 1.8vw, 2rem);
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 5px;
   background: none;
   border: none;
-  cursor: pointer;
   text-align: left;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
