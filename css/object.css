@@ -184,7 +184,7 @@
 /* thin line arrows (← →) like the source, not bold chevrons */
 .obj-arrow {
   position: absolute;
-  top: 50%;
+  top: 60%; /* drop below the timeline so the left arrow doesn't crowd it */
   transform: translateY(-50%);
   z-index: 4;
   background: none;
