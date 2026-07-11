@@ -102,6 +102,9 @@ body {
   color: var(--color-cream);
   font-family: var(--font-display);
   overflow-x: hidden;
+  /* stop a stray horizontal scroll / trackpad swipe from triggering the
+     browser's back-navigation gesture */
+  overscroll-behavior-x: none;
 }
 
 :focus-visible {

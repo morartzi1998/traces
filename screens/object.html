@@ -30,7 +30,7 @@
     </nav>
 
     <header class="obj-head">
-      <p class="obj-updated">[updated 15 days ago]</p>
+      <p class="obj-updated" id="objUpdated">[updated 15 days ago]</p>
       <div class="obj-title-row">
         <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions">&#9776;</button>
         <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
@@ -52,8 +52,18 @@
       </div>
     </div>
 
-    <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">&#8592;</button>
-    <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">&#8594;</button>
+    <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">
+      <svg viewBox="0 0 54 18" width="54" height="18" aria-hidden="true">
+        <line x1="53" y1="9" x2="4" y2="9" stroke="currentColor" stroke-width="1.3"/>
+        <polyline points="13,2 3,9 13,16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">
+      <svg viewBox="0 0 54 18" width="54" height="18" aria-hidden="true">
+        <line x1="1" y1="9" x2="50" y2="9" stroke="currentColor" stroke-width="1.3"/>
+        <polyline points="41,2 51,9 41,16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    </button>
 
     <div class="obj-stage" id="objStage"
          aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">
@@ -169,8 +179,8 @@
           connected: "my old living room",
           feeling: "old lamp from georgia at soviet union times that my father brought from his childhood home. it was in the house for 30 years but recently was replaced.",
           annotations: [
-            { x: 0.46, y: 0.72, title: "missing", type: "remark", text: "one bulb has been missing for years - we never replaced it." },
-            { x: 0.5, y: 0.4, title: "lights", type: "story", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
+            { x: 0.46, y: 0.72, title: "missing", type: "remark", since: 2023, text: "one bulb has been missing for years - we never replaced it." },
+            { x: 0.5, y: 0.4, title: "lights", type: "story", since: 2021, text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
           ] },
         couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
           model: "../assets/models/couch.glb",
@@ -217,7 +227,7 @@
           title: it.title, feeling: it.feeling, kind: it.kind, connected: it.connected,
           annotations: it.annotations.map(function (a) {
             return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
-              pos: a.pos || null, normal: a.normal || null };
+              since: a.since || 2021, pos: a.pos || null, normal: a.normal || null };
           }),
         };
         saveStore(s);
@@ -287,12 +297,17 @@
 
       // annotations render as model-viewer hotspots on a 3D capture (so they
       // stay pinned to the surface as it turns), or as flat pins on a photo
+      // which point in the object's history the timeline is showing
+      var activeYear = 2021;
+
       function renderAnnotations() {
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
         clearHotspots();
         var isModel = !!catalog[key].model && !modelViewer.hidden;
         var ready = isModel && modelViewer.loaded;
         catalog[key].annotations.forEach(function (a, i) {
+          // the timeline scrubs history: only show notes from the selected year back
+          if ((a.since || 2021) > activeYear) return;
           if (ready) {
             if (!a.pos) convertTo3D(a);
             if (a.pos) {
@@ -590,6 +605,21 @@
         show(order[(order.indexOf(key) + 1) % order.length]);
       });
 
+      // timeline: clicking a year scrubs to that point in the capture's history
+      function selectYear(y) {
+        activeYear = y;
+        document.querySelectorAll(".obj-year").forEach(function (el) {
+          el.classList.toggle("obj-year--active", Number(el.dataset.year) === y);
+        });
+        document.getElementById("objUpdated").textContent = "[history — " + y + "]";
+        closeBlue();
+        closeRemarkCard();
+        renderAnnotations();
+      }
+      document.querySelectorAll(".obj-year").forEach(function (el) {
+        el.addEventListener("click", function () { selectYear(Number(el.dataset.year)); });
+      });
+
       document.getElementById("objMenuBtn").addEventListener("click", function () {
         menu.hidden = !menu.hidden;
       });
@@ -623,6 +653,7 @@
               normal: pendingSpot ? pendingSpot.normal : null,
               title: title,
               type: type,
+              since: activeYear, // the note belongs to the year currently selected
               text: text,
             });
           }

@@ -23,19 +23,14 @@
   letter-spacing: 0.06em;
 }
 
-/* Add-new-capture is a blue text layer anchored to the teddy capture: it sits
-   on the card's upper area and spills off its right edge onto the black
-   background. Being anchored to the card (not the viewport), it always stays on
-   the teddy and rides along as the archive grows and scrolls. */
-.gal-item--add {
-  position: relative;
-}
-
+/* Add-new-capture is a blue text layer fixed to the viewport, sitting over the
+   upper-right capture (the teddy) and spilling onto the black beside it. Being
+   fixed, it stays locked in place while the polaroids scroll beneath it. */
 .gal-add {
-  position: absolute;
-  top: 3rem;   /* upper third of the card, just under the meta */
-  left: 56%;   /* on the card's right portion, spilling past its edge */
-  z-index: 6;
+  position: fixed;
+  top: 20vh;
+  left: 73vw;
+  z-index: 25;
   font-family: var(--font-display);
   font-size: clamp(1.3rem, 2vw, 2.1rem);
   color: var(--color-ink-blue);
