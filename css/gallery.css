@@ -23,14 +23,15 @@
   letter-spacing: 0.06em;
 }
 
-/* Add-new-capture is a static blue text layer on the upper third of the last
-   polaroid; clicking anywhere in the empty archive space also adds a capture. */
+/* Add-new-capture is a blue text layer locked over the polaroids (roughly over
+   the upper-right capture), spilling out of it. It's fixed to the viewport, so
+   as more scans pile up and the archive scrolls, the polaroids slide beneath it
+   while it stays put. */
 .gal-add {
-  align-self: flex-start;
-  margin-top: 4.6rem;
-  margin-left: -13vw;
-  z-index: 6;
-  position: relative;
+  position: fixed;
+  top: 20vh;
+  left: 72vw;
+  z-index: 25;
   font-family: var(--font-display);
   font-size: clamp(1.3rem, 2vw, 2.1rem);
   color: var(--color-ink-blue);
