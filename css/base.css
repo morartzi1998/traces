@@ -200,23 +200,26 @@ body {
   height: 100vh;
   pointer-events: none;
   z-index: 9997;
-  mix-blend-mode: soft-light;
-  opacity: 0.34;
+  /* screen blend lets the light specks read even over the near-black bg and
+     over the 3D model, so the analog grain is visible everywhere */
+  mix-blend-mode: screen;
+  isolation: auto;
+  opacity: 0.32;
   image-rendering: pixelated;
   animation: grain-flicker 3.4s steps(1) infinite;
 }
 
 /* the layer's strength gently breathes so it reads as a quiet flicker */
 @keyframes grain-flicker {
-  0%   { opacity: 0.26; }
-  25%  { opacity: 0.4; }
-  50%  { opacity: 0.24; }
-  75%  { opacity: 0.38; }
-  100% { opacity: 0.3; }
+  0%   { opacity: 0.24; }
+  25%  { opacity: 0.34; }
+  50%  { opacity: 0.22; }
+  75%  { opacity: 0.32; }
+  100% { opacity: 0.27; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .grain-overlay { animation: none; opacity: 0.3; }
+  .grain-overlay { animation: none; opacity: 0.26; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -10,6 +10,7 @@
 <script src="../js/grain.js" defer></script>
 <script src="../js/tilt3d.js" defer></script>
 <script src="../js/annotations.js" defer></script>
+<script src="../js/archive.js"></script>
 <script src="../js/flow.js" defer></script>
 </head>
 <body>
@@ -58,7 +59,7 @@
 
       <div class="actions">
         <button class="btn" type="button" onclick="goTo('upload.html')">Retake scan</button>
-        <button class="btn btn--primary" type="button" onclick="goTo('gallery.html')">Save to archive</button>
+        <button class="btn btn--primary" type="button" onclick="saveCapture()">Save to archive</button>
       </div>
     </aside>
 
@@ -90,7 +91,7 @@
       <hr class="rule rule--inset rule--dotted">
       <div class="actions">
         <button class="btn" type="button" onclick="goTo('upload.html')">Retake scan</button>
-        <button class="btn btn--primary" type="button" onclick="goTo('gallery.html')">Save to archive</button>
+        <button class="btn btn--primary" type="button" onclick="saveCapture()">Save to archive</button>
       </div>
     </aside>
 
@@ -99,6 +100,14 @@
   <script>
     (function () {
       function boot() {
+        // if the user uploaded an image, show it as the captured object
+        try {
+          var up = sessionStorage.getItem("traces-upload-img");
+          if (up) document.querySelector(".capture-object").src = up;
+          var nm = sessionStorage.getItem("traces-upload-name");
+          var titleInput = document.querySelector(".text-input");
+          if (nm && titleInput) titleInput.value = nm.replace(/\.[^.]+$/, "");
+        } catch (e) {}
         initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
       }
       if (document.readyState === "loading") {
@@ -107,6 +116,40 @@
         boot();
       }
     })();
+
+    // Save the capture — to "your archive" (private) or the shared community
+    // feed, depending on the visibility choice — then open it there.
+    function saveCapture() {
+      var title = (document.querySelector(".text-input") || {}).value || "untitled capture";
+      var feeling = (document.querySelector(".text-area") || {}).value || "";
+      var typeEl = document.querySelector('input[name="capture-type"]:checked');
+      var kind = typeEl ? typeEl.value : "object";
+      var visEl = document.querySelector('input[name="visibility"]:checked');
+      var toCommunity = visEl && visEl.value === "community";
+      var img = document.querySelector(".capture-object").src;
+      var model = null;
+      // a real reconstruction (Tripo) drops its GLB url here when available
+      try { model = sessionStorage.getItem("traces-capture-model") || null; } catch (e) {}
+      var annotations = window.getCaptureAnnotations ? window.getCaptureAnnotations() : [];
+      var payload = {
+        title: title.trim() || "untitled capture",
+        feeling: feeling.trim(),
+        kind: kind,
+        img: img,
+        model: model,
+        annotations: annotations
+      };
+      var cap = null;
+      if (toCommunity && window.Community) cap = Community.add(payload);
+      else if (window.Archive) cap = Archive.add(payload);
+      try {
+        if (cap) sessionStorage.setItem("traces-item", cap.id);
+        sessionStorage.removeItem("traces-upload-img");
+        sessionStorage.removeItem("traces-upload-name");
+        sessionStorage.removeItem("traces-capture-model");
+      } catch (e) {}
+      goTo(toCommunity ? "community.html" : "gallery.html");
+    }
   </script>
 
 </body>

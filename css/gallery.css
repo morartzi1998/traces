@@ -44,6 +44,46 @@
   white-space: nowrap;
 }
 
+/* archive heading — distinguishes "my archive" (designer) from "your archive" */
+.gal-mine-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.7vw, 1.6rem);
+  letter-spacing: 0.04em;
+  color: var(--color-cream);
+  text-align: center;
+  margin: 0.5vh auto 1.5vh;
+}
+.gal-mine-title span {
+  opacity: 0.55;
+  font-size: 0.72em;
+}
+
+/* empty state for a brand-new "your archive" */
+.gal-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3vh;
+  text-align: center;
+}
+.gal-empty-line {
+  font-size: clamp(1rem, 1.4vw, 1.4rem);
+  color: var(--color-cream);
+  opacity: 0.75;
+}
+.gal-empty-cta {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.2vw, 2.2rem);
+  color: var(--color-ink-blue);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  cursor: pointer;
+}
+
 .gal-tools {
   display: flex;
   align-items: center;
@@ -102,6 +142,20 @@
 .gal-item {
   width: clamp(220px, 17vw, 372px);
   flex: 0 0 auto;
+}
+
+/* revealed under a capture on long-press */
+.gal-delete {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--color-ink-blue);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
 }
 
 .gal-meta {

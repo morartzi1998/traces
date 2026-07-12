@@ -109,47 +109,29 @@ body {
   text-wrap: pretty; /* avoid a lone short word stranded on its own line */
 }
 
-/* ---------- Custom blue scroll indicator ---------- */
-
-/* hide the native scrollbar in favour of the blue indicator.
-   base.css themes every scrollbar blue, so on this window-scrolling page it
-   would otherwise show TWICE (native bar + our .ab-scroll). Force it off. */
-html,
-body {
-  scrollbar-width: none !important;
+.ab-archive-note {
+  margin-top: 4vh;
+  opacity: 0.7;
 }
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+.ab-archive-link {
+  display: inline-block;
+  margin-top: 1.4vh;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.6vw, 1.6rem);
+  color: var(--color-ink-blue);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  cursor: pointer;
 }
 
+/* ---------- Scroll bar ----------
+   For consistency with the rest of the interface, About uses the same native
+   blue scrollbar (themed globally in base.css) rather than a bespoke one. The
+   old custom indicator element stays in the markup but is hidden. */
 .ab-scroll {
-  position: fixed;
-  top: 16vh;
-  bottom: 16vh;
-  right: 2.4vw;
-  width: 3px;
-  background: rgba(240, 238, 234, 0.12);
-  z-index: 30;
-  pointer-events: none;
-}
-
-.ab-scroll-thumb {
-  position: absolute;
-  top: 0;
-  left: -1px;
-  width: 5px;
-  height: 60px;
-  background: var(--color-ink-blue);
-  transition: filter 0.25s ease;
-  will-change: transform;
-}
-
-/* blur while scrolling, like the cursor smear */
-.ab-scroll-thumb.is-scrolling {
-  filter: blur(2.4px);
+  display: none;
 }
 
 @media (max-width: 900px) {

@@ -115,5 +115,13 @@
     closeBlue();
   });
 
+  // expose the current annotations so "Save to archive" can store them with
+  // the capture (the array is mutated in place, so this stays current)
+  window.getCaptureAnnotations = function () {
+    return annotations.map(function (a) {
+      return { x: a.x, y: a.y, title: a.title, text: a.text, type: a.type || "story", since: 2021 };
+    });
+  };
+
   render();
 })();

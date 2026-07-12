@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Traces — Archive</title>
+<title>Traces — Your archive</title>
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/chrome.css">
 <link rel="stylesheet" href="../css/gallery.css">
 <script src="../js/cursor.js" defer></script>
 <script src="../js/grain.js" defer></script>
+<script src="../js/archive.js"></script>
 <script src="../js/flow.js" defer></script>
 </head>
 <body>
@@ -20,83 +21,17 @@
       <span class="nav-link nav-corner nav-corner--tr" style="text-decoration:none;opacity:.55">Archive</span>
     </header>
 
-    <main class="gal-grid">
+    <p class="gal-mine-title">your archive<span> — everything you capture lives here</span></p>
 
-      <article class="gal-item">
-        <p class="gal-meta">[01]<br>2 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('chandelier')">
-          <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
-          <span class="gal-caption">old living room lamp</span>
-        </button>
-      </article>
+    <main class="gal-grid" id="galGrid"></main>
 
-      <article class="gal-item">
-        <p class="gal-meta">[02]<br>13 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('room')">
-          <img src="../assets/images/photo-room.png" alt="My old living room">
-          <span class="gal-caption">my living room</span>
-        </button>
-      </article>
+    <!-- shown only while the archive is empty -->
+    <div class="gal-empty" id="galEmpty" hidden>
+      <p class="gal-empty-line">your archive is empty — nothing has been captured yet.</p>
+      <button class="gal-empty-cta" type="button" onclick="goTo('onboarding.html')">start your first scan +</button>
+    </div>
 
-      <article class="gal-item">
-        <p class="gal-meta">[03]<br>16 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('couch')">
-          <img src="../assets/images/photo-couch.png" alt="Father's couch">
-          <span class="gal-caption">father's couch</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[04]<br>27 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('teddy')">
-          <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
-          <span class="gal-caption">childhood tedy</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[05]<br>39 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('souvenirs')">
-          <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
-          <span class="gal-caption">souvenirs from europe</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[06]<br>55 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('bed')">
-          <img src="../assets/images/photo-bed.png" alt="20 year old bed">
-          <span class="gal-caption">20 year old bed</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[07]<br>164 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('cabinet')">
-          <img src="../assets/images/photo-cabinet.png" alt="Souvenirs storage cabinet">
-          <span class="gal-caption">souvenirs storage</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[08]<br>a year ago</p>
-        <button class="gal-card" type="button" onclick="openObject('curtain')">
-          <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
-          <span class="gal-caption">favorite corner</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[09]<br>a year ago</p>
-        <button class="gal-card" type="button" onclick="openObject('table')">
-          <img src="../assets/images/photo-table.png" alt="Old table">
-          <span class="gal-caption">old table</span>
-        </button>
-      </article>
-
-      <button class="gal-add" type="button" onclick="goTo('upload.html')">Add New<br>Capture +</button>
-
-    </main>
+    <button class="gal-add" type="button" onclick="goTo('onboarding.html')">Add New<br>Capture +</button>
 
     <footer class="nav-bottom">
       <button class="nav-link nav-corner nav-corner--bl" type="button" onclick="goTo('community.html')">Community</button>
@@ -104,6 +39,91 @@
     </footer>
 
   </div>
+
+  <script>
+    (function () {
+      var grid = document.getElementById("galGrid");
+      var empty = document.getElementById("galEmpty");
+      var add = document.querySelector(".gal-add");
+
+      function ago(ts) {
+        if (!ts) return "just now";
+        var d = Math.floor((Date.now() - ts) / 86400000);
+        if (d <= 0) return "today";
+        if (d === 1) return "1 day ago";
+        if (d < 30) return d + " days ago";
+        var m = Math.floor(d / 30);
+        return m === 1 ? "a month ago" : m + " months ago";
+      }
+
+      function render() {
+        var items = (window.Archive ? Archive.all() : []);
+        grid.innerHTML = "";
+        if (!items.length) {
+          empty.hidden = false;
+          if (add) add.hidden = true;
+          return;
+        }
+        empty.hidden = true;
+        if (add) add.hidden = false;
+
+        items.forEach(function (c, i) {
+          var idx = ("0" + (items.length - i)).slice(-2);
+          var art = document.createElement("article");
+          art.className = "gal-item";
+          art.innerHTML =
+            '<p class="gal-meta">[' + idx + ']<br>' + ago(c.created) + '</p>' +
+            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+            '<button class="gal-delete" type="button" hidden>delete capture</button>';
+          art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
+          art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
+
+          var card = art.querySelector(".gal-card");
+          var del = art.querySelector(".gal-delete");
+          var timer = null, longPressed = false;
+
+          function open() {
+            try { sessionStorage.setItem("traces-item", c.id); } catch (e) {}
+            goTo("object.html");
+          }
+          function startPress() {
+            longPressed = false;
+            timer = setTimeout(function () {
+              longPressed = true;
+              // reveal delete on this card, hide any others
+              grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
+              del.hidden = false;
+            }, 480);
+          }
+          function endPress() { clearTimeout(timer); }
+
+          card.addEventListener("mousedown", startPress);
+          card.addEventListener("touchstart", startPress, { passive: true });
+          card.addEventListener("mouseup", endPress);
+          card.addEventListener("mouseleave", endPress);
+          card.addEventListener("touchend", endPress);
+          card.addEventListener("click", function (e) {
+            if (longPressed) { e.preventDefault(); return; } // long-press opened delete, not the capture
+            open();
+          });
+          del.addEventListener("click", function () {
+            if (window.Archive) Archive.remove(c.id);
+            render();
+          });
+          grid.appendChild(art);
+        });
+      }
+
+      // tapping elsewhere dismisses an open delete button
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".gal-item")) {
+          grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
+        }
+      });
+
+      render();
+    })();
+  </script>
 
 </body>
 </html>

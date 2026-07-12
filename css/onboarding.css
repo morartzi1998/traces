@@ -23,17 +23,17 @@
   line-height: 1.25;
   text-align: left;
   align-self: center;
-  width: min(560px, 90vw);
+  width: min(620px, 90vw);
 }
 
 .onb-form {
-  width: min(560px, 90vw);
+  width: min(620px, 90vw);
   display: flex;
   flex-direction: column;
 }
 
 .onb-label {
-  font-size: clamp(1rem, 1.4vw, 1.375rem);
+  font-size: clamp(1rem, 1.4vw, 1.35rem);
   margin-bottom: 10px;
 }
 

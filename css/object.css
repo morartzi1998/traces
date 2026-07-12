@@ -117,6 +117,12 @@
   opacity: 0.8;
 }
 
+/* pressed state: bold and blue while held */
+.obj-menu button:active {
+  font-weight: 700;
+  color: var(--color-ink-blue);
+}
+
 /* ---------- Timeline ---------- */
 
 .obj-timeline {

@@ -14,7 +14,7 @@
 
   <div class="proc-screen">
 
-    <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true">
+    <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true" id="procCloud">
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
 
@@ -32,6 +32,11 @@
       var status = document.getElementById("procStatus");
       var proceed = document.getElementById("procProceed");
       var cloud = document.querySelector(".proc-cloud");
+      // reconstruct the object the user actually captured, not a placeholder
+      try {
+        var up = sessionStorage.getItem("traces-upload-img");
+        if (up) cloud.src = up;
+      } catch (e) {}
       el.textContent = pct;
       proceed.hidden = true;
       status.innerHTML = 'Processing&nbsp;&nbsp;<span id="procPct">' + pct + "%</span>";

@@ -67,3 +67,9 @@
   border: none;
   cursor: pointer;
 }
+
+/* pressed state: the nav button goes bold and blue while held */
+.nav-link:active {
+  font-weight: 700;
+  color: var(--color-ink-blue);
+}

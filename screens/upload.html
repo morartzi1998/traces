@@ -97,8 +97,18 @@
         if (!files || !files.length) return;
         var f = files[0];
         filename.textContent = f.name;
+        try { sessionStorage.setItem("traces-upload-name", f.name); } catch (e) {}
         if (f.type && f.type.indexOf("image/") === 0) {
           try { thumb.src = URL.createObjectURL(f); } catch (e) {}
+          // keep a persistable copy so the capture carries the real image
+          // across to the describe / archive screens
+          var reader = new FileReader();
+          reader.onload = function () {
+            try { sessionStorage.setItem("traces-upload-img", reader.result); } catch (e) {}
+          };
+          reader.readAsDataURL(f);
+        } else {
+          try { sessionStorage.removeItem("traces-upload-img"); } catch (e) {}
         }
         drop.hidden = true;
         selected.hidden = false;

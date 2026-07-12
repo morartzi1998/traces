@@ -10,6 +10,7 @@
 <script src="../js/cursor.js" defer></script>
 <script src="../js/grain.js" defer></script>
 <script src="../js/tilt3d.js" defer></script>
+<script src="../js/archive.js"></script>
 <script src="../js/flow.js" defer></script>
 <script type="module" src="../js/vendor/model-viewer.min.js"></script>
 <script type="module">
@@ -198,6 +199,29 @@
         curtain: { title: "Favorite corner", img: "../assets/images/photo-curtain.png", annotations: [] },
         table: { title: "Old table", img: "../assets/images/photo-table.png", annotations: [] },
       };
+
+      // ----- the visitor's own saved captures (archive + community) join the
+      // catalog so they open in the object view just like the designer's items -----
+      (function mergeCaptures() {
+        var lists = [];
+        if (window.Archive) lists.push(Archive.all());
+        if (window.Community) lists.push(Community.all());
+        lists.forEach(function (list) {
+          list.forEach(function (c) {
+            if (catalog[c.id]) return;
+            catalog[c.id] = {
+              kind: c.kind || "object",
+              title: c.title || "untitled capture",
+              img: c.img || "../assets/images/photo-room.png",
+              model: c.model || null,
+              connected: c.connected || "",
+              feeling: c.feeling || "",
+              annotations: Array.isArray(c.annotations) ? c.annotations : []
+            };
+            order.push(c.id);
+          });
+        });
+      })();
 
       // ----- persistence: edits, annotations and connections survive reloads -----
       var STORE = "traces-store-v1";

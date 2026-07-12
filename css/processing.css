@@ -13,29 +13,32 @@
   background-size: 74px 74px, 74px 74px, 74px 74px;
 }
 
-/* the reconstructing capture sits to the right */
+/* the reconstructing capture sits in the centre of the drafting grid */
 .proc-cloud {
   position: absolute;
-  right: 4vw;
-  bottom: 8vh;
-  height: 78vh;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 72vh;
+  max-width: 82vw;
+  object-fit: contain;
   filter: blur(17px) saturate(0.85);
   pointer-events: none;
   user-select: none;
 }
 
-/* status text sits on the left */
+/* status text is centred over the reconstructing object */
 .proc-status {
   position: absolute;
-  left: 4vw;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
+  transform: translate(-50%, -50%);
+  z-index: 2;
   font-family: var(--font-display);
   font-size: clamp(2.6rem, 5.5vw, 5rem);
   color: #ffffff;
   font-variant-numeric: tabular-nums;
-  text-align: left;
+  text-align: center;
   letter-spacing: 0.01em;
 }
 

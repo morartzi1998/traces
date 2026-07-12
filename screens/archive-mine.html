@@ -3,28 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Traces — Community</title>
+<title>Traces — My archive</title>
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/chrome.css">
 <link rel="stylesheet" href="../css/gallery.css">
 <script src="../js/cursor.js" defer></script>
 <script src="../js/grain.js" defer></script>
-<script src="../js/archive.js"></script>
 <script src="../js/flow.js" defer></script>
 </head>
 <body>
 
-  <div class="gal-screen gal--community">
+  <div class="gal-screen gal--archive">
 
     <header class="gal-header">
       <a class="logo gal-logo nav-corner nav-corner--tl" href="../index.html">traces</a>
-      <button class="nav-link nav-corner nav-corner--tr" type="button" onclick="goTo('gallery.html')">Archive</button>
+      <span class="nav-link nav-corner nav-corner--tr" style="text-decoration:none;opacity:.55">Archive</span>
     </header>
+
+    <p class="gal-mine-title">my archive<span> — the home i grew up in</span></p>
 
     <main class="gal-grid">
 
       <article class="gal-item">
-        <p class="gal-meta">2 days ago<br>lea's capture from usa</p>
+        <p class="gal-meta">[01]<br>2 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('chandelier')">
           <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
           <span class="gal-caption">old living room lamp</span>
@@ -32,7 +33,15 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">16 days ago<br>dhhh5's capture from france</p>
+        <p class="gal-meta">[02]<br>13 days ago</p>
+        <button class="gal-card" type="button" onclick="openObject('room')">
+          <img src="../assets/images/photo-room.png" alt="My old living room">
+          <span class="gal-caption">my living room</span>
+        </button>
+      </article>
+
+      <article class="gal-item">
+        <p class="gal-meta">[03]<br>16 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('couch')">
           <img src="../assets/images/photo-couch.png" alt="Father's couch">
           <span class="gal-caption">father's couch</span>
@@ -40,7 +49,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">27 days ago<br>lexi's capture from spain</p>
+        <p class="gal-meta">[04]<br>27 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('teddy')">
           <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
           <span class="gal-caption">childhood tedy</span>
@@ -48,7 +57,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">39 days ago<br>neo's capture from poland</p>
+        <p class="gal-meta">[05]<br>39 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('souvenirs')">
           <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
           <span class="gal-caption">souvenirs from europe</span>
@@ -56,7 +65,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">55 days ago<br>xxl's capture from mexico</p>
+        <p class="gal-meta">[06]<br>55 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('bed')">
           <img src="../assets/images/photo-bed.png" alt="20 year old bed">
           <span class="gal-caption">20 year old bed</span>
@@ -64,7 +73,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">164 days ago<br>mishl's capture from israel</p>
+        <p class="gal-meta">[07]<br>164 days ago</p>
         <button class="gal-card" type="button" onclick="openObject('cabinet')">
           <img src="../assets/images/photo-cabinet.png" alt="Souvenirs storage cabinet">
           <span class="gal-caption">souvenirs storage</span>
@@ -72,7 +81,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">a year ago<br>sweetcherry's capture from usa</p>
+        <p class="gal-meta">[08]<br>a year ago</p>
         <button class="gal-card" type="button" onclick="openObject('curtain')">
           <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
           <span class="gal-caption">favorite corner</span>
@@ -80,7 +89,7 @@
       </article>
 
       <article class="gal-item">
-        <p class="gal-meta">a year ago<br>dada's capture from israel</p>
+        <p class="gal-meta">[09]<br>a year ago</p>
         <button class="gal-card" type="button" onclick="openObject('table')">
           <img src="../assets/images/photo-table.png" alt="Old table">
           <span class="gal-caption">old table</span>
@@ -90,42 +99,11 @@
     </main>
 
     <footer class="nav-bottom">
-      <span class="nav-link nav-corner nav-corner--bl" style="text-decoration:none;opacity:.55">Community</span>
+      <button class="nav-link nav-corner nav-corner--bl" type="button" onclick="goTo('community.html')">Community</button>
       <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
 
   </div>
-
-  <script>
-    (function () {
-      // the visitor's own captures shared to the community appear first
-      var grid = document.querySelector(".gal-grid");
-      var items = (window.Community ? Community.all() : []);
-      if (!grid || !items.length) return;
-      function ago(ts) {
-        var d = Math.floor((Date.now() - (ts || Date.now())) / 86400000);
-        if (d <= 0) return "today";
-        if (d === 1) return "1 day ago";
-        if (d < 30) return d + " days ago";
-        var m = Math.floor(d / 30);
-        return m === 1 ? "a month ago" : m + " months ago";
-      }
-      items.forEach(function (c) {
-        var art = document.createElement("article");
-        art.className = "gal-item";
-        art.innerHTML =
-          '<p class="gal-meta">' + ago(c.created) + '<br>your capture</p>' +
-          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
-        art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
-        art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
-        art.querySelector(".gal-card").addEventListener("click", function () {
-          try { sessionStorage.setItem("traces-item", c.id); } catch (e) {}
-          goTo("object.html");
-        });
-        grid.insertBefore(art, grid.firstChild);
-      });
-    })();
-  </script>
 
 </body>
 </html>
