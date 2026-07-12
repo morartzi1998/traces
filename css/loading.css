@@ -37,8 +37,8 @@
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
   width: clamp(120px, 12.5vw, 200px);
   position: relative;
-  /* overlap the neighbouring cards, fanned like a pile */
-  margin-left: clamp(-58px, -3vw, -28px);
+  /* fan the cards with a light overlap — captions stay readable */
+  margin-left: clamp(-30px, -1.2vw, -10px);
   cursor: pointer;
   animation: load-float 3.6s ease-in-out infinite;
   animation-delay: var(--delay, 0s);
