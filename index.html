@@ -7,11 +7,91 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/chrome.css">
 <link rel="stylesheet" href="css/s01-welcome.css">
+<style>
+  /* Entry loader — a short splash for the interface itself, shown once on load */
+  .app-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9990;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3.4vh;
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(1px 1px at 8% 22%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1px 1px at 32% 68%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1.5px 1.5px at 55% 15%, rgba(255,255,255,.8), transparent),
+      radial-gradient(1px 1px at 78% 45%, rgba(255,255,255,.6), transparent),
+      radial-gradient(1px 1px at 92% 78%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1.5px 1.5px at 15% 85%, rgba(255,255,255,.5), transparent);
+    background-size: 340px 340px;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  .app-loader.is-done { opacity: 0; visibility: hidden; }
+  .app-loader-mark {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 8vw, 6rem);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-cream);
+  }
+  .app-loader-status {
+    font-family: var(--font-drawn);
+    font-size: clamp(1.2rem, 2.2vw, 2rem);
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .app-loader-bar {
+    width: min(320px, 60vw);
+    height: 2px;
+    background: rgba(240,238,234,.18);
+    overflow: hidden;
+  }
+  .app-loader-bar > i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--color-ink-blue);
+  }
+</style>
 <script src="js/cursor.js" defer></script>
 <script src="js/grain.js" defer></script>
 <script src="js/flow.js" defer></script>
 </head>
 <body>
+
+  <div class="app-loader" id="appLoader" aria-hidden="true">
+    <div class="app-loader-mark">traces</div>
+    <div class="app-loader-bar"><i id="appLoaderFill"></i></div>
+    <p class="app-loader-status">Loading&nbsp;<span id="appLoaderPct">0</span>%</p>
+  </div>
+
+  <script>
+    (function () {
+      // show the entry splash once per browser session, then reveal the app
+      var loader = document.getElementById("appLoader");
+      if (sessionStorage.getItem("traces-loaded")) { loader.remove(); return; }
+      var pct = 0;
+      var fill = document.getElementById("appLoaderFill");
+      var label = document.getElementById("appLoaderPct");
+      var t = setInterval(function () {
+        pct += 2 + Math.floor(Math.random() * 5);
+        if (pct >= 100) {
+          pct = 100;
+          clearInterval(t);
+          try { sessionStorage.setItem("traces-loaded", "1"); } catch (e) {}
+          setTimeout(function () {
+            loader.classList.add("is-done");
+            setTimeout(function () { loader.remove(); }, 650);
+          }, 250);
+        }
+        label.textContent = pct;
+        fill.style.width = pct + "%";
+      }, 80);
+    })();
+  </script>
 
   <div class="screen">
 
