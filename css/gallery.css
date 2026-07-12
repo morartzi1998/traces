@@ -44,18 +44,34 @@
   white-space: nowrap;
 }
 
-/* archive heading — distinguishes "my archive" (designer) from "your archive" */
-.gal-mine-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.1rem, 1.7vw, 1.6rem);
-  letter-spacing: 0.04em;
-  color: var(--color-cream);
-  text-align: center;
-  margin: 0.5vh auto 1.5vh;
+/* archive heading — mirrors the object screen's title: a small meta label above
+   a big uppercase title, left-aligned and sitting directly above the first
+   polaroid */
+.gal-title-block {
+  width: 100%;
+  max-width: min(1850px, 92vw);
+  margin: 0 auto 3vh;
+  text-align: left;
 }
-.gal-mine-title span {
-  opacity: 0.55;
-  font-size: 0.72em;
+.gal-updated {
+  font-size: 0.75rem;
+  opacity: 0.65;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.gal-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 2.6vw, 2.6rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-cream);
+}
+
+/* the archive grids start from the left so the first polaroid lines up under
+   the heading (community keeps its centred rows) */
+.gal--archive .gal-grid {
+  justify-content: flex-start;
 }
 
 /* empty state for a brand-new "your archive" */
