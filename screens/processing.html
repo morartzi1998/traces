@@ -6,6 +6,7 @@
 <title>Traces — Processing</title>
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/processing.css">
+<script src="../js/config.js"></script>
 <script src="../js/cursor.js" defer></script>
 <script src="../js/grain.js" defer></script>
 <script src="../js/flow.js" defer></script>
@@ -27,33 +28,78 @@
 
   <script>
     (function () {
-      var pct = 63;
-      var el = document.getElementById("procPct");
       var status = document.getElementById("procStatus");
       var proceed = document.getElementById("procProceed");
       var cloud = document.querySelector(".proc-cloud");
+
       // reconstruct the object the user actually captured, not a placeholder
       try {
         var up = sessionStorage.getItem("traces-upload-img");
         if (up) cloud.src = up;
       } catch (e) {}
-      el.textContent = pct;
-      proceed.hidden = true;
-      status.innerHTML = 'Processing&nbsp;&nbsp;<span id="procPct">' + pct + "%</span>";
-      el = status.querySelector("#procPct");
-      cloud.style.filter = "blur(17px) saturate(0.85)";
 
+      function setPct(p) {
+        status.innerHTML = 'Processing&nbsp;&nbsp;<span>' + p + "%</span>";
+        cloud.style.filter = "blur(" + Math.max(0, (100 - p) * 0.45) + "px) saturate(0.85)";
+      }
+      function complete() {
+        status.textContent = "Capturing complete";
+        cloud.style.filter = "blur(0px) saturate(1)";
+        proceed.hidden = false;
+      }
+      function failed(msg) {
+        status.textContent = "Reconstruction failed";
+        cloud.style.filter = "blur(6px) saturate(0.6)";
+        console.warn("Tripo:", msg);
+      }
+
+      var api = (window.TRACES_API || "").replace(/\/$/, "");
+      var mode = null, task = null, err = null;
+      try {
+        mode = sessionStorage.getItem("traces-mode");
+        task = sessionStorage.getItem("traces-task");
+        err = sessionStorage.getItem("traces-task-error");
+      } catch (e) {}
+
+      // ---- real Tripo reconstruction: poll the worker for progress ----------
+      if (api && mode === "tripo") {
+        if (err || !task) { failed(err || "no task id"); return; }
+        setPct(1);
+        var poll = setInterval(function () {
+          if (!status.isConnected) { clearInterval(poll); return; }
+          fetch(api + "/status?task_id=" + encodeURIComponent(task))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var s = d && d.status;
+              setPct(d && d.progress ? d.progress : 1);
+              if (s === "success") {
+                clearInterval(poll);
+                try {
+                  if (d.model_url) {
+                    // load the GLB through the worker proxy (avoids cross-origin issues)
+                    sessionStorage.setItem("traces-capture-model", api + "/proxy?url=" + encodeURIComponent(d.model_url));
+                  }
+                  if (d.thumb) sessionStorage.setItem("traces-capture-thumb", d.thumb);
+                } catch (e) {}
+                complete();
+              } else if (s === "failed" || s === "cancelled" || s === "banned" || s === "unknown") {
+                clearInterval(poll);
+                failed(s);
+              }
+            })
+            .catch(function (e) { /* transient — keep polling */ });
+        }, 2000);
+        return;
+      }
+
+      // ---- simulated flow (no worker configured) ----------------------------
+      var pct = 63;
+      setPct(pct);
       var t = setInterval(function () {
         if (!status.isConnected || status.offsetParent === null) { clearInterval(t); return; }
         pct += 1;
-        el.textContent = pct + "%";
-        // the reconstruction sharpens as processing completes
-        cloud.style.filter = "blur(" + Math.max(0, (100 - pct) * 0.45) + "px) saturate(0.85)";
-        if (pct >= 100) {
-          clearInterval(t);
-          status.textContent = "Capturing complete";
-          proceed.hidden = false;
-        }
+        setPct(pct);
+        if (pct >= 100) { clearInterval(t); complete(); }
       }, 140);
     })();
   </script>

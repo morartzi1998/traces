@@ -128,8 +128,13 @@
       var toCommunity = visEl && visEl.value === "community";
       var img = document.querySelector(".capture-object").src;
       var model = null;
-      // a real reconstruction (Tripo) drops its GLB url here when available
-      try { model = sessionStorage.getItem("traces-capture-model") || null; } catch (e) {}
+      // a real reconstruction (Tripo) drops its GLB url + a rendered thumbnail
+      // here when available; prefer the rendered thumb for the archive card
+      try {
+        model = sessionStorage.getItem("traces-capture-model") || null;
+        var t = sessionStorage.getItem("traces-capture-thumb");
+        if (t) img = t;
+      } catch (e) {}
       var annotations = window.getCaptureAnnotations ? window.getCaptureAnnotations() : [];
       var payload = {
         title: title.trim() || "untitled capture",
@@ -147,6 +152,10 @@
         sessionStorage.removeItem("traces-upload-img");
         sessionStorage.removeItem("traces-upload-name");
         sessionStorage.removeItem("traces-capture-model");
+        sessionStorage.removeItem("traces-capture-thumb");
+        sessionStorage.removeItem("traces-mode");
+        sessionStorage.removeItem("traces-task");
+        sessionStorage.removeItem("traces-task-error");
       } catch (e) {}
       goTo(toCommunity ? "community.html" : "gallery.html");
     }

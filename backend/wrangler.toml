@@ -1,0 +1,6 @@
+name = "traces-tripo"
+main = "tripo-worker.js"
+compatibility_date = "2024-11-01"
+
+# The Tripo API key is a SECRET — do not put it here. Set it with:
+#   npx wrangler secret put TRIPO_API_KEY
