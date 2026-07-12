@@ -14,10 +14,11 @@ body {
 }
 
 .ab-main {
-  /* the pile is fixed on the left, so reserve room for it and let the story
-     flow in the open space beside it — centred there, not shoved to the edge */
-  padding-left: min(360px, 32vw);
-  padding-right: 3vw;
+  /* the pile is fixed on the left; reserve just enough room to clear it, then
+     let the story sit in a single left-aligned column beside it (not centred in
+     the leftover space, which left an odd empty band) */
+  padding-left: min(30vw, 440px);
+  padding-right: 5vw;
 }
 
 /* Polaroid pile on the left — fixed, so it stays in view and fans open fully */
@@ -80,8 +81,11 @@ body {
 
 .ab-text {
   flex: 1;
-  max-width: 680px;
-  margin: 0 auto;
+  max-width: 720px;
+}
+
+.ab-text h1 {
+  text-wrap: balance;
 }
 
 .ab-text h1 {
