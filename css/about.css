@@ -15,8 +15,9 @@ body {
 
 .ab-main {
   /* the pile is fixed on the left, so reserve room for it and let the story
-     flow on the right */
-  padding-left: min(420px, 36vw);
+     flow in the open space beside it — centred there, not shoved to the edge */
+  padding-left: min(360px, 32vw);
+  padding-right: 3vw;
 }
 
 /* Polaroid pile on the left — fixed, so it stays in view and fans open fully */
@@ -79,7 +80,8 @@ body {
 
 .ab-text {
   flex: 1;
-  max-width: 560px;
+  max-width: 680px;
+  margin: 0 auto;
 }
 
 .ab-text h1 {
@@ -98,17 +100,26 @@ body {
   line-height: 1.75;
   margin-bottom: 2.8vh;
   opacity: 0.92;
-  max-width: 46ch;
+  max-width: 62ch;
   text-transform: lowercase;
   text-wrap: pretty; /* avoid a lone short word stranded on its own line */
 }
 
 /* ---------- Custom blue scroll indicator ---------- */
 
-/* hide the native scrollbar in favour of the blue indicator */
-.ab-screen { scrollbar-width: none; }
+/* hide the native scrollbar in favour of the blue indicator.
+   base.css themes every scrollbar blue, so on this window-scrolling page it
+   would otherwise show TWICE (native bar + our .ab-scroll). Force it off. */
+html,
+body {
+  scrollbar-width: none !important;
+}
 html::-webkit-scrollbar,
-body::-webkit-scrollbar { width: 0; height: 0; }
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
 
 .ab-scroll {
   position: fixed;

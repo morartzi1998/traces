@@ -621,9 +621,14 @@
 
       document.getElementById("objMenuBtn").addEventListener("click", function () {
         menu.hidden = !menu.hidden;
+        // the open menu sits over the history timeline — hide it while open
+        var timeline = document.querySelector(".obj-timeline");
+        if (timeline) timeline.hidden = !menu.hidden;
       });
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
+        var tl = document.querySelector(".obj-timeline");
+        if (tl) tl.hidden = false;
         closeRemarkCard();
         closeBlue();
         white.hidden = true;
