@@ -50,7 +50,7 @@
 /* js/gallery-title.js shifts this so its left edge lines up with the first
    polaroid (the grid itself stays centred — the polaroids don't move) */
 .gal-title-block {
-  margin: 0 0 3vh;
+  margin: 3vh 0 3.5vh;
   text-align: left;
 }
 .gal-updated {

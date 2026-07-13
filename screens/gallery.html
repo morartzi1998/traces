@@ -10,6 +10,7 @@
 <script src="../js/cursor.js" defer></script>
 <script src="../js/grain.js" defer></script>
 <script src="../js/archive.js"></script>
+<script src="../js/designer-archive.js"></script>
 <script src="../js/gallery-title.js" defer></script>
 <script src="../js/flow.js" defer></script>
 </head>
@@ -60,17 +61,50 @@
         return m === 1 ? "a month ago" : m + " months ago";
       }
 
+      var titleEl = document.querySelector(".gal-title");
+      var updEl = document.querySelector(".gal-updated");
+
+      function setHeading(title, sub) {
+        if (titleEl) titleEl.textContent = title;
+        if (updEl) updEl.textContent = sub;
+      }
+
+      // Until the visitor captures anything, the archive shows the designer's
+      // own archive (the home she grew up in). Once they add a scan it becomes
+      // their own archive of their captures.
+      function renderDesigner() {
+        var list = window.DESIGNER_ARCHIVE || [];
+        setHeading("my archive", "the home i grew up in");
+        list.forEach(function (d, i) {
+          var idx = ("0" + (i + 1)).slice(-2);
+          var art = document.createElement("article");
+          art.className = "gal-item";
+          art.innerHTML =
+            '<p class="gal-meta">[' + idx + ']<br>' + d.meta + '</p>' +
+            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
+          art.querySelector("img").src = d.img;
+          art.querySelector(".gal-caption").textContent = d.title;
+          art.querySelector(".gal-card").addEventListener("click", function () {
+            try { sessionStorage.setItem("traces-item", d.key); } catch (e) {}
+            goTo("object.html");
+          });
+          grid.appendChild(art);
+        });
+      }
+
       function render() {
         var items = (window.Archive ? Archive.all() : []);
         grid.innerHTML = "";
-        if (!items.length) {
-          empty.hidden = false;
-          if (add) add.hidden = true;
-          return;
-        }
         empty.hidden = true;
         if (add) add.hidden = false;
 
+        if (!items.length) {
+          renderDesigner();
+          if (window.alignGalleryTitle) window.alignGalleryTitle();
+          return;
+        }
+
+        setHeading("your archive", "everything you capture lives here");
         items.forEach(function (c, i) {
           var idx = ("0" + (items.length - i)).slice(-2);
           var art = document.createElement("article");
