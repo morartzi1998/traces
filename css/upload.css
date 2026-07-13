@@ -25,7 +25,9 @@
   font-size: clamp(1.6rem, 2.6vw, 2.5rem);
   font-weight: 400;
   line-height: 1.25;
-  margin-bottom: 8vh;
+  /* the first option carries 24px of top padding, so trim that here to match
+     the onboarding screen's heading-to-first-field gap exactly */
+  margin-bottom: calc(8vh - 24px);
 }
 
 /* Accordion options */

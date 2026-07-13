@@ -90,7 +90,7 @@
     </main>
 
     <footer class="nav-bottom">
-      <span class="nav-link nav-corner nav-corner--bl" style="text-decoration:none;opacity:.55">Community</span>
+      <span class="nav-link nav-current nav-corner nav-corner--bl">Community</span>
       <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
 
@@ -110,19 +110,48 @@
         var m = Math.floor(d / 30);
         return m === 1 ? "a month ago" : m + " months ago";
       }
-      items.forEach(function (c) {
+      function build(c) {
         var art = document.createElement("article");
         art.className = "gal-item";
         art.innerHTML =
           '<p class="gal-meta">' + ago(c.created) + '<br>your capture</p>' +
-          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
+          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+          '<button class="gal-delete" type="button" hidden>delete capture</button>';
         art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
         art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
-        art.querySelector(".gal-card").addEventListener("click", function () {
-          try { sessionStorage.setItem("traces-item", c.id); } catch (e) {}
+        var card = art.querySelector(".gal-card");
+        var del = art.querySelector(".gal-delete");
+        var timer = null, longPressed = false;
+        function startPress() {
+          longPressed = false;
+          timer = setTimeout(function () {
+            longPressed = true;
+            grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
+            del.hidden = false;
+          }, 480);
+        }
+        function endPress() { clearTimeout(timer); }
+        card.addEventListener("mousedown", startPress);
+        card.addEventListener("touchstart", startPress, { passive: true });
+        card.addEventListener("mouseup", endPress);
+        card.addEventListener("mouseleave", endPress);
+        card.addEventListener("touchend", endPress);
+        card.addEventListener("click", function (e) {
+          if (longPressed) { e.preventDefault(); return; }
+          try { sessionStorage.setItem("traces-item", c.id); } catch (er) {}
           goTo("object.html");
         });
-        grid.insertBefore(art, grid.firstChild);
+        del.addEventListener("click", function () {
+          Community.remove(c.id);
+          art.remove();
+        });
+        return art;
+      }
+      items.forEach(function (c) { grid.insertBefore(build(c), grid.firstChild); });
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".gal-item")) {
+          grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
+        }
       });
     })();
   </script>

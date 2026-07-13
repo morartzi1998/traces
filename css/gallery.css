@@ -47,14 +47,14 @@
 /* archive heading — mirrors the object screen's title: a small meta label above
    a big uppercase title, left-aligned and sitting directly above the first
    polaroid */
+/* js/gallery-title.js shifts this so its left edge lines up with the first
+   polaroid (the grid itself stays centred — the polaroids don't move) */
 .gal-title-block {
-  width: 100%;
-  max-width: min(1850px, 92vw);
-  margin: 0 auto 3vh;
+  margin: 0 0 3vh;
   text-align: left;
 }
 .gal-updated {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   opacity: 0.65;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
@@ -66,12 +66,6 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-cream);
-}
-
-/* the archive grids start from the left so the first polaroid lines up under
-   the heading (community keeps its centred rows) */
-.gal--archive .gal-grid {
-  justify-content: flex-start;
 }
 
 /* empty state for a brand-new "your archive" */

@@ -5,16 +5,17 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 2.5vw 5vw;
+  padding: 1.8vw 3.2vw 2.2vw;
 }
 
+/* identical column + centring to the upload screen */
 .onb-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  gap: clamp(1.5rem, 3vh, 2.5rem);
+  width: min(620px, 90vw);
+  margin: 0 auto;
 }
 
 .onb-heading {
@@ -22,12 +23,11 @@
   font-weight: 400;
   line-height: 1.25;
   text-align: left;
-  align-self: center;
-  width: min(620px, 90vw);
+  margin-bottom: 8vh;
 }
 
 .onb-form {
-  width: min(620px, 90vw);
+  width: 100%;
   display: flex;
   flex-direction: column;
 }

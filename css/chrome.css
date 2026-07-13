@@ -73,3 +73,12 @@
   font-weight: 700;
   color: var(--color-ink-blue);
 }
+
+/* the nav item for the screen you're currently on is shown blue */
+.nav-current {
+  color: var(--color-ink-blue);
+  font-weight: 700;
+  text-decoration: none;
+  opacity: 1;
+  cursor: default;
+}
