@@ -68,12 +68,6 @@
   color: var(--color-cream);
 }
 
-/* the archive grid starts from the left, so one capture sits at the same left
-   edge as the first of four — it doesn't jump to the centre (community keeps
-   its centred rows) */
-.gal--archive .gal-grid {
-  justify-content: flex-start;
-}
 
 /* empty state for a brand-new "your archive" */
 .gal-empty {
@@ -140,25 +134,30 @@
 
 /* ---------- Grid ---------- */
 
-/* Flex-wrap with centered rows gives the rule the design wants for free:
-   a full row of four fills the width and reads as aligned columns, while a
-   partial row (three, two, one) centres and therefore sits offset from the
-   row above — the brick-course stagger, only where the row isn't full. */
+/* A centred grid of fixed columns: a full row of four reads centred, and a
+   single capture sits in column one of that same centred block — so it lines up
+   exactly where the first of four would be, instead of jumping to the middle. */
 .gal-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, clamp(200px, 17vw, 372px));
   justify-content: center;
   align-content: flex-start;
   column-gap: clamp(28px, 3vw, 80px);
   row-gap: clamp(26px, 3.2vh, 52px);
-  max-width: min(1850px, 92vw);
+  max-width: min(1850px, 96vw);
   margin: 0 auto;
   width: 100%;
 }
 
 .gal-item {
-  width: clamp(220px, 17vw, 372px);
-  flex: 0 0 auto;
+  width: auto;
+}
+
+@media (max-width: 1120px) {
+  .gal-grid { grid-template-columns: repeat(3, clamp(180px, 27vw, 320px)); }
+}
+@media (max-width: 720px) {
+  .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* revealed under a capture on long-press */
@@ -230,8 +229,3 @@
   text-overflow: ellipsis;
 }
 
-/* ---------- Small screens ---------- */
-
-@media (max-width: 760px) {
-  .gal-item { width: clamp(150px, 42vw, 300px); }
-}
