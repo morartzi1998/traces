@@ -606,14 +606,15 @@
 }
 
 .obj-white-title {
-  font-family: var(--font-ink);
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .obj-white-sub {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   text-decoration: underline;
   text-underline-offset: 2px;
   opacity: 0.85;
