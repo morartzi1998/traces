@@ -17,8 +17,8 @@ body {
   /* the pile is fixed on the left; reserve just enough room to clear it, then
      let the story sit in a single left-aligned column beside it (not centred in
      the leftover space, which left an odd empty band) */
-  padding-left: min(34vw, 500px);
-  padding-right: 4vw;
+  padding-left: min(38vw, 560px);
+  padding-right: 3vw;
 }
 
 /* Polaroid pile on the left — fixed, so it stays in view and fans open fully */

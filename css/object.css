@@ -219,17 +219,12 @@
   opacity: 1;
 }
 
-/* the prev chevron is the tail of the timeline: it sits at the bottom of the
-   vertical line, its open side meeting the line */
-.obj-arrow--prev {
-  position: static;
-  transform: none;
-  align-self: flex-end;
-  margin-top: 1.4rem; /* sit just below the last cube, no line between */
-  margin-right: -4px; /* centre the chevron under the cube column */
-  padding: 4px 0;
-}
+/* no square focus box around the chevrons — keyboard focus shows via opacity */
+.obj-arrow:focus { outline: none; }
+.obj-arrow:focus-visible { opacity: 1; }
 
+/* a symmetric pair: same height, mirrored on the left and right edges */
+.obj-arrow--prev { left: 2.4vw; }
 .obj-arrow--next { right: 2.4vw; }
 
 /* ---------- Stage + tags ---------- */

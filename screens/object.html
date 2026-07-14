@@ -44,20 +44,22 @@
       </ul>
     </header>
 
-    <!-- capture history timeline: the line runs through the cubes and continues
-         down into the prev chevron -->
+    <!-- capture history timeline: the line runs through the cubes, ending at the
+         last cube -->
     <div class="obj-timeline" aria-label="Capture history">
       <div class="obj-years">
         <button class="obj-year obj-year--active" type="button" data-year="2021"><span>2021</span><i class="obj-dot"></i></button>
         <button class="obj-year" type="button" data-year="2023"><span>2023</span><i class="obj-dot"></i></button>
         <button class="obj-year" type="button" data-year="2026"><span>2026</span><i class="obj-dot"></i></button>
       </div>
-      <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">
-        <svg viewBox="0 0 22 44" width="22" height="44" aria-hidden="true">
-          <polyline points="17,4 4,22 17,40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
     </div>
+
+    <!-- prev / next navigation: a symmetric pair flanking the object -->
+    <button class="obj-arrow obj-arrow--prev" type="button" id="objPrev" aria-label="Previous capture">
+      <svg viewBox="0 0 22 44" width="22" height="44" aria-hidden="true">
+        <polyline points="17,4 4,22 17,40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
     <button class="obj-arrow obj-arrow--next" type="button" id="objNext" aria-label="Next capture">
       <svg viewBox="0 0 22 44" width="22" height="44" aria-hidden="true">

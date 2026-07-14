@@ -50,11 +50,12 @@
 /* js/gallery-title.js shifts this so its left edge lines up with the first
    polaroid (the grid itself stays centred — the polaroids don't move) */
 .gal-title-block {
-  margin: 3vh 0 3.5vh;
+  /* line the title up with the fixed "Add New Capture" button on the right */
+  margin: 6vh 0 3.5vh;
   text-align: left;
 }
 .gal-updated {
-  font-size: 0.85rem;
+  font-size: 0.72rem; /* same size as the "[NN] · X days ago" capture meta */
   opacity: 0.65;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
