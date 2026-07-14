@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714b">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714b">
-<link rel="stylesheet" href="../css/object.css?v=20260714b">
-<script src="../js/cursor.js?v=20260714b" defer></script>
-<script src="../js/grain.js?v=20260714b" defer></script>
-<script src="../js/tilt3d.js?v=20260714b" defer></script>
-<script src="../js/archive.js?v=20260714b"></script>
-<script src="../js/flow.js?v=20260714b" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714b"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714c">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714c">
+<link rel="stylesheet" href="../css/object.css?v=20260714c">
+<script src="../js/cursor.js?v=20260714c" defer></script>
+<script src="../js/grain.js?v=20260714c" defer></script>
+<script src="../js/tilt3d.js?v=20260714c" defer></script>
+<script src="../js/archive.js?v=20260714c"></script>
+<script src="../js/flow.js?v=20260714c" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714c"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -408,9 +408,19 @@
             var li = document.createElement("li");
             var text = document.createElement("span");
             text.textContent = a.title;
-            var dash = document.createElement("span");
+            text.style.cursor = "pointer";
+            text.title = "Edit annotation";
+            text.addEventListener("click", function () { white.hidden = true; openBlueEdit(a); });
+            var dash = document.createElement("button");
+            dash.type = "button";
             dash.className = "obj-white-list-dash";
+            dash.setAttribute("aria-label", "Delete annotation");
             dash.textContent = "−";
+            dash.addEventListener("click", function (e) {
+              e.stopPropagation();
+              deleteAnnotation(a);
+              fillWhite(catalog[key]);
+            });
             li.appendChild(text);
             li.appendChild(dash);
             ul.appendChild(li);

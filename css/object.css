@@ -690,8 +690,21 @@
 }
 
 .obj-white-list-dash {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--color-ink-blue);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
   opacity: 0.7;
+  cursor: pointer;
 }
+.obj-white-list-dash:hover { opacity: 1; }
+
+/* the closing rule after the list already draws a line, so drop the last row's
+   border to avoid a double line */
+.obj-white-list li:last-child { border-bottom: none; }
 
 .obj-white-list li.obj-white-none {
   opacity: 0.6;
