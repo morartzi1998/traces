@@ -68,6 +68,13 @@
   color: var(--color-cream);
 }
 
+/* the archive grid starts from the left, so one capture sits at the same left
+   edge as the first of four — it doesn't jump to the centre (community keeps
+   its centred rows) */
+.gal--archive .gal-grid {
+  justify-content: flex-start;
+}
+
 /* empty state for a brand-new "your archive" */
 .gal-empty {
   flex: 1;
