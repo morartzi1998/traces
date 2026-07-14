@@ -671,10 +671,15 @@
 .obj-white-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 12px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--color-ink-blue);
   font-size: 0.88rem;
+}
+
+/* a line above the first row too, so the list is evenly bracketed */
+.obj-white-list li:first-child {
+  border-top: 1px solid var(--color-ink-blue);
 }
 
 .obj-white-list li::before {
