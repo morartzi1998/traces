@@ -23,7 +23,7 @@
     <main class="onb-main">
       <h1 class="onb-heading">Hey! its yor first time here,<br>please fill the details below</h1>
 
-      <form class="onb-form" onsubmit="event.preventDefault(); goTo('upload.html')">
+      <form class="onb-form" onsubmit="event.preventDefault(); saveOnboarding()">
         <label class="onb-label" for="onbName">What Is Your Name ?</label>
         <input class="onb-input" id="onbName" type="text" autocomplete="name">
 
@@ -43,6 +43,18 @@
     </nav>
 
   </div>
+
+  <script>
+    function saveOnboarding() {
+      try {
+        var n = (document.getElementById("onbName").value || "").trim();
+        var c = (document.getElementById("onbCountry").value || "").trim();
+        if (n) localStorage.setItem("traces-user-name", n);
+        if (c) localStorage.setItem("traces-user-country", c);
+      } catch (e) {}
+      goTo("upload.html");
+    }
+  </script>
 
 </body>
 </html>

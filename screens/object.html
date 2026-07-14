@@ -86,6 +86,10 @@
           </div>
         </div>
         <p class="remark-card-text" id="remarkText"></p>
+        <div class="remark-card-actions">
+          <button class="remark-card-act" type="button" id="remarkEdit">edit</button>
+          <button class="remark-card-act" type="button" id="remarkDelete">delete</button>
+        </div>
       </div>
     </div>
 
@@ -147,6 +151,7 @@
           <textarea class="obj-blue-text" id="blueText"></textarea>
           <div class="obj-blue-actions">
             <button class="obj-blue-btn" type="button" id="blueCancel">Cancel</button>
+            <button class="obj-blue-btn" type="button" id="blueDelete" hidden>Delete</button>
             <button class="obj-blue-btn obj-blue-btn--solid" type="button" id="blueSave">Save annotation</button>
           </div>
         </div>
@@ -584,6 +589,7 @@
         document.getElementById("blueName").value = annotation ? annotation.title : "";
         document.getElementById("blueText").value = annotation ? annotation.text : "";
         document.getElementById("blueSave").textContent = annotation ? "Save changes" : "Save annotation";
+        document.getElementById("blueDelete").hidden = !annotation;
       }
 
       // view a saved "story" annotation: read-only, collapsible, with an Edit button
@@ -663,6 +669,29 @@
 
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && annotateMode) exitAnnotateMode();
+      });
+
+      function deleteAnnotation(annotation) {
+        if (!annotation) return;
+        var list = catalog[key].annotations;
+        var i = list.indexOf(annotation);
+        if (i >= 0) list.splice(i, 1);
+        persist(key);
+        renderAnnotations();
+      }
+
+      document.getElementById("blueDelete").addEventListener("click", function () {
+        deleteAnnotation(editingAnnotation);
+        closeBlue();
+      });
+      document.getElementById("remarkEdit").addEventListener("click", function () {
+        var a = openRemarkAnnotation;
+        closeRemarkCard();
+        openBlueEdit(a);
+      });
+      document.getElementById("remarkDelete").addEventListener("click", function () {
+        deleteAnnotation(openRemarkAnnotation);
+        closeRemarkCard();
       });
 
       document.getElementById("blueCancel").addEventListener("click", closeBlue);

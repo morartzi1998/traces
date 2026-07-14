@@ -16,14 +16,11 @@
   if (!canvas || !list || !count || !blueSidebar || !defaultSidebar) return;
 
   var empty = list.querySelector(".annotations-empty");
-  // the freshly-scanned capture already carries its annotations, shown as
-  // pins on the object straight away (matches the object view).
-  var annotations = [
-    { x: 0.46, y: 0.72, title: "missing", text: "one bulb has been missing for years - we never replaced it." },
-    { x: 0.58, y: 0.4, title: "lights", text: "there is something strange about the lights in the hallway. no matter how many times i change them, they never all work at the same time." },
-  ];
+  // a fresh capture starts with NO annotations — the user adds their own
+  var annotations = [];
   var pendingSpot = null;
   var pendingMarker = null;
+  var editingIndex = -1; // >= 0 while editing an existing annotation
 
   function render() {
     count.textContent = annotations.length;
@@ -40,12 +37,17 @@
       label.className = "label";
       label.textContent = a.title;
       marker.appendChild(label);
+      marker.style.cursor = "pointer";
+      marker.addEventListener("click", function (e) { e.stopPropagation(); openEdit(i); });
       canvas.appendChild(marker);
 
       var row = document.createElement("div");
       row.className = "annotation-row";
       var text = document.createElement("span");
       text.textContent = a.title;
+      text.style.cursor = "pointer";
+      text.title = "Edit annotation";
+      text.addEventListener("click", function () { openEdit(i); });
       var remove = document.createElement("button");
       remove.className = "remove";
       remove.type = "button";
@@ -81,10 +83,23 @@
   }
 
   function openBlue(spot) {
+    editingIndex = -1;
     pendingSpot = spot;
     showPendingMarker(spot);
     document.getElementById("daName").value = "";
     document.getElementById("daText").value = "";
+    defaultSidebar.hidden = true;
+    blueSidebar.hidden = false;
+    document.getElementById("daName").focus();
+  }
+
+  function openEdit(i) {
+    editingIndex = i;
+    var a = annotations[i];
+    pendingSpot = { x: a.x, y: a.y };
+    showPendingMarker(pendingSpot);
+    document.getElementById("daName").value = a.title || "";
+    document.getElementById("daText").value = a.text || "";
     defaultSidebar.hidden = true;
     blueSidebar.hidden = false;
     document.getElementById("daName").focus();
@@ -95,6 +110,7 @@
     defaultSidebar.hidden = false;
     clearPendingMarker();
     pendingSpot = null;
+    editingIndex = -1;
   }
 
   canvas.addEventListener("click", function (e) {
@@ -109,7 +125,12 @@
     var title = document.getElementById("daName").value.trim();
     var text = document.getElementById("daText").value.trim();
     if (title && pendingSpot) {
-      annotations.push({ x: pendingSpot.x, y: pendingSpot.y, title: title, text: text });
+      if (editingIndex >= 0 && annotations[editingIndex]) {
+        annotations[editingIndex].title = title;
+        annotations[editingIndex].text = text;
+      } else {
+        annotations.push({ x: pendingSpot.x, y: pendingSpot.y, title: title, text: text });
+      }
       render();
     }
     closeBlue();

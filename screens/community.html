@@ -113,10 +113,12 @@
       function build(c) {
         var art = document.createElement("article");
         art.className = "gal-item";
+        var who = (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : "");
         art.innerHTML =
-          '<p class="gal-meta">' + ago(c.created) + '<br>your capture</p>' +
+          '<p class="gal-meta">' + ago(c.created) + '<br><span class="gal-who"></span></p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
           '<button class="gal-delete" type="button" hidden>delete capture</button>';
+        art.querySelector(".gal-who").textContent = who;
         art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
         art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
         var card = art.querySelector(".gal-card");

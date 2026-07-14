@@ -125,7 +125,7 @@
       var typeEl = document.querySelector('input[name="capture-type"]:checked');
       var kind = typeEl ? typeEl.value : "object";
       var visEl = document.querySelector('input[name="visibility"]:checked');
-      var toCommunity = visEl && visEl.value === "community";
+      var alsoCommunity = visEl && visEl.value === "community";
       var img = document.querySelector(".capture-object").src;
       var model = null;
       // a real reconstruction (Tripo) drops its GLB url + a rendered thumbnail
@@ -136,17 +136,27 @@
         if (t) img = t;
       } catch (e) {}
       var annotations = window.getCaptureAnnotations ? window.getCaptureAnnotations() : [];
+      var by = "", country = "";
+      try {
+        by = localStorage.getItem("traces-user-name") || "";
+        country = localStorage.getItem("traces-user-country") || "";
+      } catch (e) {}
       var payload = {
         title: title.trim() || "untitled capture",
         feeling: feeling.trim(),
         kind: kind,
         img: img,
         model: model,
+        by: by,
+        country: country,
         annotations: annotations
       };
-      var cap = null;
-      if (toCommunity && window.Community) cap = Community.add(payload);
-      else if (window.Archive) cap = Archive.add(payload);
+      // a capture ALWAYS goes into the archive; sharing to the community is an
+      // additional choice, not an alternative
+      var cap = window.Archive ? Archive.add(payload) : null;
+      if (alsoCommunity && window.Community && cap) {
+        Community.add(Object.assign({}, cap));
+      }
       try {
         if (cap) sessionStorage.setItem("traces-item", cap.id);
         sessionStorage.removeItem("traces-upload-img");
@@ -157,7 +167,7 @@
         sessionStorage.removeItem("traces-task");
         sessionStorage.removeItem("traces-task-error");
       } catch (e) {}
-      goTo(toCommunity ? "community.html" : "gallery.html");
+      goTo("gallery.html");
     }
   </script>
 
