@@ -384,6 +384,23 @@
   padding-bottom: 0;
 }
 
+/* .obj-blue is the flex column, but its content sits in this body div — make
+   it (and the edit/view field wrappers within it) flex columns too, so the
+   action row at the end can be pushed to the true bottom of the panel */
+.obj-blue-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.obj-blue-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .obj-blue-close {
   flex-shrink: 0;
   width: 28px;
@@ -838,6 +855,13 @@
 .obj-white-list li.obj-white-none {
   opacity: 0.6;
   border-bottom: none;
+}
+
+/* pushes the action button(s) to the very bottom of the panel, whatever the
+   content length above — used in every side panel (details/link/blue) */
+.obj-panel-spacer {
+  flex: 1 1 auto;
+  min-height: 12px;
 }
 
 .obj-white-list li.obj-white-none::before {
