@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714k">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714k">
-<link rel="stylesheet" href="../css/object.css?v=20260714k">
-<script src="../js/cursor.js?v=20260714k" defer></script>
-<script src="../js/grain.js?v=20260714k" defer></script>
-<script src="../js/tilt3d.js?v=20260714k" defer></script>
-<script src="../js/archive.js?v=20260714k"></script>
-<script src="../js/flow.js?v=20260714k" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714k"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714l">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714l">
+<link rel="stylesheet" href="../css/object.css?v=20260714l">
+<script src="../js/cursor.js?v=20260714l" defer></script>
+<script src="../js/grain.js?v=20260714l" defer></script>
+<script src="../js/tilt3d.js?v=20260714l" defer></script>
+<script src="../js/archive.js?v=20260714l"></script>
+<script src="../js/flow.js?v=20260714l" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714l"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -98,6 +98,10 @@
       <aside class="obj-link-card" id="linkCard" hidden>
         <button class="obj-link-card-close" type="button" id="linkCardClose" aria-label="Close">&minus;</button>
         <h2 class="obj-white-title" id="linkCardTitle">Old living room lamp</h2>
+        <div class="obj-link-card-actions">
+          <button class="obj-link-card-act" type="button" id="linkCardMove">move point</button>
+          <button class="obj-link-card-act" type="button" id="linkCardDelete">delete link</button>
+        </div>
         <hr class="obj-white-rule">
         <p class="obj-white-label">Type of capture</p>
         <div class="obj-white-choices">
@@ -111,7 +115,6 @@
         <hr class="obj-white-rule">
         <p class="obj-white-label">Annotations (<span id="linkCardAnnCount">0</span>)</p>
         <ul class="obj-white-list" id="linkCardAnnotations"></ul>
-        <hr class="obj-white-rule">
         <p class="obj-white-label">Visibility</p>
         <div class="obj-white-choices">
           <label><input type="checkbox" id="linkCardPrivate" disabled> private</label>
@@ -334,6 +337,7 @@
       // where the connected object sits -----
       var linkMode = false;
       var linkTarget = null; // the key of the object being placed
+      var linkEditingLink = null; // set instead of linkTarget when repositioning an existing link
       var objLinkHint = document.getElementById("objLinkHint");
 
       // targetKey known: we came from that object, just place its point here.
@@ -342,6 +346,7 @@
       function enterLinkMode(targetKey) {
         linkMode = true;
         linkTarget = targetKey;
+        linkEditingLink = null;
         stage.setAttribute("data-crosshair", "");
         objLinkHint.textContent = targetKey
           ? 'click where "' + catalog[targetKey].title + '" is located'
@@ -349,9 +354,20 @@
         objLinkHint.hidden = false;
       }
 
+      // reposition an existing link marker: the next click moves it in place
+      function enterLinkMoveMode(link) {
+        linkMode = true;
+        linkTarget = null;
+        linkEditingLink = link;
+        stage.setAttribute("data-crosshair", "");
+        objLinkHint.textContent = 'click the new spot for "' + link.title + '"';
+        objLinkHint.hidden = false;
+      }
+
       function exitLinkMode() {
         linkMode = false;
         linkTarget = null;
+        linkEditingLink = null;
         stage.removeAttribute("data-crosshair");
         objLinkHint.hidden = true;
       }
@@ -423,6 +439,7 @@
 
       var linkCard = document.getElementById("linkCard");
       var openLinkTarget = null;
+      var openLinkRef = null; // the actual link object, so move/delete can act on it
 
       function openLinkCard(link) {
         // a full read-only preview of the connected capture — same layout as
@@ -460,11 +477,13 @@
 
         linkCard.hidden = false;
         openLinkTarget = link.target;
+        openLinkRef = link;
       }
 
       function closeLinkCard() {
         linkCard.hidden = true;
         openLinkTarget = null;
+        openLinkRef = null;
       }
 
       function renderLinks() {
@@ -691,9 +710,18 @@
             }
           }
           var t = linkTarget;
+          var editing = linkEditingLink;
           var placedIn = key;
           exitLinkMode();
-          if (t) {
+          if (editing) {
+            // repositioning an existing link — update it in place
+            editing.x = lspot.x;
+            editing.y = lspot.y;
+            editing.pos = lspot.pos || null;
+            editing.normal = lspot.normal || null;
+            persist(placedIn);
+            renderLinks();
+          } else if (t) {
             // came from the object side — target already chosen
             catalog[placedIn].links.push({
               x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
@@ -995,6 +1023,21 @@
         var t = openLinkTarget;
         closeLinkCard();
         if (t && catalog[t]) show(t);
+      });
+      document.getElementById("linkCardDelete").addEventListener("click", function () {
+        var link = openLinkRef;
+        if (link) {
+          var idx = catalog[key].links.indexOf(link);
+          if (idx >= 0) catalog[key].links.splice(idx, 1);
+          persist(key);
+        }
+        closeLinkCard();
+        renderLinks();
+      });
+      document.getElementById("linkCardMove").addEventListener("click", function () {
+        var link = openLinkRef;
+        closeLinkCard();
+        if (link) enterLinkMoveMode(link);
       });
 
       function boot() {

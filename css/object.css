@@ -248,13 +248,7 @@
 }
 
 /* a capture connected to another glows blue */
-.obj-stage.obj-connected .obj-photo {
-  filter: drop-shadow(0 0 22px rgba(42, 72, 218, 0.95)) drop-shadow(0 0 44px rgba(42, 72, 218, 0.6));
-}
-
-.obj-stage.obj-connected .obj-model {
-  filter: drop-shadow(0 0 22px rgba(42, 72, 218, 0.9));
-}
+/* a connected capture is indicated by its link marker alone — no glow */
 
 .obj-model {
   width: 100%;
@@ -672,11 +666,31 @@
 .obj-link-card-img {
   display: block;
   width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  background: var(--photo-backdrop);
+  height: 200px;
+  object-fit: contain;
+  background: #000000;
   margin: 4px 0;
 }
+
+.obj-link-card-actions {
+  display: flex;
+  gap: 20px;
+  margin: -4px 0 4px;
+}
+
+.obj-link-card-act {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-caption);
+  font-size: 0.85rem;
+  color: var(--color-ink-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.obj-link-card-act:hover { opacity: 1; }
 
 /* banner shown while placing a new link marker */
 .obj-link-hint {
