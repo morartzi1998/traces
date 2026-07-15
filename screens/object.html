@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714j">
-<link rel="stylesheet" href="../css/object.css?v=20260714j">
-<script src="../js/cursor.js?v=20260714j" defer></script>
-<script src="../js/grain.js?v=20260714j" defer></script>
-<script src="../js/tilt3d.js?v=20260714j" defer></script>
-<script src="../js/archive.js?v=20260714j"></script>
-<script src="../js/flow.js?v=20260714j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714k">
+<link rel="stylesheet" href="../css/object.css?v=20260714k">
+<script src="../js/cursor.js?v=20260714k" defer></script>
+<script src="../js/grain.js?v=20260714k" defer></script>
+<script src="../js/tilt3d.js?v=20260714k" defer></script>
+<script src="../js/archive.js?v=20260714k"></script>
+<script src="../js/flow.js?v=20260714k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714k"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -93,15 +93,32 @@
       </div>
 
       <!-- a link marker (a point in a space marking where a connected object
-           sits) opens this small card, with a way to jump straight there -->
-      <div class="obj-link-card" id="linkCard" hidden>
-        <p class="obj-link-card-label">connected object</p>
-        <p class="obj-link-card-title" id="linkCardTitle"></p>
-        <div class="obj-link-card-actions">
-          <button class="obj-link-card-act" type="button" id="linkCardOpen">open</button>
-          <button class="obj-link-card-act" type="button" id="linkCardClose">close</button>
+           sits) opens this preview panel — the same layout as the details
+           panel, read-only, with a way to jump straight there -->
+      <aside class="obj-link-card" id="linkCard" hidden>
+        <button class="obj-link-card-close" type="button" id="linkCardClose" aria-label="Close">&minus;</button>
+        <h2 class="obj-white-title" id="linkCardTitle">Old living room lamp</h2>
+        <hr class="obj-white-rule">
+        <p class="obj-white-label">Type of capture</p>
+        <div class="obj-white-choices">
+          <label><input type="checkbox" id="linkCardObj" disabled> object</label>
+          <label><input type="checkbox" id="linkCardSpace" disabled> space</label>
         </div>
-      </div>
+        <hr class="obj-white-rule">
+        <img class="obj-link-card-img" id="linkCardImg" alt="">
+        <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
+        <p class="obj-white-feeling" id="linkCardFeeling"></p>
+        <hr class="obj-white-rule">
+        <p class="obj-white-label">Annotations (<span id="linkCardAnnCount">0</span>)</p>
+        <ul class="obj-white-list" id="linkCardAnnotations"></ul>
+        <hr class="obj-white-rule">
+        <p class="obj-white-label">Visibility</p>
+        <div class="obj-white-choices">
+          <label><input type="checkbox" id="linkCardPrivate" disabled> private</label>
+          <label><input type="checkbox" id="linkCardCommunity" disabled> community</label>
+        </div>
+        <button class="obj-white-edit" type="button" id="linkCardOpen">Open</button>
+      </aside>
     </div>
 
     <!-- shown while placing a link marker: click where the connected object sits -->
@@ -391,7 +408,8 @@
         el.appendChild(label);
       }
 
-      // a link marker = a small white dot with a blue ring that glows on hover
+      // a link marker = a small white square with a blue ring (no glow — a
+      // plain, quiet marker)
       function buildLinkMarker(el) {
         var dot = document.createElement("span");
         dot.className = "obj-link-dot";
@@ -407,12 +425,39 @@
       var openLinkTarget = null;
 
       function openLinkCard(link) {
-        // a side panel, like the details/annotation panels — not positioned
-        // at the marker's point
+        // a full read-only preview of the connected capture — same layout as
+        // the details panel — not positioned at the marker's point
         closeBlue();
         closeRemarkCard();
         white.hidden = true;
-        document.getElementById("linkCardTitle").textContent = link.title;
+        var item = catalog[link.target] || { title: link.title, annotations: [] };
+
+        document.getElementById("linkCardTitle").textContent = item.title;
+        document.getElementById("linkCardObj").checked = item.kind !== "space";
+        document.getElementById("linkCardSpace").checked = item.kind === "space";
+        document.getElementById("linkCardImg").src = item.img || "";
+        document.getElementById("linkCardFeeling").textContent = item.feeling || "";
+        document.getElementById("linkCardAnnCount").textContent = item.annotations.length;
+        document.getElementById("linkCardPrivate").checked = false;
+        document.getElementById("linkCardCommunity").checked = true;
+
+        var ul = document.getElementById("linkCardAnnotations");
+        ul.innerHTML = "";
+        if (item.annotations.length) {
+          item.annotations.forEach(function (a) {
+            var li = document.createElement("li");
+            var text = document.createElement("span");
+            text.textContent = a.title;
+            li.appendChild(text);
+            ul.appendChild(li);
+          });
+        } else {
+          var li = document.createElement("li");
+          li.className = "obj-white-none";
+          li.textContent = "no annotations yet";
+          ul.appendChild(li);
+        }
+
         linkCard.hidden = false;
         openLinkTarget = link.target;
       }
