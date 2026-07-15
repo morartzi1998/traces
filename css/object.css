@@ -250,6 +250,17 @@
 /* a capture connected to another glows blue */
 /* a connected capture is indicated by its link marker alone — no glow */
 
+/* the details/blue/link-preview panels span the full height on the right —
+   hide the fixed corner nav that would otherwise show through/overlap them */
+.obj-screen:has(#objWhite:not([hidden])) .nav-corner--tr,
+.obj-screen:has(#objWhite:not([hidden])) .nav-corner--br,
+.obj-screen:has(#objBlue:not([hidden])) .nav-corner--tr,
+.obj-screen:has(#objBlue:not([hidden])) .nav-corner--br,
+.obj-screen:has(#linkCard:not([hidden])) .nav-corner--tr,
+.obj-screen:has(#linkCard:not([hidden])) .nav-corner--br {
+  display: none;
+}
+
 .obj-model {
   width: 100%;
   height: 100%;
@@ -379,9 +390,12 @@
   margin-bottom: 18px;
 }
 
-.obj-blue-head--view h2 {
-  border-bottom: none;
-  padding-bottom: 0;
+/* view mode keeps the same line under the title as edit mode */
+
+.obj-blue-rule {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  margin: 14px 0;
 }
 
 /* .obj-blue is the flex column, but its content sits in this body div — make
