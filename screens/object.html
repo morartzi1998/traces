@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714i">
-<link rel="stylesheet" href="../css/object.css?v=20260714i">
-<script src="../js/cursor.js?v=20260714i" defer></script>
-<script src="../js/grain.js?v=20260714i" defer></script>
-<script src="../js/tilt3d.js?v=20260714i" defer></script>
-<script src="../js/archive.js?v=20260714i"></script>
-<script src="../js/flow.js?v=20260714i" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714i"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714j">
+<link rel="stylesheet" href="../css/object.css?v=20260714j">
+<script src="../js/cursor.js?v=20260714j" defer></script>
+<script src="../js/grain.js?v=20260714j" defer></script>
+<script src="../js/tilt3d.js?v=20260714j" defer></script>
+<script src="../js/archive.js?v=20260714j"></script>
+<script src="../js/flow.js?v=20260714j" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714j"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -40,7 +40,7 @@
         <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
-        <li><button type="button" onclick="goTo('connect.html')">Connect previous captured object</button></li>
+        <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
       </ul>
     </header>
 
@@ -319,11 +319,16 @@
       var linkTarget = null; // the key of the object being placed
       var objLinkHint = document.getElementById("objLinkHint");
 
+      // targetKey known: we came from that object, just place its point here.
+      // targetKey null: we started from the space — place the point first,
+      // then go choose which object it represents.
       function enterLinkMode(targetKey) {
         linkMode = true;
         linkTarget = targetKey;
         stage.setAttribute("data-crosshair", "");
-        document.getElementById("objLinkHintTitle").textContent = catalog[targetKey].title;
+        objLinkHint.textContent = targetKey
+          ? 'click where "' + catalog[targetKey].title + '" is located'
+          : "click where the object you want to connect is located";
         objLinkHint.hidden = false;
       }
 
@@ -342,6 +347,38 @@
         try { sessionStorage.removeItem("traces-place-link"); } catch (e) {}
         enterLinkMode(pending);
       }
+
+      // the reverse hand-off: a point was already placed in this space (before
+      // an object was chosen), and connect.html now knows which object it is —
+      // finalize the link marker here
+      function maybeFinalizeLink(k) {
+        var raw = null;
+        try { raw = sessionStorage.getItem("traces-finalize-link"); } catch (e) {}
+        if (!raw) return;
+        try { sessionStorage.removeItem("traces-finalize-link"); } catch (e) {}
+        var spot;
+        try { spot = JSON.parse(raw); } catch (e) { return; }
+        if (!spot || spot.space !== k || !catalog[spot.target]) return;
+        catalog[k].links.push({
+          x: spot.x, y: spot.y, pos: spot.pos || null, normal: spot.normal || null,
+          target: spot.target, title: catalog[spot.target].title,
+        });
+        persist(k);
+      }
+
+      // "Connect previous captured object": if we're already looking at a
+      // space, place the point right here first, then go choose the object;
+      // otherwise (looking at an object) go pick the space to connect it to.
+      window.startConnectFlow = function () {
+        menu.hidden = true;
+        var timeline = document.querySelector(".obj-timeline");
+        if (timeline) timeline.hidden = false;
+        if (catalog[key].kind === "space") {
+          enterLinkMode(null);
+        } else {
+          goTo("connect.html");
+        }
+      };
 
       // a marker = a small blue colour cube next to a label strip
       function buildMarker(el, title) {
@@ -370,8 +407,11 @@
       var openLinkTarget = null;
 
       function openLinkCard(link) {
-        linkCard.style.left = link.x * 100 + "%";
-        linkCard.style.top = link.y * 100 + "%";
+        // a side panel, like the details/annotation panels — not positioned
+        // at the marker's point
+        closeBlue();
+        closeRemarkCard();
+        white.hidden = true;
         document.getElementById("linkCardTitle").textContent = link.title;
         linkCard.hidden = false;
         openLinkTarget = link.target;
@@ -490,7 +530,11 @@
 
       function openRemarkCard(annotation) {
         closeRemarkCard();
-        remarkCard.style.left = annotation.x * 100 + "%";
+        // the marker (a 3D hotspot) lives inside model-viewer, a lower
+        // stacking context than this card, so it can never paint above the
+        // card where they overlap — offset the card clear of the marker
+        // instead of letting it get swallowed underneath
+        remarkCard.style.left = "calc(" + (annotation.x * 100) + "% + 12px)";
         remarkCard.style.top = annotation.y * 100 + "%";
         document.getElementById("remarkTitle").textContent = annotation.title;
         document.getElementById("remarkText").textContent = annotation.text;
@@ -602,13 +646,25 @@
             }
           }
           var t = linkTarget;
-          catalog[key].links.push({
-            x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
-            target: t, title: catalog[t].title,
-          });
-          persist(key);
+          var placedIn = key;
           exitLinkMode();
-          renderLinks();
+          if (t) {
+            // came from the object side — target already chosen
+            catalog[placedIn].links.push({
+              x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
+              target: t, title: catalog[t].title,
+            });
+            persist(placedIn);
+            renderLinks();
+          } else {
+            // came from the space side — go choose which object this point is
+            try {
+              sessionStorage.setItem("traces-pending-spot", JSON.stringify({
+                space: placedIn, x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
+              }));
+            } catch (e) {}
+            goTo("connect.html");
+          }
           return;
         }
         if (annotateMode) {
@@ -627,7 +683,7 @@
         } else {
           fillWhite(catalog[key]);
           white.hidden = !white.hidden;
-          if (!white.hidden) closeBlue();
+          if (!white.hidden) { closeBlue(); closeLinkCard(); }
         }
       });
 
@@ -668,6 +724,7 @@
         fillWhite(catalog[k]);
         renderAnnotations();
         maybePlaceLink(k);
+        maybeFinalizeLink(k);
         renderLinks();
       }
 

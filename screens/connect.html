@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Connect a capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714i">
-<link rel="stylesheet" href="../css/gallery.css?v=20260714i">
-<script src="../js/cursor.js?v=20260714i" defer></script>
-<script src="../js/grain.js?v=20260714i" defer></script>
-<script src="../js/flow.js?v=20260714i" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714j">
+<link rel="stylesheet" href="../css/gallery.css?v=20260714j">
+<script src="../js/cursor.js?v=20260714j" defer></script>
+<script src="../js/grain.js?v=20260714j" defer></script>
+<script src="../js/flow.js?v=20260714j" defer></script>
 </head>
 <body>
 
@@ -91,10 +91,25 @@
 
   <script>
     // Connecting an object to a space also needs a point IN the space marking
-    // where that object sits. So: store the connection, then jump to the
-    // picked space and ask it to enter "place link" mode — the next click
-    // there drops the marker back to the object we came from.
+    // where that object sits. Two ways to arrive here:
+    //  - from an OBJECT: pick the space now, then place the point there next.
+    //  - from a SPACE (a point was already placed there): pick which object
+    //    that point represents, finalizing the marker straight away.
     function connectObject(pickedKey) {
+      var pendingSpotRaw = null;
+      try { pendingSpotRaw = sessionStorage.getItem("traces-pending-spot"); } catch (e) {}
+      if (pendingSpotRaw) {
+        try {
+          var spot = JSON.parse(pendingSpotRaw);
+          spot.target = pickedKey;
+          sessionStorage.removeItem("traces-pending-spot");
+          localStorage.setItem("traces-conn-" + pickedKey, spot.space);
+          sessionStorage.setItem("traces-finalize-link", JSON.stringify(spot));
+          sessionStorage.setItem("traces-item", spot.space);
+        } catch (e) {}
+        goTo("object.html");
+        return;
+      }
       try {
         var cur = sessionStorage.getItem("traces-item") || "chandelier";
         localStorage.setItem("traces-conn-" + cur, pickedKey);
