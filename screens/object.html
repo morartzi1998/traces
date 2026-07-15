@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714e">
-<link rel="stylesheet" href="../css/object.css?v=20260714e">
-<script src="../js/cursor.js?v=20260714e" defer></script>
-<script src="../js/grain.js?v=20260714e" defer></script>
-<script src="../js/tilt3d.js?v=20260714e" defer></script>
-<script src="../js/archive.js?v=20260714e"></script>
-<script src="../js/flow.js?v=20260714e" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714e"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714g">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714g">
+<link rel="stylesheet" href="../css/object.css?v=20260714g">
+<script src="../js/cursor.js?v=20260714g" defer></script>
+<script src="../js/grain.js?v=20260714g" defer></script>
+<script src="../js/tilt3d.js?v=20260714g" defer></script>
+<script src="../js/archive.js?v=20260714g"></script>
+<script src="../js/flow.js?v=20260714g" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714g"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -118,7 +118,6 @@
       <hr class="obj-white-rule">
       <p class="obj-white-label">Annotations (<span id="whiteAnnCount">0</span>)</p>
       <ul class="obj-white-list" id="whiteAnnotations"></ul>
-      <hr class="obj-white-rule">
       <p class="obj-white-label">Visibility</p>
       <div class="obj-white-choices">
         <label><input type="checkbox" id="whitePrivate" disabled> private</label>
@@ -285,19 +284,14 @@
         stage.removeAttribute("data-crosshair");
       }
 
-      // a marker = a small blue colour cube, a white type-indicator square
-      // (story/remark, already visible before the pin is opened), and a label
-      function buildMarker(el, title, type) {
+      // a marker = a small blue colour cube next to a label strip
+      function buildMarker(el, title) {
         var cube = document.createElement("span");
         cube.className = "obj-tag-cube";
-        var check = document.createElement("span");
-        check.className = "obj-tag-check";
-        if (type === "remark") check.classList.add("obj-tag-check--remark");
         var label = document.createElement("span");
         label.className = "obj-tag-label";
         label.textContent = title;
         el.appendChild(cube);
-        el.appendChild(check);
         el.appendChild(label);
       }
 
@@ -386,12 +380,14 @@
         document.getElementById("remarkRemarkBox").checked = true;
         remarkCard.hidden = false;
         openRemarkAnnotation = annotation;
-        if (annotation.__btn) annotation.__btn.hidden = true; // the pill becomes this card
+        // the marker stays put but simplifies to a white square with a blue
+        // line while its remark card is open (the card itself carries the label)
+        if (annotation.__btn) annotation.__btn.classList.add("obj-tag--open");
       }
 
       function closeRemarkCard() {
         remarkCard.hidden = true;
-        if (openRemarkAnnotation && openRemarkAnnotation.__btn) openRemarkAnnotation.__btn.hidden = false;
+        if (openRemarkAnnotation && openRemarkAnnotation.__btn) openRemarkAnnotation.__btn.classList.remove("obj-tag--open");
         openRemarkAnnotation = null;
       }
 

@@ -291,22 +291,28 @@
   height: 15px;
   background: var(--color-ink-blue);
   flex-shrink: 0;
+  position: relative;
 }
 
-/* the type indicator: a small white square with a blue line, matching the
-   story/remark checkbox — visible on the pin itself, before it's opened */
-.obj-tag-check {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
+/* while its remark card is open, the marker simplifies to a white square with
+   a blue line (the card itself now carries the label) */
+.obj-tag--open .obj-tag-cube {
   background: #ffffff;
-  border: 1.5px solid var(--color-ink-blue);
-  box-sizing: border-box;
 }
 
-/* a "remark" annotation shows filled, matching the checked checkbox look */
-.obj-tag-check--remark {
+.obj-tag--open .obj-tag-cube::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 50%;
+  height: 2px;
   background: var(--color-ink-blue);
+  transform: translateY(-50%);
+}
+
+.obj-tag--open .obj-tag-label {
+  display: none;
 }
 
 .obj-tag-label {
@@ -722,10 +728,6 @@
   cursor: pointer;
 }
 .obj-white-list-dash:hover { opacity: 1; }
-
-/* the closing rule after the list already draws a line, so drop the last row's
-   border to avoid a double line */
-.obj-white-list li:last-child { border-bottom: none; }
 
 .obj-white-list li.obj-white-none {
   opacity: 0.6;
