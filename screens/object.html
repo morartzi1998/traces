@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714d">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714d">
-<link rel="stylesheet" href="../css/object.css?v=20260714d">
-<script src="../js/cursor.js?v=20260714d" defer></script>
-<script src="../js/grain.js?v=20260714d" defer></script>
-<script src="../js/tilt3d.js?v=20260714d" defer></script>
-<script src="../js/archive.js?v=20260714d"></script>
-<script src="../js/flow.js?v=20260714d" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714d"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714e">
+<link rel="stylesheet" href="../css/object.css?v=20260714e">
+<script src="../js/cursor.js?v=20260714e" defer></script>
+<script src="../js/grain.js?v=20260714e" defer></script>
+<script src="../js/tilt3d.js?v=20260714e" defer></script>
+<script src="../js/archive.js?v=20260714e"></script>
+<script src="../js/flow.js?v=20260714e" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714e"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -285,14 +285,19 @@
         stage.removeAttribute("data-crosshair");
       }
 
-      // a marker = a small blue colour cube next to a label strip
-      function buildMarker(el, title) {
+      // a marker = a small blue colour cube, a white type-indicator square
+      // (story/remark, already visible before the pin is opened), and a label
+      function buildMarker(el, title, type) {
         var cube = document.createElement("span");
         cube.className = "obj-tag-cube";
+        var check = document.createElement("span");
+        check.className = "obj-tag-check";
+        if (type === "remark") check.classList.add("obj-tag-check--remark");
         var label = document.createElement("span");
         label.className = "obj-tag-label";
         label.textContent = title;
         el.appendChild(cube);
+        el.appendChild(check);
         el.appendChild(label);
       }
 
@@ -347,7 +352,7 @@
               h.slot = "hotspot-" + i;
               h.dataset.position = a.pos;
               if (a.normal) h.dataset.normal = a.normal;
-              buildMarker(h, a.title);
+              buildMarker(h, a.title, a.type);
               a.__btn = h;
               h.addEventListener("click", function (e) { e.stopPropagation(); onAnnotationClick(a); });
               modelViewer.appendChild(h);
@@ -359,7 +364,7 @@
           b.type = "button";
           b.style.left = a.x * 100 + "%";
           b.style.top = a.y * 100 + "%";
-          buildMarker(b, a.title);
+          buildMarker(b, a.title, a.type);
           a.__btn = b;
           b.addEventListener("click", function (e) {
             e.stopPropagation(); // don't also trigger the stage's add-new-annotation click

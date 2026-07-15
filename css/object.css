@@ -293,6 +293,22 @@
   flex-shrink: 0;
 }
 
+/* the type indicator: a small white square with a blue line, matching the
+   story/remark checkbox — visible on the pin itself, before it's opened */
+.obj-tag-check {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1.5px solid var(--color-ink-blue);
+  box-sizing: border-box;
+}
+
+/* a "remark" annotation shows filled, matching the checked checkbox look */
+.obj-tag-check--remark {
+  background: var(--color-ink-blue);
+}
+
 .obj-tag-label {
   background: rgba(240, 238, 234, 0.94);
   color: var(--color-ink-blue);
