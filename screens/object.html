@@ -214,12 +214,17 @@
 
   <script>
     (function () {
-      var order = ["chandelier", "room", "couch", "plant", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
+      var order = ["chandelier", "room", "couch", "plant", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table", "television", "porcelain"];
       var catalog = {
         room: { kind: "space", title: "My old living room", img: "../assets/images/photo-room.png",
           model: "../assets/models/scan.glb",
           connected: "", feeling: "the room where everything happened - dinners, naps, matches on tv.",
-          annotations: [] },
+          annotations: [],
+          links: [
+            { x: 0.55, y: 0.5, target: "couch", title: "Father's couch" },
+            { x: 0.62, y: 0.43, target: "television", title: "Living room tv" },
+            { x: 0.78, y: 0.55, target: "porcelain", title: "Blue porcelain set" },
+          ] },
         chandelier: { kind: "object", title: "Old living room lamp", img: "../assets/images/photo-chandelier-large.png",
           model: "../assets/models/chandelier.glb",
           connected: "my old living room",
@@ -230,6 +235,7 @@
           ] },
         couch: { title: "Father's couch", img: "../assets/images/photo-couch.png",
           model: "../assets/models/scan2.glb",
+          connected: "my old living room", connectedKey: "room",
           annotations: [{ x: 0.35, y: 0.5, title: "worn armrest", type: "story", text: "his side. always his side." }] },
         plant: { title: "Mom's gifted plant", img: "../assets/images/photo-orchid.png",
           model: "../assets/models/plant.glb", annotations: [] },
@@ -247,6 +253,12 @@
           model: "../assets/models/curtain.glb", annotations: [] },
         table: { title: "Old table", img: "../assets/images/photo-table.png",
           model: "../assets/models/table.glb", annotations: [] },
+        television: { title: "Living room tv", img: "../assets/images/photo-television.png",
+          model: "../assets/models/television.glb",
+          connected: "my old living room", connectedKey: "room", annotations: [] },
+        porcelain: { title: "Blue porcelain set", img: "../assets/images/photo-porcelain.png",
+          model: "../assets/models/porcelain.glb",
+          connected: "my old living room", connectedKey: "room", annotations: [] },
       };
 
       // every item can host link markers (points that jump to a connected
