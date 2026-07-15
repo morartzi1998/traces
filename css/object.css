@@ -521,6 +521,7 @@
   color: #ffffff;
   font-family: var(--font-ink);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
 }
 
 .remark-card-row {
@@ -606,6 +607,106 @@
   opacity: 0.85;
 }
 .remark-card-act:hover { opacity: 1; }
+
+/* ---------- Link markers (a point marking a connected object) ---------- */
+
+/* a small white dot with a blue ring; the blue glow only appears on hover, to
+   signal it's clickable, rather than staying lit all the time */
+.obj-link-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.obj-link-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 3px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--color-ink-blue);
+  box-shadow: 0 0 0 0 rgba(10, 37, 180, 0);
+  transition: box-shadow 0.2s ease;
+}
+
+.obj-link-marker:hover .obj-link-dot {
+  box-shadow: 0 0 12px 4px rgba(10, 37, 180, 0.6);
+}
+
+.obj-link-card {
+  position: absolute;
+  z-index: 4;
+  transform: translateY(-50%);
+  max-width: min(260px, 26vw);
+  background: var(--color-ink-blue);
+  color: #ffffff;
+  font-family: var(--font-ink);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  padding: 12px 14px;
+  pointer-events: auto;
+}
+
+.obj-link-card-label {
+  font-family: var(--font-caption);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.obj-link-card-title {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.obj-link-card-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.obj-link-card-act {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-caption);
+  font-size: 0.78rem;
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.obj-link-card-act:hover { opacity: 1; }
+
+/* banner shown while placing a new link marker */
+.obj-link-hint {
+  position: fixed;
+  top: 2.4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: var(--color-ink-blue);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  padding: 10px 22px;
+  text-transform: lowercase;
+}
+
+/* the "connected to..." line becomes a real link when we know the target */
+.obj-white-sub--link {
+  cursor: pointer;
+}
 
 /* ---------- White details panel (click the title to toggle) ---------- */
 

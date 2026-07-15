@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260714g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260714g">
-<link rel="stylesheet" href="../css/object.css?v=20260714g">
-<script src="../js/cursor.js?v=20260714g" defer></script>
-<script src="../js/grain.js?v=20260714g" defer></script>
-<script src="../js/tilt3d.js?v=20260714g" defer></script>
-<script src="../js/archive.js?v=20260714g"></script>
-<script src="../js/flow.js?v=20260714g" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714g"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260714i">
+<link rel="stylesheet" href="../css/chrome.css?v=20260714i">
+<link rel="stylesheet" href="../css/object.css?v=20260714i">
+<script src="../js/cursor.js?v=20260714i" defer></script>
+<script src="../js/grain.js?v=20260714i" defer></script>
+<script src="../js/tilt3d.js?v=20260714i" defer></script>
+<script src="../js/archive.js?v=20260714i"></script>
+<script src="../js/flow.js?v=20260714i" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260714i"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -91,6 +91,22 @@
           <button class="remark-card-act" type="button" id="remarkDelete">delete</button>
         </div>
       </div>
+
+      <!-- a link marker (a point in a space marking where a connected object
+           sits) opens this small card, with a way to jump straight there -->
+      <div class="obj-link-card" id="linkCard" hidden>
+        <p class="obj-link-card-label">connected object</p>
+        <p class="obj-link-card-title" id="linkCardTitle"></p>
+        <div class="obj-link-card-actions">
+          <button class="obj-link-card-act" type="button" id="linkCardOpen">open</button>
+          <button class="obj-link-card-act" type="button" id="linkCardClose">close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- shown while placing a link marker: click where the connected object sits -->
+    <div class="obj-link-hint" id="objLinkHint" hidden>
+      click where "<span id="objLinkHintTitle"></span>" is located
     </div>
 
     <!-- white details panel: read the capture, or edit it in place (no page change) -->
@@ -206,6 +222,10 @@
         table: { title: "Old table", img: "../assets/images/photo-table.png", annotations: [] },
       };
 
+      // every item can host link markers (points that jump to a connected
+      // capture — spaces typically hold these, but any item may)
+      Object.keys(catalog).forEach(function (k) { catalog[k].links = catalog[k].links || []; });
+
       // ----- the visitor's own saved captures (archive + community) join the
       // catalog so they open in the object view just like the designer's items -----
       (function mergeCaptures() {
@@ -221,8 +241,10 @@
               img: c.img || "../assets/images/photo-room.png",
               model: c.model || null,
               connected: c.connected || "",
+              connectedKey: c.connectedKey || null,
               feeling: c.feeling || "",
-              annotations: Array.isArray(c.annotations) ? c.annotations : []
+              annotations: Array.isArray(c.annotations) ? c.annotations : [],
+              links: []
             };
             order.push(c.id);
           });
@@ -246,17 +268,24 @@
           if (o.feeling != null) catalog[k].feeling = o.feeling;
           if (o.kind != null) catalog[k].kind = o.kind;
           if (o.connected != null) catalog[k].connected = o.connected;
+          if (o.connectedKey != null) catalog[k].connectedKey = o.connectedKey;
           if (Array.isArray(o.annotations)) catalog[k].annotations = o.annotations;
+          if (Array.isArray(o.links)) catalog[k].links = o.links;
         });
       })();
       function persist(k) {
         var s = loadStore();
         var it = catalog[k];
         s[k] = {
-          title: it.title, feeling: it.feeling, kind: it.kind, connected: it.connected,
+          title: it.title, feeling: it.feeling, kind: it.kind,
+          connected: it.connected, connectedKey: it.connectedKey || null,
           annotations: it.annotations.map(function (a) {
             return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
               since: a.since || 2021, pos: a.pos || null, normal: a.normal || null };
+          }),
+          links: (it.links || []).map(function (l) {
+            return { x: l.x, y: l.y, target: l.target, title: l.title,
+              pos: l.pos || null, normal: l.normal || null };
           }),
         };
         saveStore(s);
@@ -284,6 +313,36 @@
         stage.removeAttribute("data-crosshair");
       }
 
+      // ----- linking an object to a space: click the point in the space
+      // where the connected object sits -----
+      var linkMode = false;
+      var linkTarget = null; // the key of the object being placed
+      var objLinkHint = document.getElementById("objLinkHint");
+
+      function enterLinkMode(targetKey) {
+        linkMode = true;
+        linkTarget = targetKey;
+        stage.setAttribute("data-crosshair", "");
+        document.getElementById("objLinkHintTitle").textContent = catalog[targetKey].title;
+        objLinkHint.hidden = false;
+      }
+
+      function exitLinkMode() {
+        linkMode = false;
+        linkTarget = null;
+        stage.removeAttribute("data-crosshair");
+        objLinkHint.hidden = true;
+      }
+
+      // after connect.html hands off here, drop straight into link-mode once
+      function maybePlaceLink(k) {
+        var pending = null;
+        try { pending = sessionStorage.getItem("traces-place-link"); } catch (e) {}
+        if (!pending || !catalog[pending]) return;
+        try { sessionStorage.removeItem("traces-place-link"); } catch (e) {}
+        enterLinkMode(pending);
+      }
+
       // a marker = a small blue colour cube next to a label strip
       function buildMarker(el, title) {
         var cube = document.createElement("span");
@@ -295,13 +354,72 @@
         el.appendChild(label);
       }
 
+      // a link marker = a small white dot with a blue ring that glows on hover
+      function buildLinkMarker(el) {
+        var dot = document.createElement("span");
+        dot.className = "obj-link-dot";
+        el.appendChild(dot);
+      }
+
       function onAnnotationClick(a) {
         if (a.type === "remark") { closeBlue(); openRemarkCard(a); }
         else { closeRemarkCard(); openBlue(a); }
       }
 
+      var linkCard = document.getElementById("linkCard");
+      var openLinkTarget = null;
+
+      function openLinkCard(link) {
+        linkCard.style.left = link.x * 100 + "%";
+        linkCard.style.top = link.y * 100 + "%";
+        document.getElementById("linkCardTitle").textContent = link.title;
+        linkCard.hidden = false;
+        openLinkTarget = link.target;
+      }
+
+      function closeLinkCard() {
+        linkCard.hidden = true;
+        openLinkTarget = null;
+      }
+
+      function renderLinks() {
+        tags.querySelectorAll(".obj-link-marker:not(.obj-link-hotspot)").forEach(function (n) { n.remove(); });
+        clearLinkHotspots();
+        var isModel = !!catalog[key].model && !modelViewer.hidden;
+        var ready = isModel && modelViewer.loaded;
+        catalog[key].links.forEach(function (l, i) {
+          if (ready) {
+            if (!l.pos) convertTo3D(l);
+            if (l.pos) {
+              var h = document.createElement("button");
+              h.className = "obj-link-marker obj-link-hotspot";
+              h.type = "button";
+              h.slot = "hotspot-link-" + i;
+              h.dataset.position = l.pos;
+              if (l.normal) h.dataset.normal = l.normal;
+              buildLinkMarker(h);
+              h.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+              modelViewer.appendChild(h);
+              return;
+            }
+          }
+          var b = document.createElement("button");
+          b.className = "obj-link-marker";
+          b.type = "button";
+          b.style.left = l.x * 100 + "%";
+          b.style.top = l.y * 100 + "%";
+          buildLinkMarker(b);
+          b.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+          tags.appendChild(b);
+        });
+      }
+
       function clearHotspots() {
         modelViewer.querySelectorAll(".obj-hotspot").forEach(function (n) { n.remove(); });
+      }
+
+      function clearLinkHotspots() {
+        modelViewer.querySelectorAll(".obj-link-hotspot").forEach(function (n) { n.remove(); });
       }
 
       // raycast a stored fractional (x,y) onto the loaded mesh so an older
@@ -395,8 +513,14 @@
 
       function fillWhite(item) {
         document.getElementById("whiteTitle").textContent = item.title;
-        document.getElementById("whiteSub").textContent =
-          item.connected ? 'connected to the space "' + item.connected + '"' : "";
+        var subEl = document.getElementById("whiteSub");
+        subEl.textContent = item.connected ? 'connected to the space "' + item.connected + '"' : "";
+        // clickable when we know which capture it's connected to — jumps there
+        var jumpKey = item.connectedKey && catalog[item.connectedKey] ? item.connectedKey : null;
+        subEl.classList.toggle("obj-white-sub--link", !!jumpKey);
+        subEl.onclick = jumpKey
+          ? function () { try { sessionStorage.setItem("traces-item", jumpKey); } catch (e) {} show(jumpKey); }
+          : null;
         document.getElementById("whiteFeeling").textContent = item.feeling || "";
         var kindBoxes = document.querySelectorAll("#whiteKind input");
         kindBoxes[0].checked = item.kind !== "space";
@@ -457,15 +581,36 @@
 
       // once the mesh is ready, (re)draw annotations as 3D-anchored hotspots
       modelViewer.addEventListener("load", function () {
-        if (catalog[key].model) renderAnnotations();
+        if (catalog[key].model) { renderAnnotations(); renderLinks(); }
       });
 
       // plain click on the capture toggles its info panel (like clicking the
       // title); the crosshair pick-a-point flow only runs while annotateMode
-      // is active, entered via the menu's "Add an annotations" item.
+      // or linkMode is active.
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
         closeRemarkCard();
+        closeLinkCard();
+        if (linkMode) {
+          var lr = stage.getBoundingClientRect();
+          var lspot = { x: (e.clientX - lr.left) / lr.width, y: (e.clientY - lr.top) / lr.height };
+          if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
+            var lhit = modelViewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+            if (lhit && lhit.position) {
+              lspot.pos = lhit.position.toString();
+              lspot.normal = lhit.normal ? lhit.normal.toString() : null;
+            }
+          }
+          var t = linkTarget;
+          catalog[key].links.push({
+            x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
+            target: t, title: catalog[t].title,
+          });
+          persist(key);
+          exitLinkMode();
+          renderLinks();
+          return;
+        }
         if (annotateMode) {
           var r = stage.getBoundingClientRect();
           var spot = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
@@ -507,15 +652,23 @@
         var conn = null;
         try { conn = localStorage.getItem("traces-conn-" + k); } catch (e) {}
         stage.classList.toggle("obj-connected", !!conn);
-        if (conn && catalog[conn]) { catalog[k].connected = catalog[conn].title; persist(k); }
+        if (conn && catalog[conn]) {
+          catalog[k].connected = catalog[conn].title;
+          catalog[k].connectedKey = conn;
+          persist(k);
+        }
 
         exitAnnotateMode();
+        exitLinkMode();
+        closeLinkCard();
         exitWhiteEdit();
         closeBlue();
         closeRemarkCard();
         white.hidden = true;
         fillWhite(catalog[k]);
         renderAnnotations();
+        maybePlaceLink(k);
+        renderLinks();
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
@@ -680,6 +833,7 @@
 
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && annotateMode) exitAnnotateMode();
+        if (e.key === "Escape" && linkMode) exitLinkMode();
       });
 
       function deleteAnnotation(annotation) {
@@ -734,6 +888,12 @@
       });
 
       document.getElementById("remarkClose").addEventListener("click", closeRemarkCard);
+      document.getElementById("linkCardClose").addEventListener("click", closeLinkCard);
+      document.getElementById("linkCardOpen").addEventListener("click", function () {
+        var t = openLinkTarget;
+        closeLinkCard();
+        if (t && catalog[t]) show(t);
+      });
 
       function boot() {
         initTilt3D(stage, photo);
