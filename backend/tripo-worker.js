@@ -13,17 +13,17 @@
 
   Deploy: see backend/README.md. Set the secret TRIPO_API_KEY in the Worker.
 
-  The Tripo v3 API shape is taken from the official Quick Start:
-    POST https://openapi.tripo3d.ai/v3/generation/<type>   -> { data: { task_id } }
-    GET  https://openapi.tripo3d.ai/v3/tasks/<task_id>      -> { data: { status, progress, output } }
+  The Tripo v2 openapi shape, confirmed live against the real API:
+    POST https://api.tripo3d.ai/v2/openapi/upload           (multipart "file") -> { data: { image_token } }
+    POST https://api.tripo3d.ai/v2/openapi/task              -> { data: { task_id } }
+    GET  https://api.tripo3d.ai/v2/openapi/task/<task_id>    -> { data: { status, progress, output } }
   If Tripo ever adjusts the upload path or token field, only the constants below
   need to change — every Tripo response is passed through in `raw` for debugging.
 */
 
-const TRIPO_BASE = "https://openapi.tripo3d.ai/v3";
-const UPLOAD_PATH = "/generation/upload";        // multipart image upload
-const IMAGE_TASK_PATH = "/generation/image-to-model";
-const MODEL = "tripo-v3.1";                        // matches the Quick Start example
+const TRIPO_BASE = "https://api.tripo3d.ai/v2/openapi";
+const UPLOAD_PATH = "/upload";        // multipart image upload
+const IMAGE_TASK_PATH = "/task";
 
 function cors(extra = {}) {
   return {
@@ -81,7 +81,6 @@ export default {
           headers: { ...auth, "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "image_to_model",
-            model: MODEL,
             file: { type: ext, file_token: token },
           }),
         });
@@ -95,7 +94,7 @@ export default {
       if (url.pathname === "/status" && request.method === "GET") {
         const taskId = url.searchParams.get("task_id");
         if (!taskId) return json({ error: "task_id required" }, 400);
-        const res = await fetch(`${TRIPO_BASE}/tasks/${taskId}`, { headers: auth });
+        const res = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: auth });
         const data = await res.json().catch(() => ({}));
         const d = data?.data || {};
         const out = d.output || {};
