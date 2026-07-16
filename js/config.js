@@ -7,4 +7,4 @@
 
   Example: window.TRACES_API = "https://traces-tripo.yourname.workers.dev";
 */
-window.TRACES_API = "";
+window.TRACES_API = "https://traces-tripo.traces-morartzi.workers.dev";
