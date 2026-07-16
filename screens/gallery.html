@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716i">
-<link rel="stylesheet" href="../css/gallery.css?v=20260716i">
-<script src="../js/cursor.js?v=20260716i" defer></script>
-<script src="../js/grain.js?v=20260716i" defer></script>
-<script src="../js/archive.js?v=20260716i"></script>
-<script src="../js/designer-archive.js?v=20260716i"></script>
-<script src="../js/gallery-title.js?v=20260716i" defer></script>
-<script src="../js/flow.js?v=20260716i" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716k">
+<link rel="stylesheet" href="../css/gallery.css?v=20260716k">
+<script src="../js/cursor.js?v=20260716k" defer></script>
+<script src="../js/grain.js?v=20260716k" defer></script>
+<script src="../js/archive.js?v=20260716k"></script>
+<script src="../js/designer-archive.js?v=20260716k"></script>
+<script src="../js/gallery-title.js?v=20260716k" defer></script>
+<script src="../js/flow.js?v=20260716k" defer></script>
 </head>
 <body>
 
@@ -69,11 +69,24 @@
         if (updEl) updEl.textContent = sub;
       }
 
+      // shared with archive-mine.html — she's still deciding what belongs in
+      // the designer showcase, so it's deletable from here too for now
+      var HIDDEN_KEY = "traces-archive-hidden";
+      function hiddenKeys() {
+        try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { return []; }
+      }
+      function hideForever(key) {
+        var keys = hiddenKeys();
+        if (keys.indexOf(key) === -1) keys.push(key);
+        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+      }
+
       // Until the visitor captures anything, the archive shows the designer's
       // own archive (the home she grew up in). Once they add a scan it becomes
       // their own archive of their captures.
       function renderDesigner() {
-        var list = window.DESIGNER_ARCHIVE || [];
+        var hidden = hiddenKeys();
+        var list = (window.DESIGNER_ARCHIVE || []).filter(function (d) { return hidden.indexOf(d.key) === -1; });
         setHeading("my archive", "the home i grew up in");
         list.forEach(function (d, i) {
           var idx = ("0" + (i + 1)).slice(-2);
@@ -81,12 +94,36 @@
           art.className = "gal-item";
           art.innerHTML =
             '<p class="gal-meta">[' + idx + ']<br>' + d.meta + '</p>' +
-            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
+            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+            '<button class="gal-delete" type="button" hidden>delete capture</button>';
           art.querySelector("img").src = d.img;
           art.querySelector(".gal-caption").textContent = d.title;
-          art.querySelector(".gal-card").addEventListener("click", function () {
-            try { sessionStorage.setItem("traces-item", d.key); } catch (e) {}
+
+          var card = art.querySelector(".gal-card");
+          var del = art.querySelector(".gal-delete");
+          var timer = null, longPressed = false;
+          function startPress() {
+            longPressed = false;
+            timer = setTimeout(function () {
+              longPressed = true;
+              grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
+              del.hidden = false;
+            }, 480);
+          }
+          function endPress() { clearTimeout(timer); }
+          card.addEventListener("mousedown", startPress);
+          card.addEventListener("touchstart", startPress, { passive: true });
+          card.addEventListener("mouseup", endPress);
+          card.addEventListener("mouseleave", endPress);
+          card.addEventListener("touchend", endPress);
+          card.addEventListener("click", function (e) {
+            if (longPressed) { e.preventDefault(); return; }
+            try { sessionStorage.setItem("traces-item", d.key); } catch (er) {}
             goTo("object.html");
+          });
+          del.addEventListener("click", function () {
+            hideForever(d.key);
+            art.remove();
           });
           grid.appendChild(art);
         });
