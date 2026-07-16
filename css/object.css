@@ -1036,81 +1036,70 @@
   opacity: 0.85;
 }
 
-/* these sit INSIDE the row's own top-left corner (not hanging off to the
-   left of it) — a negative offset gets clipped away by the card's own
-   overflow-y:auto (which forces overflow-x:auto too), since it's outside
-   the scrollable content box */
+/* click-anything-to-edit-it: a dashed outline previews what you're about
+   to select, a solid one marks what's currently selected. Excludes the
+   card handles/panel/bar themselves so they don't visually flicker too */
+body.layout-editing-active *:hover {
+  outline: 1px dashed #4a7dff;
+  outline-offset: 1px;
+}
 
-.layout-edit-gap-handle {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+.layout-edit-selected {
+  outline: 2px solid #4a7dff !important;
+  outline-offset: 1px;
+}
+
+.layout-edit-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #1a1815;
+  color: #ffffff;
+  padding: 14px 16px;
+  border-radius: 6px;
+  font-family: var(--font-drawn);
+  font-size: 0.8rem;
+  width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.layout-edit-panel-title {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  word-break: break-word;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  padding-bottom: 8px;
+}
+
+.layout-edit-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.layout-edit-panel input[type="number"] {
+  width: 60px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 3px 6px;
+}
+
+.layout-edit-panel button {
+  font-family: inherit;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   background: #4a7dff;
-  border-radius: 3px;
-  cursor: ns-resize;
-  z-index: 42;
-}
-
-.layout-edit-gap-label {
-  position: absolute;
-  top: 2px;
-  left: 20px;
-  width: 34px;
-  font-size: 9px;
-  color: #4a7dff;
-  background: #ffffff;
-  text-align: center;
-  border-radius: 2px;
-  pointer-events: none;
-  z-index: 42;
-}
-
-.layout-edit-font-handle {
-  position: absolute;
-  top: 2px;
-  left: 58px;
-  width: 16px;
-  height: 16px;
-  background: #3bb273;
-  color: #ffffff;
-  border-radius: 3px;
-  cursor: ew-resize;
-  font-size: 10px;
-  line-height: 16px;
-  text-align: center;
-  z-index: 41;
-}
-
-.layout-edit-font-label {
-  left: 76px;
-  color: #3bb273;
-}
-
-.layout-edit-thickness-handle {
-  left: 58px;
-  background: #999999;
-}
-
-.layout-edit-thickness-handle .layout-edit-gap-label {
-  color: #999999;
-}
-
-.layout-edit-line-toggle {
-  position: absolute;
-  top: 2px;
-  left: 116px;
-  width: 16px;
-  height: 16px;
   border: none;
-  border-radius: 3px;
-  background: #ff5a5a;
   color: #ffffff;
-  font-size: 11px;
-  line-height: 1;
+  padding: 7px 10px;
   cursor: pointer;
-  z-index: 41;
+  border-radius: 3px;
 }
 
 .layout-edit-added-line {
