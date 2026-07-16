@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717o">
-<link rel="stylesheet" href="../css/object.css?v=20260717o">
-<script src="../js/cursor.js?v=20260717o" defer></script>
-<script src="../js/grain.js?v=20260717o" defer></script>
-<script src="../js/tilt3d.js?v=20260717o" defer></script>
-<script src="../js/archive.js?v=20260717o"></script>
-<script src="../js/blobstore.js?v=20260717o"></script>
-<script src="../js/flow.js?v=20260717o" defer></script>
-<script src="../js/layout-editor.js?v=20260717o" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717o"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717p">
+<link rel="stylesheet" href="../css/object.css?v=20260717p">
+<script src="../js/cursor.js?v=20260717p" defer></script>
+<script src="../js/grain.js?v=20260717p" defer></script>
+<script src="../js/tilt3d.js?v=20260717p" defer></script>
+<script src="../js/archive.js?v=20260717p"></script>
+<script src="../js/blobstore.js?v=20260717p"></script>
+<script src="../js/flow.js?v=20260717p" defer></script>
+<script src="../js/layout-editor.js?v=20260717p" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717p"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -837,6 +837,82 @@
       // since key still points at the object, not the space now on screen
       modelViewer.addEventListener("load", function () {
         if (catalog[key].model && !SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
+      });
+
+      // ----- hold Space to pan the camera target, for better viewing angles -----
+      // model-viewer's own camera-controls only orbit/zoom around a fixed
+      // point; while Space is held, its native drag handling is switched off
+      // (removing the attribute) so our own drag can move that point instead
+      var spaceHeld = false;
+      var panDrag = null;
+
+      function isTypingTarget(el) {
+        return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if (e.code !== "Space" && e.key !== " ") return;
+        if (isTypingTarget(e.target) || spaceHeld) return;
+        e.preventDefault(); // otherwise the page itself scrolls
+        spaceHeld = true;
+        stage.classList.add("obj-stage--pan-ready");
+        if (catalog[key].model && !modelViewer.hidden) modelViewer.removeAttribute("camera-controls");
+      });
+      document.addEventListener("keyup", function (e) {
+        if (e.code !== "Space" && e.key !== " ") return;
+        spaceHeld = false;
+        panDrag = null;
+        stage.classList.remove("obj-stage--pan-ready", "obj-stage--panning");
+        if (catalog[key].model) modelViewer.setAttribute("camera-controls", "");
+      });
+
+      // right/up vectors for the current view, plus a pixels->world scale
+      // (from the field of view, so a drag feels the same size on screen
+      // regardless of how zoomed in the camera currently is)
+      function computePanBasis() {
+        var orbit = modelViewer.getCameraOrbit();
+        var theta = orbit.theta, phi = orbit.phi, radius = orbit.radius;
+        var camX = radius * Math.sin(phi) * Math.sin(theta);
+        var camY = radius * Math.cos(phi);
+        var camZ = radius * Math.sin(phi) * Math.cos(theta);
+        var fLen = Math.sqrt(camX * camX + camY * camY + camZ * camZ) || 1;
+        var fwd = { x: -camX / fLen, y: -camY / fLen, z: -camZ / fLen };
+        var rx = fwd.y * 1 - fwd.z * 0, ry = fwd.z * 0 - fwd.x * 1, rz = fwd.x * 0 - fwd.y * 0;
+        var rLen = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
+        var right = { x: rx / rLen, y: ry / rLen, z: rz / rLen };
+        var up = {
+          x: right.y * fwd.z - right.z * fwd.y,
+          y: right.z * fwd.x - right.x * fwd.z,
+          z: right.x * fwd.y - right.y * fwd.x
+        };
+        var fovDeg = modelViewer.getFieldOfView ? modelViewer.getFieldOfView() : 30;
+        var fovRad = fovDeg * Math.PI / 180;
+        var stageRect = stage.getBoundingClientRect();
+        var worldHeight = 2 * radius * Math.tan(fovRad / 2);
+        var scale = worldHeight / (stageRect.height || 1);
+        return { right: right, up: up, scale: scale, target: modelViewer.getCameraTarget() };
+      }
+
+      modelViewer.addEventListener("pointerdown", function (e) {
+        if (!spaceHeld || modelViewer.hidden) return;
+        e.preventDefault();
+        e.stopPropagation();
+        stage.classList.add("obj-stage--panning");
+        var basis = computePanBasis();
+        panDrag = { x: e.clientX, y: e.clientY, target: basis.target, right: basis.right, up: basis.up, scale: basis.scale };
+      });
+      document.addEventListener("pointermove", function (e) {
+        if (!panDrag) return;
+        var dx = e.clientX - panDrag.x;
+        var dy = e.clientY - panDrag.y;
+        var t = panDrag.target, r = panDrag.right, u = panDrag.up, s = panDrag.scale;
+        var nx = t.x - r.x * dx * s + u.x * dy * s;
+        var ny = t.y - r.y * dx * s + u.y * dy * s;
+        var nz = t.z - r.z * dx * s + u.z * dy * s;
+        modelViewer.cameraTarget = nx.toFixed(4) + "m " + ny.toFixed(4) + "m " + nz.toFixed(4) + "m";
+      });
+      document.addEventListener("pointerup", function () {
+        if (panDrag) { panDrag = null; stage.classList.remove("obj-stage--panning"); }
       });
 
       // plain click on the capture toggles its info panel (like clicking the

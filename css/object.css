@@ -260,6 +260,15 @@
   justify-content: center;
 }
 
+/* holding Space swaps the drag gesture from orbit to pan, for a better
+   viewing angle instead of just spinning around a fixed point */
+.obj-stage--pan-ready, .obj-stage--pan-ready model-viewer {
+  cursor: grab;
+}
+.obj-stage--panning, .obj-stage--panning model-viewer {
+  cursor: grabbing;
+}
+
 .obj-photo {
   max-width: 100%;
   max-height: 100%;
