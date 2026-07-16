@@ -168,13 +168,26 @@
     var exclusiveEls = editables.filter(function (el) {
       return EXCLUSIVE.indexOf(el.dataset.editable) !== -1;
     });
+    editables.forEach(function (el) { if (!el.hidden) revealAll(el); });
+
+    // revealing nested conditional UI (an annotation's "view" state, etc.)
+    // that's normally hidden depending on what she was doing right before
+    // opening edit mode — otherwise its lines/text are invisible and can't
+    // be clicked at all
+    function revealAll(container) {
+      if (!container) return;
+      container.querySelectorAll("[hidden]").forEach(function (el) { el.hidden = false; });
+    }
 
     // ---- the side panel for everything else (click anything to select) ----
     var panel = document.createElement("div");
     panel.className = "layout-edit-panel";
     panel.hidden = true;
     panel.innerHTML =
-      '<p class="layout-edit-panel-title" id="layoutPanelTitle"></p>' +
+      '<p class="layout-edit-panel-title" id="layoutPanelTitle">' +
+        '<span class="layout-edit-panel-drag" id="layoutPanelDrag" title="drag to move this panel">⠇⠇</span>' +
+        '<span id="layoutPanelDesc"></span>' +
+      '</p>' +
       '<label>space above <input type="number" id="layoutPropMargin"> px</label>' +
       '<label>font size <input type="number" id="layoutPropFont"> px</label>' +
       '<label id="layoutPropThicknessRow">line thickness <input type="number" id="layoutPropThickness"> px</label>' +
@@ -187,7 +200,19 @@
     var thicknessRow = document.getElementById("layoutPropThicknessRow");
     var thicknessInput = document.getElementById("layoutPropThickness");
     var hiddenInput = document.getElementById("layoutPropHidden");
-    var panelTitle = document.getElementById("layoutPanelTitle");
+    var panelDesc = document.getElementById("layoutPanelDesc");
+    var panelDrag = document.getElementById("layoutPanelDrag");
+    panelDrag.addEventListener("mousedown", function (e) {
+      e.stopPropagation();
+      var rect = panel.getBoundingClientRect();
+      panel.style.left = rect.left + "px";
+      panel.style.top = rect.top + "px";
+      panel.style.right = "auto";
+      dragMove(e, function (dx, dy) {
+        panel.style.left = (panel.offsetLeft + dx) + "px";
+        panel.style.top = (panel.offsetTop + dy) + "px";
+      });
+    });
 
     var selected = null;
     var selectedKey = null;
@@ -204,7 +229,7 @@
       selected = el;
       selectedKey = key;
       selected.classList.add("layout-edit-selected");
-      panelTitle.textContent = describe(el);
+      panelDesc.textContent = describe(el);
       var cs = getComputedStyle(el);
       marginInput.value = Math.round(parseFloat(cs.marginTop) || 0);
       fontInput.value = Math.round(parseFloat(cs.fontSize) || 0);
@@ -221,12 +246,34 @@
       saveJSON(PROPS_KEY, props);
     }
 
+    // mousedown (not click) so the same gesture can both select AND, if she
+    // moves the mouse before releasing, drag the element's spacing right
+    // there instead of only through the panel's number input
+    document.addEventListener("mousedown", function (e) {
+      if (isEditorChrome(e.target)) return;
+      if (!document.body.classList.contains("layout-editing-active")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var el = e.target;
+      selectElement(el);
+      if (!selectedKey) return;
+      var startMargin = parseFloat(getComputedStyle(el).marginTop) || 0;
+      dragMove(e, function (dx, dy) {
+        var v = Math.max(0, startMargin + dy);
+        startMargin = v; // relative deltas accumulate onto the running value
+        el.style.marginTop = v + "px";
+        marginInput.value = Math.round(v);
+      }, function () {
+        persistSelected({ marginTop: parseFloat(el.style.marginTop) || 0 });
+      });
+    }, true);
+    // swallow the click that follows the mousedown above, so it doesn't
+    // also fire whatever the element would normally do (navigate, toggle…)
     document.addEventListener("click", function (e) {
       if (isEditorChrome(e.target)) return;
       if (!document.body.classList.contains("layout-editing-active")) return;
       e.preventDefault();
       e.stopPropagation();
-      selectElement(e.target);
     }, true);
 
     marginInput.addEventListener("input", function () {
@@ -279,6 +326,7 @@
         btn.addEventListener("click", function () {
           exclusiveEls.forEach(function (other) { other.hidden = other !== el; });
           seedPosition(el);
+          revealAll(el);
         });
         switcher.appendChild(btn);
       });

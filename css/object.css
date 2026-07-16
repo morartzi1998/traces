@@ -1068,11 +1068,20 @@ body.layout-editing-active *:hover {
 }
 
 .layout-edit-panel-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   font-size: 0.75rem;
   opacity: 0.8;
   word-break: break-word;
   border-bottom: 1px solid rgba(255, 255, 255, 0.25);
   padding-bottom: 8px;
+}
+
+.layout-edit-panel-drag {
+  cursor: move;
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .layout-edit-panel label {
