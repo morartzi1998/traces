@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716f">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260716f">
-<script src="../js/cursor.js?v=20260716f" defer></script>
-<script src="../js/grain.js?v=20260716f" defer></script>
-<script src="../js/tilt3d.js?v=20260716f" defer></script>
-<script src="../js/annotations.js?v=20260716f" defer></script>
-<script src="../js/archive.js?v=20260716f"></script>
-<script src="../js/blobstore.js?v=20260716f"></script>
-<script src="../js/flow.js?v=20260716f" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716f"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716h">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260716h">
+<script src="../js/cursor.js?v=20260716h" defer></script>
+<script src="../js/grain.js?v=20260716h" defer></script>
+<script src="../js/tilt3d.js?v=20260716h" defer></script>
+<script src="../js/annotations.js?v=20260716h" defer></script>
+<script src="../js/archive.js?v=20260716h"></script>
+<script src="../js/blobstore.js?v=20260716h"></script>
+<script src="../js/flow.js?v=20260716h" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716h"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -147,6 +147,26 @@
 
     // Save the capture — to "your archive" (private) or the shared community
     // feed, depending on the visibility choice — then open it there.
+    // render a snapshot of the live model as the archive/gallery thumbnail —
+    // without this, a ready-made-scan capture (no flat photo, no Tripo thumb)
+    // would keep showing the placeholder chandelier image in every card
+    function captureModelThumbnail() {
+      var mv = document.getElementById("captureModel");
+      if (mv.hidden || !mv.loaded) return Promise.resolve(null);
+      // give model-viewer's reveal/settle animation a moment to finish —
+      // grabbing a frame right at "load" can catch it mid-fade-in
+      return new Promise(function (r) { setTimeout(r, 600); }).then(function () {
+        return mv.toBlob({ mimeType: "image/png" });
+      }).then(function (blob) {
+        return new Promise(function (resolve) {
+          var reader = new FileReader();
+          reader.onload = function () { resolve(reader.result); };
+          reader.onerror = function () { resolve(null); };
+          reader.readAsDataURL(blob);
+        });
+      }).catch(function () { return null; });
+    }
+
     function saveCapture() {
       var title = (document.querySelector(".text-input") || {}).value || "untitled capture";
       var feeling = (document.querySelector(".text-area") || {}).value || "";
@@ -156,12 +176,13 @@
       var alsoCommunity = visEl && visEl.value === "community";
       var img = document.querySelector(".capture-object").src;
       var model = null;
+      var tripoThumb = null;
       // a real reconstruction (Tripo) drops its GLB url + a rendered thumbnail
       // here when available; prefer the rendered thumb for the archive card
       try {
         model = sessionStorage.getItem("traces-capture-model") || null;
-        var t = sessionStorage.getItem("traces-capture-thumb");
-        if (t) img = t;
+        tripoThumb = sessionStorage.getItem("traces-capture-thumb");
+        if (tripoThumb) img = tripoThumb;
       } catch (e) {}
       var annotations = window.getCaptureAnnotations ? window.getCaptureAnnotations() : [];
       var by = "", country = "";
@@ -169,50 +190,59 @@
         by = localStorage.getItem("traces-user-name") || "";
         country = localStorage.getItem("traces-user-country") || "";
       } catch (e) {}
-      var payload = {
-        title: title.trim() || "untitled capture",
-        feeling: feeling.trim(),
-        kind: kind,
-        img: img,
-        model: model,
-        by: by,
-        country: country,
-        annotations: annotations
-      };
-      // a capture ALWAYS goes into the archive; sharing to the community is an
-      // additional choice, not an alternative
-      var cap = window.Archive ? Archive.add(payload) : null;
-      if (alsoCommunity && window.Community && cap) {
-        Community.add(Object.assign({}, cap));
+
+      function afterThumb(finalImg) {
+        var payload = {
+          title: title.trim() || "untitled capture",
+          feeling: feeling.trim(),
+          kind: kind,
+          img: finalImg,
+          model: model,
+          by: by,
+          country: country,
+          annotations: annotations
+        };
+        // a capture ALWAYS goes into the archive; sharing to the community is an
+        // additional choice, not an alternative
+        var cap = window.Archive ? Archive.add(payload) : null;
+        if (alsoCommunity && window.Community && cap) {
+          Community.add(Object.assign({}, cap));
+        }
+        function finish() {
+          try {
+            if (cap) sessionStorage.setItem("traces-item", cap.id);
+            sessionStorage.removeItem("traces-upload-img");
+            sessionStorage.removeItem("traces-upload-name");
+            sessionStorage.removeItem("traces-capture-model");
+            sessionStorage.removeItem("traces-capture-thumb");
+            sessionStorage.removeItem("traces-mode");
+            sessionStorage.removeItem("traces-task");
+            sessionStorage.removeItem("traces-task-error");
+          } catch (e) {}
+          goTo("gallery.html");
+        }
+        // the model rode over in IndexedDB under a temporary key — move it to
+        // a permanent one keyed by the saved capture's own id
+        if (cap && model && model.indexOf("idb:") === 0) {
+          var pendingKey = model.slice(4);
+          window.BlobStore.get(pendingKey).then(function (blob) {
+            if (!blob) return;
+            var permKey = "cap:" + cap.id;
+            return window.BlobStore.set(permKey, blob).then(function () {
+              Archive.update(cap.id, { model: "idb:" + permKey });
+              if (alsoCommunity && window.Community) Community.update(cap.id, { model: "idb:" + permKey });
+              return window.BlobStore.del(pendingKey);
+            });
+          }).then(finish, finish);
+        } else {
+          finish();
+        }
       }
-      function finish() {
-        try {
-          if (cap) sessionStorage.setItem("traces-item", cap.id);
-          sessionStorage.removeItem("traces-upload-img");
-          sessionStorage.removeItem("traces-upload-name");
-          sessionStorage.removeItem("traces-capture-model");
-          sessionStorage.removeItem("traces-capture-thumb");
-          sessionStorage.removeItem("traces-mode");
-          sessionStorage.removeItem("traces-task");
-          sessionStorage.removeItem("traces-task-error");
-        } catch (e) {}
-        goTo("gallery.html");
-      }
-      // the model rode over in IndexedDB under a temporary key — move it to
-      // a permanent one keyed by the saved capture's own id
-      if (cap && model && model.indexOf("idb:") === 0) {
-        var pendingKey = model.slice(4);
-        window.BlobStore.get(pendingKey).then(function (blob) {
-          if (!blob) return;
-          var permKey = "cap:" + cap.id;
-          return window.BlobStore.set(permKey, blob).then(function () {
-            Archive.update(cap.id, { model: "idb:" + permKey });
-            if (alsoCommunity && window.Community) Community.update(cap.id, { model: "idb:" + permKey });
-            return window.BlobStore.del(pendingKey);
-          });
-        }).then(finish, finish);
+
+      if (!tripoThumb && model) {
+        captureModelThumbnail().then(function (thumb) { afterThumb(thumb || img); });
       } else {
-        finish();
+        afterThumb(img);
       }
     }
   </script>

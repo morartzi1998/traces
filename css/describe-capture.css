@@ -28,8 +28,9 @@
 }
 
 .capture-canvas .capture-model {
-  width: 78%;
-  height: 92%;
+  width: 78vw;
+  height: 92vh;
+  max-width: 78%;
   --poster-color: transparent;
 }
 
