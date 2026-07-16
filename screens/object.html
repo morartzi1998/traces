@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716e">
-<link rel="stylesheet" href="../css/object.css?v=20260716e">
-<script src="../js/cursor.js?v=20260716e" defer></script>
-<script src="../js/grain.js?v=20260716e" defer></script>
-<script src="../js/tilt3d.js?v=20260716e" defer></script>
-<script src="../js/archive.js?v=20260716e"></script>
-<script src="../js/blobstore.js?v=20260716e"></script>
-<script src="../js/flow.js?v=20260716e" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716e"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716f">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716f">
+<link rel="stylesheet" href="../css/object.css?v=20260716f">
+<script src="../js/cursor.js?v=20260716f" defer></script>
+<script src="../js/grain.js?v=20260716f" defer></script>
+<script src="../js/tilt3d.js?v=20260716f" defer></script>
+<script src="../js/archive.js?v=20260716f"></script>
+<script src="../js/blobstore.js?v=20260716f"></script>
+<script src="../js/flow.js?v=20260716f" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716f"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -279,6 +279,7 @@
               connected: c.connected || "",
               connectedKey: c.connectedKey || null,
               feeling: c.feeling || "",
+              visibility: (window.Community && Community.get(c.id)) ? "community" : "private",
               annotations: Array.isArray(c.annotations) ? c.annotations : [],
               links: []
             };
@@ -305,6 +306,7 @@
           if (o.kind != null) catalog[k].kind = o.kind;
           if (o.connected != null) catalog[k].connected = o.connected;
           if (o.connectedKey != null) catalog[k].connectedKey = o.connectedKey;
+          if (o.visibility != null) catalog[k].visibility = o.visibility;
           if (Array.isArray(o.annotations)) catalog[k].annotations = o.annotations;
           if (Array.isArray(o.links)) catalog[k].links = o.links;
         });
@@ -315,6 +317,7 @@
         s[k] = {
           title: it.title, feeling: it.feeling, kind: it.kind,
           connected: it.connected, connectedKey: it.connectedKey || null,
+          visibility: it.visibility || "private",
           annotations: it.annotations.map(function (a) {
             return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
               since: a.since || 2021, pos: a.pos || null, normal: a.normal || null };
@@ -471,8 +474,8 @@
         document.getElementById("linkCardImg").src = item.img || "";
         document.getElementById("linkCardFeeling").textContent = item.feeling || "";
         document.getElementById("linkCardAnnCount").textContent = item.annotations.length;
-        document.getElementById("linkCardPrivate").checked = false;
-        document.getElementById("linkCardCommunity").checked = true;
+        document.getElementById("linkCardPrivate").checked = item.visibility !== "community";
+        document.getElementById("linkCardCommunity").checked = item.visibility === "community";
 
         var ul = document.getElementById("linkCardAnnotations");
         ul.innerHTML = "";
@@ -649,6 +652,8 @@
         var kindBoxes = document.querySelectorAll("#whiteKind input");
         kindBoxes[0].checked = item.kind !== "space";
         kindBoxes[1].checked = item.kind === "space";
+        document.getElementById("whitePrivate").checked = item.visibility !== "community";
+        document.getElementById("whiteCommunity").checked = item.visibility === "community";
         document.getElementById("whiteAnnCount").textContent = item.annotations.length;
         var ul = document.getElementById("whiteAnnotations");
         ul.innerHTML = "";
@@ -864,7 +869,20 @@
         if (t) item.title = t;
         item.feeling = document.getElementById("whiteFeelingInput").value.trim();
         item.kind = document.getElementById("whiteSpace").checked ? "space" : "object";
+        item.visibility = document.getElementById("whiteCommunity").checked ? "community" : "private";
         persist(key);
+        // keep the shared community feed in sync with the choice, for
+        // captures that actually live in the Archive/Community stores
+        if (window.Archive && Archive.get(key)) {
+          if (item.visibility === "community") {
+            if (window.Community && !Community.get(key)) {
+              var base = Archive.get(key);
+              Community.add(Object.assign({}, base, { id: key }));
+            }
+          } else if (window.Community && Community.get(key)) {
+            Community.remove(key);
+          }
+        }
         exitWhiteEdit();
         document.getElementById("objTitle").textContent = item.title;
         fillWhite(item);

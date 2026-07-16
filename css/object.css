@@ -467,6 +467,9 @@
 
 .obj-blue-choices input {
   appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
   width: 15px;
   height: 15px;
   border: 1px solid #ffffff;
@@ -593,6 +596,9 @@
 
 .remark-card-choices input {
   appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
   width: 9px;
   height: 9px;
   border: 1px solid #ffffff;
@@ -806,6 +812,9 @@
 
 .obj-white-choices input {
   appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
   width: 13px;
   height: 13px;
   border: 1px solid var(--color-ink-blue);
