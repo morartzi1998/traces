@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716v">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716v">
-<link rel="stylesheet" href="../css/upload.css?v=20260716v">
-<script src="../js/config.js?v=20260716v"></script>
-<script src="../js/cursor.js?v=20260716v" defer></script>
-<script src="../js/grain.js?v=20260716v" defer></script>
-<script src="../js/blobstore.js?v=20260716v"></script>
-<script src="../js/flow.js?v=20260716v" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716w">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716w">
+<link rel="stylesheet" href="../css/upload.css?v=20260716w">
+<script src="../js/config.js?v=20260716w"></script>
+<script src="../js/cursor.js?v=20260716w" defer></script>
+<script src="../js/grain.js?v=20260716w" defer></script>
+<script src="../js/blobstore.js?v=20260716w"></script>
+<script src="../js/flow.js?v=20260716w" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716w"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -28,7 +28,7 @@
   import { PLYLoader } from "../js/vendor/three/PLYLoader.js";
   import { buildVoxelGlb, exportScene, serializeGeometry } from "../js/voxelize-shared.js";
 
-  var VOXEL_TARGET = 30000;
+  var VOXEL_TARGET = 70000;
 
   // the raw parsed point cloud, kept around so the density slider can
   // re-voxelize at a different level without re-parsing the file
@@ -64,15 +64,9 @@
     });
   };
 
-  // lets the density slider re-export at a different cube count without
-  // re-parsing the (potentially huge) source file
-  window.__revoxelizeScan = function (targetCount) {
-    if (!lastRawGeometry) return Promise.reject(new Error("no point cloud loaded"));
-    return buildVoxelGlb(lastRawGeometry, targetCount);
-  };
-  window.__scanIsPointCloud = function () { return !!lastRawGeometry; };
   // carries the raw point cloud across to processing.html so the density
-  // slider keeps working there too, without re-reading the source file
+  // slider (which lives there, not here) keeps working without re-reading
+  // the source file
   window.__getRawGeometryBlob = function () {
     return lastRawGeometry ? serializeGeometry(lastRawGeometry) : null;
   };
@@ -142,16 +136,11 @@
             <span class="up-drop-line">click to browse &mdash; no file has been uploaded yet</span>
           </label>
 
-          <div class="up-selected up-selected--scan" id="upSelectedScan" hidden>
-            <div class="up-file up-file--scan">
+          <div class="up-selected" id="upSelectedScan" hidden>
+            <div class="up-file">
               <model-viewer class="up-thumb up-thumb-model" id="upThumbScan" camera-controls
                 disable-pan bounds="tight" interaction-prompt="none" shadow-intensity="0" exposure="1"></model-viewer>
               <span class="up-filename" id="upFilenameScan"></span>
-              <div class="up-density" id="upDensityRow" hidden>
-                <label for="upDensitySlider">point density</label>
-                <input type="range" id="upDensitySlider" min="1" max="5" value="3" step="1">
-                <span class="up-density-label" id="upDensityLabel">balanced</span>
-              </div>
             </div>
             <div class="up-actions">
               <button class="up-btn up-btn--solid" type="button" onclick="startScanCapture(this)">Proceed</button>
@@ -243,15 +232,6 @@
       var selectedScan = document.getElementById("upSelectedScan");
       var filenameScan = document.getElementById("upFilenameScan");
       var thumbScan = document.getElementById("upThumbScan");
-      var densityRow = document.getElementById("upDensityRow");
-      var densitySlider = document.getElementById("upDensitySlider");
-      var densityLabel = document.getElementById("upDensityLabel");
-
-      // 1-5 on the slider maps to a cube-count target — low = sparser/faster,
-      // high = denser/heavier. Level 3 ("balanced") is the default.
-      var DENSITY_LEVELS = [10000, 18000, 30000, 55000, 90000];
-      var DENSITY_NAMES = ["sparse", "light", "balanced", "dense", "very dense"];
-      var origScanName = "";
 
       customElements.whenDefined("model-viewer").then(function () {
         customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -259,17 +239,10 @@
 
       function showSelectedScan(file, displayName) {
         window.__selectedScanFile = file;
-        origScanName = displayName;
         filenameScan.textContent = displayName;
         try { thumbScan.src = URL.createObjectURL(file); } catch (e) {}
         dropScan.hidden = true;
         selectedScan.hidden = false;
-        var isPointCloud = window.__scanIsPointCloud && window.__scanIsPointCloud();
-        densityRow.hidden = !isPointCloud;
-        if (isPointCloud) {
-          densitySlider.value = 3;
-          densityLabel.textContent = DENSITY_NAMES[2];
-        }
       }
 
       function acceptScan(files) {
@@ -280,6 +253,7 @@
           return;
         }
         // a .ply file needs converting to glb before anything else can use it
+        // — density itself is tuned later, on the processing screen
         dropScan.hidden = true;
         selectedScan.hidden = true;
         filenameScan.textContent = f.name + " — converting…";
@@ -287,7 +261,7 @@
         reader.onload = function () {
           var convert = window.__convertPlyToGlb;
           if (!convert) { setTimeout(function () { acceptScan(files); }, 150); return; }
-          convert(reader.result, DENSITY_LEVELS[2]).then(function (glb) {
+          convert(reader.result).then(function (glb) {
             var blob = new Blob([glb], { type: "model/gltf-binary" });
             var glbName = f.name.replace(/\.ply$/i, ".glb");
             showSelectedScan(new File([blob], glbName, { type: "model/gltf-binary" }), f.name);
@@ -303,27 +277,6 @@
         };
         reader.readAsArrayBuffer(f);
       }
-
-      densitySlider.addEventListener("input", function () {
-        densityLabel.textContent = DENSITY_NAMES[parseInt(densitySlider.value, 10) - 1];
-      });
-      densitySlider.addEventListener("change", function () {
-        var target = DENSITY_LEVELS[parseInt(densitySlider.value, 10) - 1];
-        var revoxelize = window.__revoxelizeScan;
-        if (!revoxelize) return;
-        filenameScan.textContent = origScanName + " — updating…";
-        revoxelize(target).then(function (glb) {
-          var blob = new Blob([glb], { type: "model/gltf-binary" });
-          var prevName = (window.__selectedScanFile && window.__selectedScanFile.name) || "scan.glb";
-          var newFile = new File([blob], prevName, { type: "model/gltf-binary" });
-          window.__selectedScanFile = newFile;
-          try { thumbScan.src = URL.createObjectURL(newFile); } catch (e) {}
-          filenameScan.textContent = origScanName;
-        }).catch(function (err) {
-          filenameScan.textContent = origScanName;
-          console.error("re-voxelize failed:", err);
-        });
-      });
 
       inputScan.addEventListener("change", function () { acceptScan(inputScan.files); });
       dropScan.addEventListener("dragover", function (e) {

@@ -182,47 +182,6 @@
   min-width: 150px;
 }
 
-/* a ready-made scan is something she's actively judging (spin it, tune its
-   density) before proceeding, so it gets a much bigger preview than the
-   flat-file thumbnail used elsewhere on this screen */
-.up-file--scan {
-  gap: 12px;
-}
-
-.up-file--scan .up-thumb-model {
-  width: min(56vw, 520px);
-  height: min(48vh, 380px);
-  background: var(--color-bg);
-  --poster-color: var(--color-bg);
-}
-
-.up-density {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.up-density label {
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.75;
-  white-space: nowrap;
-}
-
-.up-density input[type="range"] {
-  flex: 1;
-  min-width: 120px;
-  accent-color: currentColor;
-}
-
-.up-density-label {
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  opacity: 0.75;
-  min-width: 64px;
-}
-
 .up-btn {
   font-family: inherit;
   font-size: 0.85rem;
