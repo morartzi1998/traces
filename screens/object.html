@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717m">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717m">
-<link rel="stylesheet" href="../css/object.css?v=20260717m">
-<script src="../js/cursor.js?v=20260717m" defer></script>
-<script src="../js/grain.js?v=20260717m" defer></script>
-<script src="../js/tilt3d.js?v=20260717m" defer></script>
-<script src="../js/archive.js?v=20260717m"></script>
-<script src="../js/blobstore.js?v=20260717m"></script>
-<script src="../js/flow.js?v=20260717m" defer></script>
-<script src="../js/layout-editor.js?v=20260717m" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717m"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717n">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717n">
+<link rel="stylesheet" href="../css/object.css?v=20260717n">
+<script src="../js/cursor.js?v=20260717n" defer></script>
+<script src="../js/grain.js?v=20260717n" defer></script>
+<script src="../js/tilt3d.js?v=20260717n" defer></script>
+<script src="../js/archive.js?v=20260717n"></script>
+<script src="../js/blobstore.js?v=20260717n"></script>
+<script src="../js/flow.js?v=20260717n" defer></script>
+<script src="../js/layout-editor.js?v=20260717n" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717n"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -836,6 +836,12 @@
           photo.src = catalog[k].img;
           photo.alt = catalog[k].title;
         }
+        // a capture shared to the community gets a blue-purple backdrop
+        // here too, matching its card on the community gallery
+        document.querySelector(".obj-screen").classList.toggle(
+          "obj-screen--community", catalog[k].visibility === "community"
+        );
+
         // a capture linked to another (via the connect screen) glows blue
         var conn = null;
         try { conn = localStorage.getItem("traces-conn-" + k); } catch (e) {}
