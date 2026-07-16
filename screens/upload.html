@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260715a">
-<link rel="stylesheet" href="../css/chrome.css?v=20260715a">
-<link rel="stylesheet" href="../css/upload.css?v=20260715a">
-<script src="../js/config.js?v=20260715a"></script>
-<script src="../js/cursor.js?v=20260715a" defer></script>
-<script src="../js/grain.js?v=20260715a" defer></script>
-<script src="../js/flow.js?v=20260715a" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716a">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716a">
+<link rel="stylesheet" href="../css/upload.css?v=20260716a">
+<script src="../js/config.js?v=20260716a"></script>
+<script src="../js/cursor.js?v=20260716a" defer></script>
+<script src="../js/grain.js?v=20260716a" defer></script>
+<script src="../js/flow.js?v=20260716a" defer></script>
 </head>
 <body>
 
@@ -57,6 +57,32 @@
             <div class="up-actions">
               <button class="up-btn up-btn--solid" type="button" onclick="startCapture(this)">Proceed</button>
               <button class="up-btn up-btn--ghost" type="button" id="upCancel">Cancel</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="up-option">
+        <button class="up-option-head" type="button" aria-expanded="false" data-acc="scan"
+          title="3D scans you made with external software that you'd like to attach here">
+          <span>Upload a ready-made scan</span>
+          <span class="up-toggle" aria-hidden="true">+</span>
+        </button>
+        <div class="up-option-body" id="acc-scan" hidden>
+
+          <label class="up-drop" id="dropZoneScan" title="3D scans you made with external software that you'd like to attach here">
+            <input type="file" id="fileInputScan" accept=".glb,.gltf,model/gltf-binary,model/gltf+json">
+            <span class="up-drop-line">click to browse &mdash; no file has been uploaded yet</span>
+          </label>
+
+          <div class="up-selected" id="upSelectedScan" hidden>
+            <div class="up-file">
+              <span class="up-filename" id="upFilenameScan"></span>
+            </div>
+            <div class="up-actions">
+              <button class="up-btn up-btn--solid" type="button" onclick="startScanCapture(this)">Proceed</button>
+              <button class="up-btn up-btn--ghost" type="button" id="upCancelScan">Cancel</button>
             </div>
           </div>
 
@@ -136,7 +162,69 @@
         input.value = "";
         window.__selectedFile = null;
       });
+
+      // ready-made scans: already-finished GLBs from external software —
+      // no reconstruction needed, just carry the file straight through
+      var dropScan = document.getElementById("dropZoneScan");
+      var inputScan = document.getElementById("fileInputScan");
+      var selectedScan = document.getElementById("upSelectedScan");
+      var filenameScan = document.getElementById("upFilenameScan");
+
+      function acceptScan(files) {
+        if (!files || !files.length) return;
+        var f = files[0];
+        window.__selectedScanFile = f;
+        filenameScan.textContent = f.name;
+        dropScan.hidden = true;
+        selectedScan.hidden = false;
+      }
+
+      inputScan.addEventListener("change", function () { acceptScan(inputScan.files); });
+      dropScan.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        dropScan.classList.add("up-drop--over");
+      });
+      dropScan.addEventListener("dragleave", function () {
+        dropScan.classList.remove("up-drop--over");
+      });
+      dropScan.addEventListener("drop", function (e) {
+        e.preventDefault();
+        dropScan.classList.remove("up-drop--over");
+        acceptScan(e.dataTransfer.files);
+      });
+
+      document.getElementById("upCancelScan").addEventListener("click", function () {
+        selectedScan.hidden = true;
+        dropScan.hidden = false;
+        inputScan.value = "";
+        window.__selectedScanFile = null;
+      });
     })();
+
+    // a ready-made scan is already reconstructed — skip the Tripo call and
+    // hand the model straight to the processing screen for review. a blob:
+    // URL would be revoked the moment we navigate away from this page, so
+    // the file is carried across as a data: URL instead (same trick already
+    // used for uploaded images).
+    function startScanCapture(btn) {
+      var file = window.__selectedScanFile;
+      if (!file) return;
+      if (btn) { btn.disabled = true; btn.textContent = "Reading…"; }
+      try {
+        sessionStorage.removeItem("traces-task");
+        sessionStorage.removeItem("traces-task-error");
+        sessionStorage.removeItem("traces-upload-img");
+        sessionStorage.setItem("traces-mode", "prescan");
+        sessionStorage.setItem("traces-upload-name", file.name);
+      } catch (e) {}
+      var reader = new FileReader();
+      reader.onload = function () {
+        try { sessionStorage.setItem("traces-capture-model", reader.result); } catch (e) {}
+        goTo("processing.html");
+      };
+      reader.onerror = function () { goTo("processing.html"); };
+      reader.readAsDataURL(file);
+    }
 
     // Proceed: if a Tripo worker is configured, kick off real reconstruction
     // (upload the image, get a task id, then let the processing screen poll it);

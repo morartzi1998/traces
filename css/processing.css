@@ -28,6 +28,18 @@
 }
 
 /* status text is centred over the reconstructing object */
+/* when a real 3D capture is available, it replaces the flat cloud image so
+   the visitor can spin it around and judge the result before proceeding */
+.proc-model {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 72vh;
+  max-width: 82vw;
+  --poster-color: transparent;
+}
+
 .proc-status {
   position: absolute;
   left: 50%;

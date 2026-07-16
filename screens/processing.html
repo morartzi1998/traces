@@ -4,18 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
-<link rel="stylesheet" href="../css/base.css?v=20260715a">
-<link rel="stylesheet" href="../css/processing.css?v=20260715a">
-<script src="../js/config.js?v=20260715a"></script>
-<script src="../js/cursor.js?v=20260715a" defer></script>
-<script src="../js/grain.js?v=20260715a" defer></script>
-<script src="../js/flow.js?v=20260715a" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716a">
+<link rel="stylesheet" href="../css/processing.css?v=20260716a">
+<script src="../js/config.js?v=20260716a"></script>
+<script src="../js/cursor.js?v=20260716a" defer></script>
+<script src="../js/grain.js?v=20260716a" defer></script>
+<script src="../js/flow.js?v=20260716a" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716a"></script>
+<script type="module">
+  customElements.whenDefined("model-viewer").then(function () {
+    customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
+  });
+</script>
 </head>
 <body>
 
   <div class="proc-screen">
 
     <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true" id="procCloud">
+    <model-viewer class="proc-model" id="procModel" camera-controls disable-pan
+      interaction-prompt="none" shadow-intensity="1" exposure="1" hidden></model-viewer>
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
 
@@ -31,11 +39,25 @@
       var status = document.getElementById("procStatus");
       var proceed = document.getElementById("procProceed");
       var cloud = document.querySelector(".proc-cloud");
+      var model = document.getElementById("procModel");
 
       // reconstruct the object the user actually captured, not a placeholder
       try {
         var up = sessionStorage.getItem("traces-upload-img");
         if (up) cloud.src = up;
+      } catch (e) {}
+
+      // once a real 3D capture exists, replace the flat cloud image with an
+      // interactive model so the visitor can spin it around and judge the
+      // result before deciding to proceed or cancel
+      function showModel(url) {
+        model.src = url;
+        model.hidden = false;
+        cloud.hidden = true;
+      }
+      try {
+        var readyModel = sessionStorage.getItem("traces-capture-model");
+        if (readyModel) showModel(readyModel);
       } catch (e) {}
 
       function setPct(p) {
@@ -77,7 +99,9 @@
                 try {
                   if (d.model_url) {
                     // load the GLB through the worker proxy (avoids cross-origin issues)
-                    sessionStorage.setItem("traces-capture-model", api + "/proxy?url=" + encodeURIComponent(d.model_url));
+                    var proxied = api + "/proxy?url=" + encodeURIComponent(d.model_url);
+                    sessionStorage.setItem("traces-capture-model", proxied);
+                    showModel(proxied);
                   }
                   if (d.thumb) sessionStorage.setItem("traces-capture-thumb", d.thumb);
                 } catch (e) {}
