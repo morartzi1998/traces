@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716w">
-<link rel="stylesheet" href="../css/object.css?v=20260716w">
-<script src="../js/cursor.js?v=20260716w" defer></script>
-<script src="../js/grain.js?v=20260716w" defer></script>
-<script src="../js/tilt3d.js?v=20260716w" defer></script>
-<script src="../js/archive.js?v=20260716w"></script>
-<script src="../js/blobstore.js?v=20260716w"></script>
-<script src="../js/flow.js?v=20260716w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716y">
+<link rel="stylesheet" href="../css/object.css?v=20260716y">
+<script src="../js/cursor.js?v=20260716y" defer></script>
+<script src="../js/grain.js?v=20260716y" defer></script>
+<script src="../js/tilt3d.js?v=20260716y" defer></script>
+<script src="../js/archive.js?v=20260716y"></script>
+<script src="../js/blobstore.js?v=20260716y"></script>
+<script src="../js/flow.js?v=20260716y" defer></script>
+<script src="../js/layout-editor.js?v=20260716y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716y"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -42,12 +43,13 @@
         <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
+        <li><button type="button" id="menuEditLayout">Edit card layout</button></li>
       </ul>
     </header>
 
     <!-- capture history timeline: the line runs through the cubes, ending at the
          last cube -->
-    <div class="obj-timeline" aria-label="Capture history">
+    <div class="obj-timeline" data-editable="timeline" aria-label="Capture history">
       <div class="obj-years">
         <button class="obj-year obj-year--active" type="button" data-year="2021"><span>2021</span><i class="obj-dot"></i></button>
         <button class="obj-year" type="button" data-year="2023"><span>2023</span><i class="obj-dot"></i></button>
@@ -77,7 +79,7 @@
 
     <div class="obj-tags" id="objTags">
       <!-- the tag pill itself expands into this when a "remark" annotation is opened -->
-      <div class="remark-card" id="remarkCard" hidden>
+      <div class="remark-card" id="remarkCard" data-editable="remarkCard" hidden>
         <div class="remark-card-row">
           <button class="remark-card-close" type="button" id="remarkClose" aria-label="Close">&minus;</button>
           <span class="remark-card-title" id="remarkTitle"></span>
@@ -96,7 +98,7 @@
       <!-- a link marker (a point in a space marking where a connected object
            sits) opens this preview panel — the same layout as the details
            panel, read-only, with a way to jump straight there -->
-      <aside class="obj-link-card" id="linkCard" hidden>
+      <aside class="obj-link-card" id="linkCard" data-editable="linkCard" hidden>
         <button class="obj-link-card-close" type="button" id="linkCardClose" aria-label="Close">&minus;</button>
         <h2 class="obj-white-title" id="linkCardTitle">Old living room lamp</h2>
         <div class="obj-link-card-actions">
@@ -132,7 +134,7 @@
     </div>
 
     <!-- white details panel: read the capture, or edit it in place (no page change) -->
-    <aside class="obj-white" id="objWhite" hidden>
+    <aside class="obj-white" id="objWhite" data-editable="whitePanel" hidden>
       <h2 class="obj-white-title wo-read" id="whiteTitle">Old living room lamp</h2>
       <p class="obj-white-sub wo-read" id="whiteSub">connected to the space "my old living room"</p>
 
@@ -1001,6 +1003,17 @@
         closeBlue();
         white.hidden = true;
         enterAnnotateMode();
+      });
+      document.getElementById("menuEditLayout").addEventListener("click", function () {
+        menu.hidden = true;
+        var tl = document.querySelector(".obj-timeline");
+        if (tl) tl.hidden = false;
+        white.hidden = false;
+        var link = document.getElementById("linkCard");
+        if (link) link.hidden = false;
+        var remark = document.getElementById("remarkCard");
+        if (remark) remark.hidden = false;
+        if (window.LayoutEditor) window.LayoutEditor.start();
       });
 
       document.addEventListener("keydown", function (e) {
