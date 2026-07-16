@@ -686,6 +686,12 @@
   border: 2px solid var(--color-ink-blue);
 }
 
+/* marks where the object you came from sits, while viewing its space */
+.obj-link-marker--highlight .obj-link-dot {
+  background: var(--color-ink-blue);
+  box-shadow: 0 0 0 4px rgba(10, 37, 180, 0.35);
+}
+
 /* a link marker opens a preview panel — the exact same layout as the details
    panel (obj-white-* classes), read-only, ending in an "Open" action instead
    of Edit */

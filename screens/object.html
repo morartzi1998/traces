@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717n">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717n">
-<link rel="stylesheet" href="../css/object.css?v=20260717n">
-<script src="../js/cursor.js?v=20260717n" defer></script>
-<script src="../js/grain.js?v=20260717n" defer></script>
-<script src="../js/tilt3d.js?v=20260717n" defer></script>
-<script src="../js/archive.js?v=20260717n"></script>
-<script src="../js/blobstore.js?v=20260717n"></script>
-<script src="../js/flow.js?v=20260717n" defer></script>
-<script src="../js/layout-editor.js?v=20260717n" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717n"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717o">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717o">
+<link rel="stylesheet" href="../css/object.css?v=20260717o">
+<script src="../js/cursor.js?v=20260717o" defer></script>
+<script src="../js/grain.js?v=20260717o" defer></script>
+<script src="../js/tilt3d.js?v=20260717o" defer></script>
+<script src="../js/archive.js?v=20260717o"></script>
+<script src="../js/blobstore.js?v=20260717o"></script>
+<script src="../js/flow.js?v=20260717o" defer></script>
+<script src="../js/layout-editor.js?v=20260717o" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717o"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -43,6 +43,7 @@
         <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
+        <li><button type="button" id="menuToggleView" hidden>Show in its space</button></li>
         <li><button type="button" id="menuEditLayout">Edit card layout</button></li>
       </ul>
     </header>
@@ -547,6 +548,99 @@
         modelViewer.querySelectorAll(".obj-link-hotspot").forEach(function (n) { n.remove(); });
       }
 
+      // ----- individual object <-> its containing space toggle -----
+      // a plain on/off pair for now; designed to grow into a 3-way cycle
+      // (object / space / visual collage) once that third mode exists
+      var SPACE_VIEW_ACTIVE = false;
+      var menuToggleView = document.getElementById("menuToggleView");
+
+      function hasSpaceView(k) {
+        return !!(catalog[k].connectedKey && catalog[catalog[k].connectedKey]);
+      }
+
+      function refreshViewToggle() {
+        var has = hasSpaceView(key);
+        menuToggleView.hidden = !has;
+        menuToggleView.textContent = SPACE_VIEW_ACTIVE ? "Show this object alone" : "Show in its space";
+      }
+
+      // shows just the ONE link marker (from the space's own links list)
+      // that points back at objectKey, so she can see where this object
+      // sits without every other link in that space cluttering the view
+      function renderSpaceHighlight(spaceKey, objectKey) {
+        var space = catalog[spaceKey];
+        var link = (space.links || []).filter(function (l) { return l.target === objectKey; })[0];
+        if (!link) return;
+        function place() {
+          var isModel = !!space.model && !modelViewer.hidden;
+          if (isModel) {
+            if (!link.pos) convertTo3D(link);
+            if (link.pos) {
+              var h = document.createElement("button");
+              h.className = "obj-link-marker obj-link-hotspot obj-link-marker--highlight";
+              h.type = "button";
+              h.slot = "hotspot-space-highlight";
+              h.dataset.position = link.pos;
+              if (link.normal) h.dataset.normal = link.normal;
+              buildLinkMarker(h);
+              modelViewer.appendChild(h);
+              return;
+            }
+          }
+          var b = document.createElement("button");
+          b.className = "obj-link-marker obj-link-marker--highlight";
+          b.type = "button";
+          b.style.left = link.x * 100 + "%";
+          b.style.top = link.y * 100 + "%";
+          buildLinkMarker(b);
+          tags.appendChild(b);
+        }
+        // always wait for the space model's OWN next "load" — checking
+        // modelViewer.loaded right after changing .src can still read the
+        // previous model's state, since the swap itself isn't synchronous,
+        // which raycasts against stale geometry and finds nothing
+        if (space.model) {
+          modelViewer.addEventListener("load", place, { once: true });
+        } else {
+          place();
+        }
+      }
+
+      function showSpaceView() {
+        var spaceKey = catalog[key].connectedKey;
+        var space = catalog[spaceKey];
+        if (!space) return;
+        SPACE_VIEW_ACTIVE = true;
+        clearHotspots();
+        clearLinkHotspots();
+        tags.querySelectorAll(".obj-tag, .obj-link-marker:not(.obj-link-hotspot)").forEach(function (n) { n.remove(); });
+        if (space.model) {
+          stage.dataset.mode = "model";
+          photo.hidden = true;
+          modelViewer.hidden = false;
+          if (space.model.indexOf("idb:") === 0) {
+            window.BlobStore.get(space.model.slice(4)).then(function (blob) {
+              if (blob && SPACE_VIEW_ACTIVE) modelViewer.src = URL.createObjectURL(blob);
+            });
+          } else {
+            modelViewer.src = space.model;
+          }
+        } else {
+          stage.dataset.mode = "photo";
+          modelViewer.hidden = true;
+          photo.hidden = false;
+          photo.src = space.img;
+          photo.alt = space.title;
+        }
+        renderSpaceHighlight(spaceKey, key);
+        refreshViewToggle();
+      }
+
+      menuToggleView.addEventListener("click", function () {
+        menu.hidden = true;
+        if (SPACE_VIEW_ACTIVE) { show(key); } else { showSpaceView(); }
+      });
+
       // raycast a stored fractional (x,y) onto the loaded mesh so an older
       // 2D annotation gains a 3D anchor that tracks the model when it rotates
       function convertTo3D(a) {
@@ -739,8 +833,10 @@
       });
 
       // once the mesh is ready, (re)draw annotations as 3D-anchored hotspots
+      // — skipped while showing a different capture's space (SPACE_VIEW_ACTIVE),
+      // since key still points at the object, not the space now on screen
       modelViewer.addEventListener("load", function () {
-        if (catalog[key].model) { renderAnnotations(); renderLinks(); }
+        if (catalog[key].model && !SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
       });
 
       // plain click on the capture toggles its info panel (like clicking the
@@ -864,6 +960,8 @@
         maybePlaceLink(k);
         maybeFinalizeLink(k);
         renderLinks();
+        SPACE_VIEW_ACTIVE = false;
+        refreshViewToggle();
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
