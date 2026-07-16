@@ -4,19 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716h">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716h">
-<link rel="stylesheet" href="../css/upload.css?v=20260716h">
-<script src="../js/config.js?v=20260716h"></script>
-<script src="../js/cursor.js?v=20260716h" defer></script>
-<script src="../js/grain.js?v=20260716h" defer></script>
-<script src="../js/blobstore.js?v=20260716h"></script>
-<script src="../js/flow.js?v=20260716h" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716h"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716i">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716i">
+<link rel="stylesheet" href="../css/upload.css?v=20260716i">
+<script src="../js/config.js?v=20260716i"></script>
+<script src="../js/cursor.js?v=20260716i" defer></script>
+<script src="../js/grain.js?v=20260716i" defer></script>
+<script src="../js/blobstore.js?v=20260716i"></script>
+<script src="../js/flow.js?v=20260716i" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716i"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
+</script>
+<!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
+     client-side (three.js) before it ever reaches the rest of the flow -->
+<script type="importmap">
+  { "imports": { "three": "../js/vendor/three/three.module.js" } }
+</script>
+<script type="module">
+  import * as THREE from "three";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js";
+  import { GLTFExporter } from "../js/vendor/three/GLTFExporter.js";
+
+  window.__convertPlyToGlb = function (arrayBuffer) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var geometry = new PLYLoader().parse(arrayBuffer);
+        geometry.computeVertexNormals();
+        var hasColor = !!geometry.getAttribute("color");
+        var material = new THREE.MeshStandardMaterial({
+          vertexColors: hasColor,
+          color: hasColor ? 0xffffff : 0xcfcfcf,
+          roughness: 0.85,
+          metalness: 0.05,
+        });
+        var scene = new THREE.Scene();
+        scene.add(new THREE.Mesh(geometry, material));
+        new GLTFExporter().parse(
+          scene,
+          function (glb) { resolve(glb); },
+          function (err) { reject(err); },
+          { binary: true }
+        );
+      } catch (e) { reject(e); }
+    });
+  };
 </script>
 </head>
 <body>
@@ -79,7 +113,7 @@
         <div class="up-option-body" id="acc-scan" hidden>
 
           <label class="up-drop" id="dropZoneScan" title="3D scans you made with external software that you'd like to attach here">
-            <input type="file" id="fileInputScan" accept=".glb,.gltf,model/gltf-binary,model/gltf+json">
+            <input type="file" id="fileInputScan" accept=".glb,.gltf,.ply,model/gltf-binary,model/gltf+json">
             <span class="up-drop-line">click to browse &mdash; no file has been uploaded yet</span>
           </label>
 
@@ -184,14 +218,44 @@
         customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
       });
 
+      function showSelectedScan(file, displayName) {
+        window.__selectedScanFile = file;
+        filenameScan.textContent = displayName;
+        try { thumbScan.src = URL.createObjectURL(file); } catch (e) {}
+        dropScan.hidden = true;
+        selectedScan.hidden = false;
+      }
+
       function acceptScan(files) {
         if (!files || !files.length) return;
         var f = files[0];
-        window.__selectedScanFile = f;
-        filenameScan.textContent = f.name;
-        try { thumbScan.src = URL.createObjectURL(f); } catch (e) {}
+        if (!/\.ply$/i.test(f.name)) {
+          showSelectedScan(f, f.name);
+          return;
+        }
+        // a .ply file needs converting to glb before anything else can use it
         dropScan.hidden = true;
-        selectedScan.hidden = false;
+        selectedScan.hidden = true;
+        filenameScan.textContent = f.name + " — converting…";
+        var reader = new FileReader();
+        reader.onload = function () {
+          var convert = window.__convertPlyToGlb;
+          if (!convert) { setTimeout(function () { acceptScan(files); }, 150); return; }
+          convert(reader.result).then(function (glb) {
+            var blob = new Blob([glb], { type: "model/gltf-binary" });
+            var glbName = f.name.replace(/\.ply$/i, ".glb");
+            showSelectedScan(new File([blob], glbName, { type: "model/gltf-binary" }), f.name);
+          }).catch(function (err) {
+            filenameScan.textContent = f.name + " — conversion failed";
+            selectedScan.hidden = false;
+            console.error("PLY conversion failed:", err);
+          });
+        };
+        reader.onerror = function () {
+          filenameScan.textContent = f.name + " — could not read file";
+          selectedScan.hidden = false;
+        };
+        reader.readAsArrayBuffer(f);
       }
 
       inputScan.addEventListener("change", function () { acceptScan(inputScan.files); });
