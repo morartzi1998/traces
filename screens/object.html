@@ -4,15 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716c">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716c">
-<link rel="stylesheet" href="../css/object.css?v=20260716c">
-<script src="../js/cursor.js?v=20260716c" defer></script>
-<script src="../js/grain.js?v=20260716c" defer></script>
-<script src="../js/tilt3d.js?v=20260716c" defer></script>
-<script src="../js/archive.js?v=20260716c"></script>
-<script src="../js/flow.js?v=20260716c" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716c"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716d">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716d">
+<link rel="stylesheet" href="../css/object.css?v=20260716d">
+<script src="../js/cursor.js?v=20260716d" defer></script>
+<script src="../js/grain.js?v=20260716d" defer></script>
+<script src="../js/tilt3d.js?v=20260716d" defer></script>
+<script src="../js/archive.js?v=20260716d"></script>
+<script src="../js/blobstore.js?v=20260716d"></script>
+<script src="../js/flow.js?v=20260716d" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716d"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -783,8 +784,16 @@
         if (catalog[k].model) {
           stage.dataset.mode = "model";
           photo.hidden = true;
-          modelViewer.src = catalog[k].model;
           modelViewer.hidden = false;
+          // a capture saved from the "ready-made scan" flow keeps its GLB in
+          // IndexedDB (too large for localStorage) — fetch it in on demand
+          if (catalog[k].model.indexOf("idb:") === 0) {
+            window.BlobStore.get(catalog[k].model.slice(4)).then(function (blob) {
+              if (blob && key === k) modelViewer.src = URL.createObjectURL(blob);
+            });
+          } else {
+            modelViewer.src = catalog[k].model;
+          }
         } else {
           stage.dataset.mode = "photo";
           modelViewer.hidden = true;

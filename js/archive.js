@@ -40,6 +40,15 @@
       remove: function (id) {
         save(load().filter(function (c) { return c.id !== id; }));
       },
+      update: function (id, patch) {
+        var list = load();
+        var found = null;
+        list.forEach(function (c) {
+          if (c.id === id) { Object.assign(c, patch); found = c; }
+        });
+        if (found) save(list);
+        return found;
+      },
       clear: function () { save([]); }
     };
   }

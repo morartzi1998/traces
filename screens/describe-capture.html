@@ -4,15 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716c">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260716c">
-<script src="../js/cursor.js?v=20260716c" defer></script>
-<script src="../js/grain.js?v=20260716c" defer></script>
-<script src="../js/tilt3d.js?v=20260716c" defer></script>
-<script src="../js/annotations.js?v=20260716c" defer></script>
-<script src="../js/archive.js?v=20260716c"></script>
-<script src="../js/flow.js?v=20260716c" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716c"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716d">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260716d">
+<script src="../js/cursor.js?v=20260716d" defer></script>
+<script src="../js/grain.js?v=20260716d" defer></script>
+<script src="../js/tilt3d.js?v=20260716d" defer></script>
+<script src="../js/annotations.js?v=20260716d" defer></script>
+<script src="../js/archive.js?v=20260716d"></script>
+<script src="../js/blobstore.js?v=20260716d"></script>
+<script src="../js/flow.js?v=20260716d" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716d"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -114,9 +115,15 @@
         try { model = sessionStorage.getItem("traces-capture-model"); } catch (e) {}
         if (model) {
           var mv = document.getElementById("captureModel");
-          mv.src = model;
           mv.hidden = false;
           document.querySelector(".capture-object").hidden = true;
+          if (model.indexOf("idb:") === 0) {
+            window.BlobStore.get(model.slice(4)).then(function (blob) {
+              if (blob) mv.src = URL.createObjectURL(blob);
+            });
+          } else {
+            mv.src = model;
+          }
         } else {
           // otherwise, if the user uploaded a flat image, show that
           try {
@@ -178,17 +185,35 @@
       if (alsoCommunity && window.Community && cap) {
         Community.add(Object.assign({}, cap));
       }
-      try {
-        if (cap) sessionStorage.setItem("traces-item", cap.id);
-        sessionStorage.removeItem("traces-upload-img");
-        sessionStorage.removeItem("traces-upload-name");
-        sessionStorage.removeItem("traces-capture-model");
-        sessionStorage.removeItem("traces-capture-thumb");
-        sessionStorage.removeItem("traces-mode");
-        sessionStorage.removeItem("traces-task");
-        sessionStorage.removeItem("traces-task-error");
-      } catch (e) {}
-      goTo("gallery.html");
+      function finish() {
+        try {
+          if (cap) sessionStorage.setItem("traces-item", cap.id);
+          sessionStorage.removeItem("traces-upload-img");
+          sessionStorage.removeItem("traces-upload-name");
+          sessionStorage.removeItem("traces-capture-model");
+          sessionStorage.removeItem("traces-capture-thumb");
+          sessionStorage.removeItem("traces-mode");
+          sessionStorage.removeItem("traces-task");
+          sessionStorage.removeItem("traces-task-error");
+        } catch (e) {}
+        goTo("gallery.html");
+      }
+      // the model rode over in IndexedDB under a temporary key — move it to
+      // a permanent one keyed by the saved capture's own id
+      if (cap && model && model.indexOf("idb:") === 0) {
+        var pendingKey = model.slice(4);
+        window.BlobStore.get(pendingKey).then(function (blob) {
+          if (!blob) return;
+          var permKey = "cap:" + cap.id;
+          return window.BlobStore.set(permKey, blob).then(function () {
+            Archive.update(cap.id, { model: "idb:" + permKey });
+            if (alsoCommunity && window.Community) Community.update(cap.id, { model: "idb:" + permKey });
+            return window.BlobStore.del(pendingKey);
+          });
+        }).then(finish, finish);
+      } else {
+        finish();
+      }
     }
   </script>
 
