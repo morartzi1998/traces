@@ -1036,6 +1036,31 @@
   opacity: 0.85;
 }
 
+.layout-edit-gap-handle {
+  position: absolute;
+  top: 0;
+  left: -22px;
+  width: 16px;
+  height: 16px;
+  background: #4a7dff;
+  border-radius: 3px;
+  cursor: ns-resize;
+  z-index: 40;
+}
+
+.layout-edit-gap-label {
+  position: absolute;
+  top: 0;
+  left: -60px;
+  width: 34px;
+  font-size: 9px;
+  color: #4a7dff;
+  background: #ffffff;
+  text-align: center;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 .layout-edit-json {
   position: fixed;
   left: 50%;
