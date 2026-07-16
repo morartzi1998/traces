@@ -28,6 +28,7 @@
 (function () {
   var CARDS_KEY = "traces-layout-overrides"; // card position/size, keyed by data-editable
   var PROPS_KEY = "traces-layout-props";     // everything else, keyed by a DOM path
+  var INSERTS_KEY = "traces-layout-inserts"; // lines added during editing: [{after, id}]
 
   function loadJSON(key) {
     try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; }
@@ -43,6 +44,10 @@
   function pathKey(el) {
     var parts = [];
     var node = el;
+    // falls back to document.body as the root if nothing closer has an id
+    // (a container like the timeline is marked up with only a class) —
+    // without this, anything inside such a container silently fails to
+    // select at all
     while (node && node.nodeType === 1 && node !== document.body) {
       if (node.id) { parts.unshift(node.id); return parts.join("/"); }
       var parent = node.parentElement;
@@ -50,12 +55,13 @@
       parts.unshift(Array.prototype.indexOf.call(parent.children, node));
       node = parent;
     }
+    if (node === document.body) { parts.unshift("BODY"); return parts.join("/"); }
     return null;
   }
 
   function resolvePath(key) {
     var parts = key.split("/");
-    var node = document.getElementById(parts[0]);
+    var node = parts[0] === "BODY" ? document.body : document.getElementById(parts[0]);
     for (var i = 1; i < parts.length && node; i++) {
       node = node.children[parseInt(parts[i], 10)];
     }
@@ -74,6 +80,30 @@
     });
   }
 
+  // elements she duplicated with "+ Duplicate" (a divider, a timeline dot,
+  // anything) — re-created at the same anchor point on every load, before
+  // pathKey-based props are applied (so anything AFTER the insertion point
+  // still resolves to the right index)
+  function applyInserts() {
+    var inserts = loadJSON(INSERTS_KEY);
+    (inserts.list || []).forEach(function (entry) {
+      if (document.querySelector('[data-insert-id="' + entry.id + '"]')) return;
+      var anchor = resolvePath(entry.after);
+      if (!anchor || !anchor.parentNode) return;
+      var clone;
+      if (entry.tag === "HR" && !entry.html) {
+        clone = document.createElement("hr");
+        clone.className = "layout-edit-added-line";
+      } else {
+        clone = document.createElement(entry.tag || "hr");
+        clone.className = entry.className || "";
+        if (entry.html != null) clone.innerHTML = entry.html;
+      }
+      clone.dataset.insertId = entry.id;
+      anchor.parentNode.insertBefore(clone, anchor.nextSibling);
+    });
+  }
+
   function applyProps() {
     var props = loadJSON(PROPS_KEY);
     Object.keys(props).forEach(function (key) {
@@ -83,6 +113,8 @@
       if (p.marginTop != null) el.style.marginTop = p.marginTop + "px";
       if (p.fontSize != null) el.style.fontSize = p.fontSize + "px";
       if (p.thickness != null) el.style.borderTopWidth = p.thickness + "px";
+      if (p.width != null) el.style.width = p.width + "px";
+      if (p.height != null) el.style.height = p.height + "px";
       if (p.hidden) el.style.display = "none";
     });
   }
@@ -190,16 +222,23 @@
       '</p>' +
       '<label>space above <input type="number" id="layoutPropMargin"> px</label>' +
       '<label>font size <input type="number" id="layoutPropFont"> px</label>' +
+      '<label>width <input type="number" id="layoutPropWidth"> px</label>' +
+      '<label>height <input type="number" id="layoutPropHeight"> px</label>' +
       '<label id="layoutPropThicknessRow">line thickness <input type="number" id="layoutPropThickness"> px</label>' +
       '<label><input type="checkbox" id="layoutPropHidden"> hide this element</label>' +
+      '<button type="button" id="layoutEditDuplicate">+ Duplicate this element</button>' +
+      '<button type="button" id="layoutPropDeleteLine" hidden>Delete this line</button>' +
       '<button type="button" id="layoutPropClose">Done with this element</button>';
     document.body.appendChild(panel);
 
     var marginInput = document.getElementById("layoutPropMargin");
     var fontInput = document.getElementById("layoutPropFont");
+    var widthInput = document.getElementById("layoutPropWidth");
+    var heightInput = document.getElementById("layoutPropHeight");
     var thicknessRow = document.getElementById("layoutPropThicknessRow");
     var thicknessInput = document.getElementById("layoutPropThickness");
     var hiddenInput = document.getElementById("layoutPropHidden");
+    var deleteLineBtn = document.getElementById("layoutPropDeleteLine");
     var panelDesc = document.getElementById("layoutPanelDesc");
     var panelDrag = document.getElementById("layoutPanelDrag");
     panelDrag.addEventListener("mousedown", function (e) {
@@ -214,35 +253,69 @@
       });
     });
 
+    // shift-click adds to the selection instead of replacing it, so a
+    // change (move, hide, resize…) can apply to several elements at once.
+    // `selected`/`selectedKey` always mirror the LAST-clicked one (what the
+    // panel displays); `items` holds the full multi-selection.
+    var items = []; // [{ el, key }]
     var selected = null;
     var selectedKey = null;
 
     function describe(el) {
       var text = (el.textContent || "").trim().slice(0, 40);
-      return el.tagName.toLowerCase() + (text ? ": “" + text + "”" : "");
+      var label = el.tagName.toLowerCase() + (text ? ": “" + text + "”" : "");
+      return items.length > 1 ? label + "  (+" + (items.length - 1) + " more selected)" : label;
     }
 
-    function selectElement(el) {
-      if (selected) selected.classList.remove("layout-edit-selected");
+    function clearSelection() {
+      items.forEach(function (it) { it.el.classList.remove("layout-edit-selected"); });
+      items = [];
+      selected = null; selectedKey = null;
+    }
+
+    function selectElement(el, additive) {
       var key = pathKey(el);
       if (!key) return;
-      selected = el;
-      selectedKey = key;
-      selected.classList.add("layout-edit-selected");
-      panelDesc.textContent = describe(el);
-      var cs = getComputedStyle(el);
+      if (!additive) clearSelection();
+      var existing = items.filter(function (it) { return it.el === el; })[0];
+      if (existing) {
+        // shift-clicking an already-selected element deselects just that one
+        existing.el.classList.remove("layout-edit-selected");
+        items = items.filter(function (it) { return it !== existing; });
+      } else {
+        el.classList.add("layout-edit-selected");
+        items.push({ el: el, key: key });
+      }
+      if (!items.length) { panel.hidden = true; return; }
+      var last = items[items.length - 1];
+      selected = last.el; selectedKey = last.key;
+      panelDesc.textContent = describe(selected);
+      var cs = getComputedStyle(selected);
       marginInput.value = Math.round(parseFloat(cs.marginTop) || 0);
       fontInput.value = Math.round(parseFloat(cs.fontSize) || 0);
+      var rect = selected.getBoundingClientRect();
+      widthInput.value = Math.round(rect.width);
+      heightInput.value = Math.round(rect.height);
       hiddenInput.checked = cs.display === "none";
-      thicknessRow.style.display = el.tagName === "HR" ? "" : "none";
-      if (el.tagName === "HR") thicknessInput.value = Math.round(parseFloat(cs.borderTopWidth) || 1);
+      var isLine = selected.tagName === "HR";
+      thicknessRow.style.display = isLine ? "" : "none";
+      deleteLineBtn.hidden = !isLine;
+      if (isLine) thicknessInput.value = Math.round(parseFloat(cs.borderTopWidth) || 1);
       panel.hidden = false;
     }
 
-    function persistSelected(patch) {
-      if (!selectedKey) return;
+    // applies fn(el, key) to every selected element, or just the primary
+    // one if nothing is multi-selected (covers plain single-select too)
+    function forEachSelected(fn) {
+      (items.length ? items : (selected ? [{ el: selected, key: selectedKey }] : [])).forEach(function (it) {
+        fn(it.el, it.key);
+      });
+    }
+
+    function persistFor(key, patch) {
+      if (!key) return;
       var props = loadJSON(PROPS_KEY);
-      props[selectedKey] = Object.assign({}, props[selectedKey], patch);
+      props[key] = Object.assign({}, props[key], patch);
       saveJSON(PROPS_KEY, props);
     }
 
@@ -255,16 +328,19 @@
       e.preventDefault();
       e.stopPropagation();
       var el = e.target;
-      selectElement(el);
+      selectElement(el, e.shiftKey);
       if (!selectedKey) return;
-      var startMargin = parseFloat(getComputedStyle(el).marginTop) || 0;
+      // drag applies the same delta to every selected element, not just
+      // the one the mouse happens to be over
+      var bases = items.map(function (it) { return { el: it.el, key: it.key, start: parseFloat(getComputedStyle(it.el).marginTop) || 0 }; });
       dragMove(e, function (dx, dy) {
-        var v = Math.max(0, startMargin + dy);
-        startMargin = v; // relative deltas accumulate onto the running value
-        el.style.marginTop = v + "px";
-        marginInput.value = Math.round(v);
+        bases.forEach(function (b) {
+          b.start = Math.max(0, b.start + dy);
+          b.el.style.marginTop = b.start + "px";
+        });
+        marginInput.value = Math.round(bases[bases.length - 1].start);
       }, function () {
-        persistSelected({ marginTop: parseFloat(el.style.marginTop) || 0 });
+        bases.forEach(function (b) { persistFor(b.key, { marginTop: parseFloat(b.el.style.marginTop) || 0 }); });
       });
     }, true);
     // swallow the click that follows the mousedown above, so it doesn't
@@ -279,29 +355,51 @@
     marginInput.addEventListener("input", function () {
       if (!selected) return;
       var v = parseFloat(marginInput.value) || 0;
-      selected.style.marginTop = v + "px";
-      persistSelected({ marginTop: v });
+      forEachSelected(function (el, key) { el.style.marginTop = v + "px"; persistFor(key, { marginTop: v }); });
     });
     fontInput.addEventListener("input", function () {
       if (!selected) return;
       var v = parseFloat(fontInput.value) || 0;
-      selected.style.fontSize = v + "px";
-      persistSelected({ fontSize: v });
+      forEachSelected(function (el, key) { el.style.fontSize = v + "px"; persistFor(key, { fontSize: v }); });
     });
     thicknessInput.addEventListener("input", function () {
       if (!selected) return;
       var v = parseFloat(thicknessInput.value) || 1;
-      selected.style.borderTopWidth = v + "px";
-      persistSelected({ thickness: v });
+      forEachSelected(function (el, key) { el.style.borderTopWidth = v + "px"; persistFor(key, { thickness: v }); });
+    });
+    widthInput.addEventListener("input", function () {
+      if (!selected) return;
+      var v = parseFloat(widthInput.value) || 0;
+      forEachSelected(function (el, key) { el.style.width = v + "px"; persistFor(key, { width: v }); });
+    });
+    heightInput.addEventListener("input", function () {
+      if (!selected) return;
+      var v = parseFloat(heightInput.value) || 0;
+      forEachSelected(function (el, key) { el.style.height = v + "px"; persistFor(key, { height: v }); });
     });
     hiddenInput.addEventListener("change", function () {
       if (!selected) return;
-      selected.style.display = hiddenInput.checked ? "none" : "";
-      persistSelected({ hidden: hiddenInput.checked });
+      var v = hiddenInput.checked;
+      forEachSelected(function (el, key) { el.style.display = v ? "none" : ""; persistFor(key, { hidden: v }); });
+    });
+    deleteLineBtn.addEventListener("click", function () {
+      forEachSelected(function (el, key) {
+        if (el.tagName !== "HR") return;
+        var insertId = el.dataset.insertId;
+        if (insertId) {
+          var inserts = loadJSON(INSERTS_KEY);
+          inserts.list = (inserts.list || []).filter(function (e) { return String(e.id) !== insertId; });
+          saveJSON(INSERTS_KEY, inserts);
+        } else {
+          persistFor(key, { hidden: true });
+        }
+        el.remove();
+      });
+      clearSelection();
+      panel.hidden = true;
     });
     document.getElementById("layoutPropClose").addEventListener("click", function () {
-      if (selected) selected.classList.remove("layout-edit-selected");
-      selected = null; selectedKey = null;
+      clearSelection();
       panel.hidden = true;
     });
 
@@ -311,7 +409,6 @@
     bar.innerHTML =
       '<span>Click anything to edit it (panel, top right). ⠇⠇ red / red corner move &amp; resize a whole card.</span>' +
       '<span id="layoutEditSwitcher"></span>' +
-      '<button type="button" id="layoutEditAddLine">+ Add line</button>' +
       '<button type="button" id="layoutEditCopy">Copy layout</button>' +
       '<button type="button" id="layoutEditReset">Reset</button>' +
       '<button type="button" id="layoutEditDone">Done</button>';
@@ -337,19 +434,49 @@
       return visible || editables[0];
     }
 
-    document.getElementById("layoutEditAddLine").addEventListener("click", function () {
+    // duplicates whatever's currently selected — a divider, a timeline
+    // dot, any element — and drops the copy right after it. Falls back to
+    // a plain new divider at the end of the active card if nothing's
+    // selected (e.g. clicked straight from the bottom bar in an earlier
+    // version of this tool; kept as a safe default)
+    function duplicateOne(anchorEl) {
+      var clone = anchorEl.cloneNode(true);
+      clone.classList.remove("layout-edit-selected");
+      var anchorKey = pathKey(anchorEl);
+      if (!anchorKey) return;
+      anchorEl.parentNode.insertBefore(clone, anchorEl.nextSibling);
+      var id = Date.now() + "-" + Math.floor(Math.random() * 1000) + "-" + Math.floor(Math.random() * 1000);
+      clone.dataset.insertId = id;
+      var inserts = loadJSON(INSERTS_KEY);
+      inserts.list = inserts.list || [];
+      inserts.list.push({
+        after: anchorKey, id: id,
+        tag: clone.tagName, className: clone.className, html: clone.innerHTML || undefined,
+      });
+      saveJSON(INSERTS_KEY, inserts);
+    }
+
+    function duplicateSelected() {
+      if (items.length) {
+        items.slice().forEach(function (it) { duplicateOne(it.el); });
+        return;
+      }
       var container = activeContainer();
       if (!container) return;
+      var anchorEl = container.lastElementChild || container;
+      var anchorKey = pathKey(anchorEl);
+      if (!anchorKey) return;
       var hr = document.createElement("hr");
       hr.className = "layout-edit-added-line";
-      container.appendChild(hr);
-      var key = pathKey(hr);
-      if (key) {
-        var props = loadJSON(PROPS_KEY);
-        props[key] = props[key] || {};
-        saveJSON(PROPS_KEY, props);
-      }
-    });
+      anchorEl.parentNode.insertBefore(hr, anchorEl.nextSibling);
+      var id = Date.now() + "-" + Math.floor(Math.random() * 1000);
+      hr.dataset.insertId = id;
+      var inserts = loadJSON(INSERTS_KEY);
+      inserts.list = inserts.list || [];
+      inserts.list.push({ after: anchorKey, id: id, tag: "HR", className: "layout-edit-added-line" });
+      saveJSON(INSERTS_KEY, inserts);
+    }
+    document.getElementById("layoutEditDuplicate").addEventListener("click", duplicateSelected);
 
     document.getElementById("layoutEditCopy").addEventListener("click", function () {
       var json = JSON.stringify({ cards: loadJSON(CARDS_KEY), props: loadJSON(PROPS_KEY) }, null, 2);
@@ -381,5 +508,6 @@
 
   window.LayoutEditor = { start: startEditMode, apply: applyOverrides };
   applyOverrides();
+  applyInserts();
   applyProps();
 })();

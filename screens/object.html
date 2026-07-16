@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717g">
-<link rel="stylesheet" href="../css/object.css?v=20260717g">
-<script src="../js/cursor.js?v=20260717g" defer></script>
-<script src="../js/grain.js?v=20260717g" defer></script>
-<script src="../js/tilt3d.js?v=20260717g" defer></script>
-<script src="../js/archive.js?v=20260717g"></script>
-<script src="../js/blobstore.js?v=20260717g"></script>
-<script src="../js/flow.js?v=20260717g" defer></script>
-<script src="../js/layout-editor.js?v=20260717g" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717g"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717j">
+<link rel="stylesheet" href="../css/object.css?v=20260717j">
+<script src="../js/cursor.js?v=20260717j" defer></script>
+<script src="../js/grain.js?v=20260717j" defer></script>
+<script src="../js/tilt3d.js?v=20260717j" defer></script>
+<script src="../js/archive.js?v=20260717j"></script>
+<script src="../js/blobstore.js?v=20260717j"></script>
+<script src="../js/flow.js?v=20260717j" defer></script>
+<script src="../js/layout-editor.js?v=20260717j" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717j"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -49,7 +49,7 @@
 
     <!-- capture history timeline: the line runs through the cubes, ending at the
          last cube -->
-    <div class="obj-timeline" data-editable="timeline" aria-label="Capture history">
+    <div class="obj-timeline" id="objTimeline" data-editable="timeline" aria-label="Capture history">
       <div class="obj-years">
         <button class="obj-year obj-year--active" type="button" data-year="2021"><span>2021</span><i class="obj-dot"></i></button>
         <button class="obj-year" type="button" data-year="2023"><span>2023</span><i class="obj-dot"></i></button>
