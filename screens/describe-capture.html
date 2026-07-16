@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716s">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260716s">
-<script src="../js/cursor.js?v=20260716s" defer></script>
-<script src="../js/grain.js?v=20260716s" defer></script>
-<script src="../js/tilt3d.js?v=20260716s" defer></script>
-<script src="../js/annotations.js?v=20260716s" defer></script>
-<script src="../js/archive.js?v=20260716s"></script>
-<script src="../js/blobstore.js?v=20260716s"></script>
-<script src="../js/flow.js?v=20260716s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716v">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260716v">
+<script src="../js/cursor.js?v=20260716v" defer></script>
+<script src="../js/grain.js?v=20260716v" defer></script>
+<script src="../js/tilt3d.js?v=20260716v" defer></script>
+<script src="../js/annotations.js?v=20260716v" defer></script>
+<script src="../js/archive.js?v=20260716v"></script>
+<script src="../js/blobstore.js?v=20260716v"></script>
+<script src="../js/flow.js?v=20260716v" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716v"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,7 +27,7 @@
     <div class="capture-canvas" data-crosshair id="captureCanvas">
       <img class="capture-object" src="../assets/images/photo-chandelier-large.png"
            alt="Captured object: an old living room chandelier">
-      <model-viewer class="capture-model" id="captureModel" camera-controls disable-pan bounds="tight"
+      <model-viewer class="capture-model" id="captureModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
     </div>
 

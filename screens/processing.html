@@ -4,18 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716s">
-<link rel="stylesheet" href="../css/processing.css?v=20260716s">
-<script src="../js/config.js?v=20260716s"></script>
-<script src="../js/cursor.js?v=20260716s" defer></script>
-<script src="../js/grain.js?v=20260716s" defer></script>
-<script src="../js/blobstore.js?v=20260716s"></script>
-<script src="../js/flow.js?v=20260716s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716v">
+<link rel="stylesheet" href="../css/processing.css?v=20260716v">
+<script src="../js/config.js?v=20260716v"></script>
+<script src="../js/cursor.js?v=20260716v" defer></script>
+<script src="../js/grain.js?v=20260716v" defer></script>
+<script src="../js/blobstore.js?v=20260716v"></script>
+<script src="../js/flow.js?v=20260716v" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716v"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
+</script>
+<script type="importmap">
+  { "imports": { "three": "../js/vendor/three/three.module.js" } }
+</script>
+<script type="module">
+  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js";
+  window.__buildVoxelGlb = buildVoxelGlb;
+  window.__deserializeGeometry = deserializeGeometry;
 </script>
 </head>
 <body>
@@ -23,10 +31,16 @@
   <div class="proc-screen">
 
     <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true" id="procCloud">
-    <model-viewer class="proc-model" id="procModel" camera-controls disable-pan bounds="tight"
+    <model-viewer class="proc-model" id="procModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
       interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
+
+    <div class="proc-density" id="procDensityRow" hidden>
+      <label for="procDensitySlider">point density</label>
+      <input type="range" id="procDensitySlider" min="1" max="5" value="3" step="1">
+      <span class="proc-density-label" id="procDensityLabel">balanced</span>
+    </div>
 
     <div class="proc-actions">
       <button class="proc-cancel" type="button" onclick="goTo('../index.html')">Cancel</button>
@@ -66,6 +80,44 @@
           showModel(readyModel);
         }
       } catch (e) {}
+
+      // a ready-made point-cloud scan carries its raw points along too, so
+      // the density can still be tuned here before saving — re-voxelizing
+      // updates both the live preview and the pending blob describe-capture
+      // will pick up on save
+      (function () {
+        var isCloud = false;
+        try { isCloud = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
+        if (!isCloud) return;
+        var densityRow = document.getElementById("procDensityRow");
+        var densitySlider = document.getElementById("procDensitySlider");
+        var densityLabel = document.getElementById("procDensityLabel");
+        var DENSITY_LEVELS = [10000, 18000, 30000, 55000, 90000];
+        var DENSITY_NAMES = ["sparse", "light", "balanced", "dense", "very dense"];
+        var rawGeometry = null;
+
+        window.BlobStore.get("capture-pending-raw").then(function (blob) {
+          if (!blob) return;
+          return blob.arrayBuffer();
+        }).then(function (buf) {
+          if (!buf || !window.__deserializeGeometry) return;
+          rawGeometry = window.__deserializeGeometry(buf);
+          densityRow.hidden = false;
+        }).catch(function () {});
+
+        densitySlider.addEventListener("input", function () {
+          densityLabel.textContent = DENSITY_NAMES[parseInt(densitySlider.value, 10) - 1];
+        });
+        densitySlider.addEventListener("change", function () {
+          if (!rawGeometry || !window.__buildVoxelGlb) return;
+          var target = DENSITY_LEVELS[parseInt(densitySlider.value, 10) - 1];
+          window.__buildVoxelGlb(rawGeometry, target).then(function (glb) {
+            var blob = new Blob([glb], { type: "model/gltf-binary" });
+            model.src = URL.createObjectURL(blob);
+            return window.BlobStore.set("capture-pending", blob);
+          }).catch(function (err) { console.error("re-voxelize failed:", err); });
+        });
+      })();
 
       function setPct(p) {
         status.innerHTML = 'Processing&nbsp;&nbsp;<span>' + p + "%</span>";

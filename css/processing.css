@@ -35,10 +35,44 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  height: 90vh;
-  width: 68vw;
+  height: 96vh;
+  width: 96vw;
   --poster-color: transparent;
   filter: blur(17px) saturate(0.85);
+}
+
+.proc-density {
+  position: absolute;
+  left: 50%;
+  bottom: 11vh;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+}
+
+.proc-density label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.proc-density input[type="range"] {
+  width: 180px;
+  accent-color: #ffffff;
+}
+
+.proc-density-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  min-width: 70px;
 }
 
 .proc-status {
