@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — My archive</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716a">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716a">
-<link rel="stylesheet" href="../css/gallery.css?v=20260716a">
-<script src="../js/cursor.js?v=20260716a" defer></script>
-<script src="../js/grain.js?v=20260716a" defer></script>
-<script src="../js/gallery-title.js?v=20260716a" defer></script>
-<script src="../js/flow.js?v=20260716a" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716c">
+<link rel="stylesheet" href="../css/chrome.css?v=20260716c">
+<link rel="stylesheet" href="../css/gallery.css?v=20260716c">
+<script src="../js/cursor.js?v=20260716c" defer></script>
+<script src="../js/grain.js?v=20260716c" defer></script>
+<script src="../js/gallery-title.js?v=20260716c" defer></script>
+<script src="../js/flow.js?v=20260716c" defer></script>
 </head>
 <body>
 
@@ -28,92 +28,103 @@
 
     <main class="gal-grid">
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="chandelier">
         <p class="gal-meta">[01]<br>2 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('chandelier')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
           <span class="gal-caption">old living room lamp</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="room">
         <p class="gal-meta">[02]<br>13 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('room')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-room.png" alt="My old living room">
           <span class="gal-caption">my living room</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="couch">
         <p class="gal-meta">[03]<br>16 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('couch')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-couch.png" alt="Father's couch">
           <span class="gal-caption">father's couch</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="plant">
         <p class="gal-meta">[04]<br>20 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('plant')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-orchid.png" alt="Mom's gifted plant">
           <span class="gal-caption">mom's gifted plent</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="teddy">
         <p class="gal-meta">[05]<br>27 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('teddy')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
           <span class="gal-caption">childhood tedy</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="souvenirs">
         <p class="gal-meta">[06]<br>39 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('souvenirs')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
           <span class="gal-caption">souvenirs from europe</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="bed">
         <p class="gal-meta">[07]<br>55 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('bed')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-bed.png" alt="20 year old bed">
           <span class="gal-caption">20 year old bed</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="cabinet">
         <p class="gal-meta">[08]<br>164 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('cabinet')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-cabinet.png" alt="Souvenirs storage cabinet">
           <span class="gal-caption">souvenirs storage</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="curtain">
         <p class="gal-meta">[09]<br>a year ago</p>
-        <button class="gal-card" type="button" onclick="openObject('curtain')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
           <span class="gal-caption">favorite corner</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="table">
         <p class="gal-meta">[10]<br>a year ago</p>
-        <button class="gal-card" type="button" onclick="openObject('table')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-table.png" alt="Old table">
           <span class="gal-caption">old table</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
-      <article class="gal-item">
+      <article class="gal-item" data-key="television">
         <p class="gal-meta">[11]<br>2 days ago</p>
-        <button class="gal-card" type="button" onclick="openObject('television')">
+        <button class="gal-card" type="button">
           <img src="../assets/images/photo-television.png" alt="Living room tv">
           <span class="gal-caption">living room tv</span>
         </button>
+        <button class="gal-delete" type="button" hidden>delete capture</button>
       </article>
 
     </main>
@@ -124,6 +135,58 @@
     </footer>
 
   </div>
+
+  <script>
+    (function () {
+      var HIDDEN_KEY = "traces-archive-hidden";
+      var grid = document.querySelector(".gal-grid");
+      function hiddenKeys() {
+        try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { return []; }
+      }
+      function hideForever(key, art) {
+        var keys = hiddenKeys();
+        if (keys.indexOf(key) === -1) keys.push(key);
+        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+        art.remove();
+      }
+
+      var hidden = hiddenKeys();
+      grid.querySelectorAll(".gal-item").forEach(function (art) {
+        if (hidden.indexOf(art.dataset.key) !== -1) { art.remove(); return; }
+
+        var card = art.querySelector(".gal-card");
+        var del = art.querySelector(".gal-delete");
+        var timer = null, longPressed = false;
+        function startPress() {
+          longPressed = false;
+          timer = setTimeout(function () {
+            longPressed = true;
+            grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
+            del.hidden = false;
+          }, 480);
+        }
+        function endPress() { clearTimeout(timer); }
+        card.addEventListener("mousedown", startPress);
+        card.addEventListener("touchstart", startPress, { passive: true });
+        card.addEventListener("mouseup", endPress);
+        card.addEventListener("mouseleave", endPress);
+        card.addEventListener("touchend", endPress);
+        card.addEventListener("click", function (e) {
+          if (longPressed) { e.preventDefault(); return; }
+          openObject(art.dataset.key);
+        });
+        del.addEventListener("click", function () {
+          hideForever(art.dataset.key, art);
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".gal-item")) {
+          grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
+        }
+      });
+    })();
+  </script>
 
 </body>
 </html>

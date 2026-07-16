@@ -160,6 +160,10 @@
   background: #6b6b85;
 }
 
+.up-thumb-model {
+  --poster-color: #6b6b85;
+}
+
 .up-filename {
   font-size: 0.8rem;
   opacity: 0.8;

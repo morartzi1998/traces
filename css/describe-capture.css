@@ -27,6 +27,12 @@
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.55));
 }
 
+.capture-canvas .capture-model {
+  width: 78%;
+  height: 92%;
+  --poster-color: transparent;
+}
+
 /* Annotation markers placed by clicking the capture */
 
 .annotation-marker {

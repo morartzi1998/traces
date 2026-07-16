@@ -4,14 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716a">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260716a">
-<script src="../js/cursor.js?v=20260716a" defer></script>
-<script src="../js/grain.js?v=20260716a" defer></script>
-<script src="../js/tilt3d.js?v=20260716a" defer></script>
-<script src="../js/annotations.js?v=20260716a" defer></script>
-<script src="../js/archive.js?v=20260716a"></script>
-<script src="../js/flow.js?v=20260716a" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260716c">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260716c">
+<script src="../js/cursor.js?v=20260716c" defer></script>
+<script src="../js/grain.js?v=20260716c" defer></script>
+<script src="../js/tilt3d.js?v=20260716c" defer></script>
+<script src="../js/annotations.js?v=20260716c" defer></script>
+<script src="../js/archive.js?v=20260716c"></script>
+<script src="../js/flow.js?v=20260716c" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716c"></script>
+<script type="module">
+  customElements.whenDefined("model-viewer").then(function () {
+    customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
+  });
+</script>
 </head>
 <body>
 
@@ -20,6 +26,8 @@
     <div class="capture-canvas" data-crosshair id="captureCanvas">
       <img class="capture-object" src="../assets/images/photo-chandelier-large.png"
            alt="Captured object: an old living room chandelier">
+      <model-viewer class="capture-model" id="captureModel" camera-controls disable-pan
+        interaction-prompt="none" shadow-intensity="1" exposure="1" hidden></model-viewer>
     </div>
 
     <aside class="sidebar">
@@ -99,15 +107,29 @@
   <script>
     (function () {
       function boot() {
-        // if the user uploaded an image, show it as the captured object
+        // a real 3D capture (Tripo reconstruction, or a ready-made scan)
+        // takes priority over the flat image — show it as an actual
+        // rotatable model instead of the placeholder photo
+        var model = null;
+        try { model = sessionStorage.getItem("traces-capture-model"); } catch (e) {}
+        if (model) {
+          var mv = document.getElementById("captureModel");
+          mv.src = model;
+          mv.hidden = false;
+          document.querySelector(".capture-object").hidden = true;
+        } else {
+          // otherwise, if the user uploaded a flat image, show that
+          try {
+            var up = sessionStorage.getItem("traces-upload-img");
+            if (up) document.querySelector(".capture-object").src = up;
+          } catch (e) {}
+          initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
+        }
         try {
-          var up = sessionStorage.getItem("traces-upload-img");
-          if (up) document.querySelector(".capture-object").src = up;
           var nm = sessionStorage.getItem("traces-upload-name");
           var titleInput = document.querySelector(".text-input");
           if (nm && titleInput) titleInput.value = nm.replace(/\.[^.]+$/, "");
         } catch (e) {}
-        initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
       }
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", boot);
