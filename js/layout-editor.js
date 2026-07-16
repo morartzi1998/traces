@@ -250,12 +250,13 @@
       });
     });
 
-    // whitePanel / linkCard / remarkCard / bluePanel never appear together
-    // in real use (each is a different situation) — only one is visible
-    // at a time here too, switchable, instead of showing all stacked up
-    var EXCLUSIVE = ["whitePanel", "linkCard", "remarkCard", "bluePanel"];
+    // any elements sharing a data-editable-group never appear together in
+    // real use (each is a different situation for the same screen slot,
+    // e.g. object.html's four overlay cards, or describe-capture.html's
+    // two sidebars) — only one is visible at a time here too, switchable,
+    // instead of showing all stacked up
     var exclusiveEls = editables.filter(function (el) {
-      return EXCLUSIVE.indexOf(el.dataset.editable) !== -1;
+      return !!el.dataset.editableGroup;
     });
     editables.forEach(function (el) { if (!el.hidden) revealAll(el); });
 
