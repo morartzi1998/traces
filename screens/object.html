@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717b">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717b">
-<link rel="stylesheet" href="../css/object.css?v=20260717b">
-<script src="../js/cursor.js?v=20260717b" defer></script>
-<script src="../js/grain.js?v=20260717b" defer></script>
-<script src="../js/tilt3d.js?v=20260717b" defer></script>
-<script src="../js/archive.js?v=20260717b"></script>
-<script src="../js/blobstore.js?v=20260717b"></script>
-<script src="../js/flow.js?v=20260717b" defer></script>
-<script src="../js/layout-editor.js?v=20260717b" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717b"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717e">
+<link rel="stylesheet" href="../css/object.css?v=20260717e">
+<script src="../js/cursor.js?v=20260717e" defer></script>
+<script src="../js/grain.js?v=20260717e" defer></script>
+<script src="../js/tilt3d.js?v=20260717e" defer></script>
+<script src="../js/archive.js?v=20260717e"></script>
+<script src="../js/blobstore.js?v=20260717e"></script>
+<script src="../js/flow.js?v=20260717e" defer></script>
+<script src="../js/layout-editor.js?v=20260717e" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717e"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -172,12 +172,12 @@
     </aside>
 
     <!-- blue annotation panel: write a new one, or view/edit a saved "story" (p24 / p26) -->
-    <aside class="obj-blue" id="objBlue" hidden>
+    <aside class="obj-blue" id="objBlue" data-editable="bluePanel" hidden>
       <header class="obj-blue-head">
         <h2 id="blueTitle">Describe your thought and memories in this particular annotations</h2>
         <button class="obj-blue-close" type="button" id="blueClose" aria-label="Collapse" hidden>&minus;</button>
       </header>
-      <div class="obj-blue-body">
+      <div class="obj-blue-body" data-editable-rows="blueBody">
         <p class="obj-blue-label">Type of annotation</p>
         <div class="obj-blue-choices">
           <label><input type="checkbox" id="blueStory" checked> story</label>
