@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260716z">
-<link rel="stylesheet" href="../css/chrome.css?v=20260716z">
-<link rel="stylesheet" href="../css/object.css?v=20260716z">
-<script src="../js/cursor.js?v=20260716z" defer></script>
-<script src="../js/grain.js?v=20260716z" defer></script>
-<script src="../js/tilt3d.js?v=20260716z" defer></script>
-<script src="../js/archive.js?v=20260716z"></script>
-<script src="../js/blobstore.js?v=20260716z"></script>
-<script src="../js/flow.js?v=20260716z" defer></script>
-<script src="../js/layout-editor.js?v=20260716z" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260716z"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717b">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717b">
+<link rel="stylesheet" href="../css/object.css?v=20260717b">
+<script src="../js/cursor.js?v=20260717b" defer></script>
+<script src="../js/grain.js?v=20260717b" defer></script>
+<script src="../js/tilt3d.js?v=20260717b" defer></script>
+<script src="../js/archive.js?v=20260717b"></script>
+<script src="../js/blobstore.js?v=20260717b"></script>
+<script src="../js/flow.js?v=20260717b" defer></script>
+<script src="../js/layout-editor.js?v=20260717b" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717b"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -1008,11 +1008,15 @@
         menu.hidden = true;
         var tl = document.querySelector(".obj-timeline");
         if (tl) tl.hidden = false;
+        // whitePanel / linkCard / remarkCard never appear together in real
+        // use (each covers a different situation) — only show one at a time
+        // here too, switchable from the edit bar, so editing doesn't look
+        // like two cards stacked on top of each other
         white.hidden = false;
         var link = document.getElementById("linkCard");
-        if (link) link.hidden = false;
+        if (link) link.hidden = true;
         var remark = document.getElementById("remarkCard");
-        if (remark) remark.hidden = false;
+        if (remark) remark.hidden = true;
         if (window.LayoutEditor) window.LayoutEditor.start();
       });
 

@@ -60,16 +60,23 @@
     });
   }
 
+    // a hidden element (display:none) has no layout, so measuring its
+    // position via getBoundingClientRect() while hidden gives (0,0) — only
+    // safe to seed once it's actually visible (called eagerly below for
+    // cards already shown, and again from the switcher when one is toggled on)
+    function seedPosition(el) {
+      if (el.hidden || el.style.left) return;
+      var rect = el.getBoundingClientRect();
+      el.style.left = rect.left + "px"; el.style.right = "auto";
+      el.style.top = rect.top + "px"; el.style.bottom = "auto";
+    }
+
   function startEditMode() {
     var overrides = loadOverrides();
     var editables = Array.prototype.slice.call(document.querySelectorAll("[data-editable]"));
 
     editables.forEach(function (el) {
-      // dragging/resizing needs a fixed pixel starting point, whatever
-      // mix of vw/vh/right/bottom the real CSS is using
-      var rect = el.getBoundingClientRect();
-      if (!el.style.left) { el.style.left = rect.left + "px"; el.style.right = "auto"; }
-      if (!el.style.top) { el.style.top = rect.top + "px"; el.style.bottom = "auto"; }
+      seedPosition(el);
 
       var handle = document.createElement("div");
       handle.className = "layout-edit-handle";
@@ -173,10 +180,33 @@
     bar.className = "layout-edit-bar";
     bar.innerHTML =
       '<span>⠇⠇ red = move card, red corner = resize card, blue square = space above this row.</span>' +
+      '<span id="layoutEditSwitcher"></span>' +
       '<button type="button" id="layoutEditCopy">Copy layout</button>' +
       '<button type="button" id="layoutEditReset">Reset</button>' +
       '<button type="button" id="layoutEditDone">Done</button>';
     document.body.appendChild(bar);
+
+    // whitePanel / linkCard / remarkCard never appear together in real use
+    // (each is a different situation) — showing all of them at once during
+    // editing looks like duplicated/stacked cards, so only one is visible
+    // at a time here too, switchable with these buttons
+    var EXCLUSIVE = ["whitePanel", "linkCard", "remarkCard"];
+    var exclusiveEls = editables.filter(function (el) {
+      return EXCLUSIVE.indexOf(el.dataset.editable) !== -1;
+    });
+    if (exclusiveEls.length > 1) {
+      var switcher = document.getElementById("layoutEditSwitcher");
+      exclusiveEls.forEach(function (el) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = el.dataset.editable;
+        btn.addEventListener("click", function () {
+          exclusiveEls.forEach(function (other) { other.hidden = other !== el; });
+          seedPosition(el);
+        });
+        switcher.appendChild(btn);
+      });
+    }
 
     document.getElementById("layoutEditCopy").addEventListener("click", function () {
       var json = JSON.stringify({ cards: loadOverrides(), spacing: loadGaps() }, null, 2);
