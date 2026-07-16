@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717r">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717r">
-<link rel="stylesheet" href="../css/object.css?v=20260717r">
-<script src="../js/cursor.js?v=20260717r" defer></script>
-<script src="../js/grain.js?v=20260717r" defer></script>
-<script src="../js/tilt3d.js?v=20260717r" defer></script>
-<script src="../js/archive.js?v=20260717r"></script>
-<script src="../js/blobstore.js?v=20260717r"></script>
-<script src="../js/flow.js?v=20260717r" defer></script>
-<script src="../js/layout-editor.js?v=20260717r" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717r"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717s">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717s">
+<link rel="stylesheet" href="../css/object.css?v=20260717s">
+<script src="../js/cursor.js?v=20260717s" defer></script>
+<script src="../js/grain.js?v=20260717s" defer></script>
+<script src="../js/tilt3d.js?v=20260717s" defer></script>
+<script src="../js/archive.js?v=20260717s"></script>
+<script src="../js/blobstore.js?v=20260717s"></script>
+<script src="../js/flow.js?v=20260717s" defer></script>
+<script src="../js/layout-editor.js?v=20260717s" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717s"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -39,7 +39,7 @@
         <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
       </div>
       <ul class="obj-menu" id="objMenu" hidden>
-        <li><button type="button" onclick="goTo('describe-capture.html')">Update capture</button></li>
+        <li><button type="button" id="menuUpdateCapture">Update capture</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
@@ -284,12 +284,31 @@
               feeling: c.feeling || "",
               visibility: (window.Community && Community.get(c.id)) ? "community" : "private",
               annotations: Array.isArray(c.annotations) ? c.annotations : [],
-              links: []
+              links: [],
+              // a re-scan appends a dated version; a fresh capture has just one
+              versions: (Array.isArray(c.versions) && c.versions.length)
+                ? c.versions.map(function (v) {
+                    return { year: new Date(v.created || Date.now()).getFullYear(),
+                      created: v.created, model: v.model, img: v.img };
+                  })
+                : [{ year: new Date(c.created || Date.now()).getFullYear(),
+                     created: c.created, model: c.model, img: c.img }]
             };
             order.push(c.id);
           });
         });
       })();
+
+      // the timeline shows one dot per dated scan version. Only the chandelier
+      // (whose annotations genuinely span 2021 and 2023) carries a curated
+      // multi-year history in the showcase; every other item is a single scan
+      // whose timeline stays hidden until a re-scan adds a second version.
+      catalog.chandelier.versions = [{ year: 2021 }, { year: 2023 }, { year: 2026 }];
+      Object.keys(catalog).forEach(function (k) {
+        if (!catalog[k].versions) {
+          catalog[k].versions = [{ year: 2026, model: catalog[k].model, img: catalog[k].img }];
+        }
+      });
 
       // ----- persistence: edits, annotations and connections survive reloads -----
       var STORE = "traces-store-v1";
@@ -998,23 +1017,23 @@
         }
       });
 
-      function show(k) {
-        key = k;
-        try { sessionStorage.setItem("traces-item", k); } catch (e) {}
-        clearHotspots();
-        document.getElementById("objTitle").textContent = catalog[k].title;
-        if (catalog[k].model) {
+      // load one scan (a 3D model or a flat photo) into the stage. Used both
+      // for the current capture and for scrubbing between its timeline
+      // versions — `k` guards against a late async load landing after the
+      // user has already navigated to a different capture.
+      function swapScan(k, model, img) {
+        if (model) {
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
           // a capture saved from the "ready-made scan" flow keeps its GLB in
           // IndexedDB (too large for localStorage) — fetch it in on demand
-          if (catalog[k].model.indexOf("idb:") === 0) {
-            window.BlobStore.get(catalog[k].model.slice(4)).then(function (blob) {
+          if (model.indexOf("idb:") === 0) {
+            window.BlobStore.get(model.slice(4)).then(function (blob) {
               if (blob && key === k) modelViewer.src = URL.createObjectURL(blob);
             });
           } else {
-            modelViewer.src = catalog[k].model;
+            modelViewer.src = model;
           }
         } else {
           stage.dataset.mode = "photo";
@@ -1022,14 +1041,22 @@
           photo.hidden = false;
           // a real capture's thumbnail may be an idb: reference now
           if (window.BlobStore) {
-            window.BlobStore.url(catalog[k].img).then(function (u) {
+            window.BlobStore.url(img).then(function (u) {
               if (key === k) photo.src = u || "";
             });
           } else {
-            photo.src = catalog[k].img;
+            photo.src = img;
           }
           photo.alt = catalog[k].title;
         }
+      }
+
+      function show(k) {
+        key = k;
+        try { sessionStorage.setItem("traces-item", k); } catch (e) {}
+        clearHotspots();
+        document.getElementById("objTitle").textContent = catalog[k].title;
+        swapScan(k, catalog[k].model, catalog[k].img);
         // a capture shared to the community gets a blue-purple backdrop
         // here too, matching its card on the community gallery
         document.querySelector(".obj-screen").classList.toggle(
@@ -1061,6 +1088,7 @@
         SPACE_VIEW_ACTIVE = false;
         refreshViewToggle();
         releasePan();
+        renderTimeline(k);
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
@@ -1205,31 +1233,76 @@
         show(order[(order.indexOf(key) + 1) % order.length]);
       });
 
-      // timeline: clicking a year scrubs to that point in the capture's history
-      function selectYear(y) {
-        activeYear = y;
-        document.querySelectorAll(".obj-year").forEach(function (el) {
-          el.classList.toggle("obj-year--active", Number(el.dataset.year) === y);
+      // timeline: one dot per dated scan version. Rebuilt per capture; hidden
+      // entirely until there's more than one version to move between.
+      var objTimeline = document.getElementById("objTimeline");
+      function timelineHasHistory() {
+        return ((catalog[key] && catalog[key].versions) || []).length >= 2;
+      }
+      function renderTimeline(k) {
+        var versions = catalog[k].versions || [];
+        var yearsWrap = objTimeline.querySelector(".obj-years");
+        yearsWrap.innerHTML = "";
+        if (versions.length < 2) { objTimeline.hidden = true; return; }
+        objTimeline.hidden = false;
+        // default to the latest version
+        var latest = versions.length - 1;
+        activeYear = versions[latest].year;
+        versions.forEach(function (v, i) {
+          var btn = document.createElement("button");
+          btn.className = "obj-year" + (i === latest ? " obj-year--active" : "");
+          btn.type = "button";
+          btn.dataset.year = v.year;
+          btn.dataset.index = i;
+          btn.innerHTML = "<span>" + v.year + "</span><i class=\"obj-dot\"></i>";
+          btn.addEventListener("click", function () { selectVersion(k, i); });
+          yearsWrap.appendChild(btn);
         });
-        document.getElementById("objUpdated").textContent = "[history — " + y + "]";
+      }
+      // clicking a version dot scrubs to that dated scan: swap the model/photo
+      // if the version carries its own, and filter annotations to that year
+      function selectVersion(k, i) {
+        var versions = catalog[k].versions || [];
+        var v = versions[i];
+        if (!v) return;
+        activeYear = v.year;
+        objTimeline.querySelectorAll(".obj-year").forEach(function (el) {
+          el.classList.toggle("obj-year--active", Number(el.dataset.index) === i);
+        });
+        var isLatest = i === versions.length - 1;
+        document.getElementById("objUpdated").textContent =
+          isLatest ? "[latest — " + v.year + "]" : "[version — " + v.year + "]";
+        // a version with its own scan swaps the stage; the curated
+        // annotation-only history (chandelier) keeps the current scan
+        if (v.model || v.img) swapScan(k, v.model, v.img);
         closeBlue();
         closeRemarkCard();
         renderAnnotations();
       }
-      document.querySelectorAll(".obj-year").forEach(function (el) {
-        el.addEventListener("click", function () { selectYear(Number(el.dataset.year)); });
-      });
 
       document.getElementById("objMenuBtn").addEventListener("click", function () {
         menu.hidden = !menu.hidden;
-        // the open menu sits over the history timeline — hide it while open
-        var timeline = document.querySelector(".obj-timeline");
-        if (timeline) timeline.hidden = !menu.hidden;
+        // the open menu sits over the history timeline — hide it while open,
+        // and only restore it when this capture actually has a history to show
+        objTimeline.hidden = menu.hidden ? !timelineHasHistory() : true;
+      });
+      document.getElementById("menuUpdateCapture").addEventListener("click", function () {
+        // re-scanning a real capture appends a new dated version to its
+        // timeline instead of creating a separate capture. Only the visitor's
+        // own captures live in the archive; a showcase item just goes through
+        // the normal (new-capture) flow.
+        try {
+          if (window.Archive && Archive.get(key)) {
+            sessionStorage.setItem("traces-update-target", key);
+          } else {
+            sessionStorage.removeItem("traces-update-target");
+          }
+        } catch (e) {}
+        goTo("describe-capture.html");
       });
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
-        var tl = document.querySelector(".obj-timeline");
-        if (tl) tl.hidden = false;
+        objTimeline.hidden = !timelineHasHistory();
         closeRemarkCard();
         closeBlue();
         white.hidden = true;
@@ -1237,8 +1310,7 @@
       });
       document.getElementById("menuEditLayout").addEventListener("click", function () {
         menu.hidden = true;
-        var tl = document.querySelector(".obj-timeline");
-        if (tl) tl.hidden = false;
+        objTimeline.hidden = !timelineHasHistory();
         // whitePanel / linkCard / remarkCard never appear together in real
         // use (each covers a different situation) — only show one at a time
         // here too, switchable from the edit bar, so editing doesn't look

@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717r">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260717r">
-<script src="../js/cursor.js?v=20260717r" defer></script>
-<script src="../js/grain.js?v=20260717r" defer></script>
-<script src="../js/tilt3d.js?v=20260717r" defer></script>
-<script src="../js/annotations.js?v=20260717r" defer></script>
-<script src="../js/archive.js?v=20260717r"></script>
-<script src="../js/blobstore.js?v=20260717r"></script>
-<script src="../js/flow.js?v=20260717r" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717r"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717s">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260717s">
+<script src="../js/cursor.js?v=20260717s" defer></script>
+<script src="../js/grain.js?v=20260717s" defer></script>
+<script src="../js/tilt3d.js?v=20260717s" defer></script>
+<script src="../js/annotations.js?v=20260717s" defer></script>
+<script src="../js/archive.js?v=20260717s"></script>
+<script src="../js/blobstore.js?v=20260717s"></script>
+<script src="../js/flow.js?v=20260717s" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717s"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -107,7 +107,7 @@
 
   </div>
 
-  <script src="../js/layout-editor.js?v=20260717r" defer></script>
+  <script src="../js/layout-editor.js?v=20260717s" defer></script>
   <script>
     (function () {
       function boot() {
@@ -202,12 +202,78 @@
         country = localStorage.getItem("traces-user-country") || "";
       } catch (e) {}
 
+      // re-scanning an existing capture (from its "Update capture" menu) adds
+      // a new dated version to that capture's timeline instead of creating a
+      // separate one. Only the visitor's own archive captures can be updated.
+      var updateTarget = null;
+      try { updateTarget = sessionStorage.getItem("traces-update-target") || null; } catch (e) {}
+      var isUpdate = !!(updateTarget && window.Archive && Archive.get(updateTarget));
+
+      function clearSession(showItem) {
+        try {
+          if (showItem) sessionStorage.setItem("traces-item", showItem);
+          sessionStorage.removeItem("traces-upload-img");
+          sessionStorage.removeItem("traces-upload-name");
+          sessionStorage.removeItem("traces-capture-model");
+          sessionStorage.removeItem("traces-capture-thumb");
+          sessionStorage.removeItem("traces-mode");
+          sessionStorage.removeItem("traces-task");
+          sessionStorage.removeItem("traces-task-error");
+          sessionStorage.removeItem("traces-update-target");
+        } catch (e) {}
+      }
+
+      // move a data-URL thumbnail and the pending model blob into IndexedDB
+      // under keys derived from `base`, and resolve to the stored references.
+      // A rendered/uploaded thumbnail is a big data: URL — those must NOT sit
+      // in localStorage (a couple blow past its ~5MB quota and every save
+      // after that silently fails), so only a tiny "idb:…" reference is kept.
+      function moveBlobs(base, finalImg, isData) {
+        var out = { img: isData ? "" : (finalImg || ""), model: model };
+        var chain = Promise.resolve();
+        if (isData && window.BlobStore) {
+          var thumbKey = "thumb:" + base;
+          chain = chain.then(function () {
+            return window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(finalImg));
+          }).then(function () { out.img = "idb:" + thumbKey; }).catch(function () {});
+        }
+        if (model && model.indexOf("idb:") === 0 && window.BlobStore) {
+          var pendingKey = model.slice(4);
+          var permKey = "cap:" + base;
+          chain = chain.then(function () { return window.BlobStore.get(pendingKey); })
+            .then(function (blob) {
+              if (!blob) return;
+              return window.BlobStore.set(permKey, blob).then(function () {
+                out.model = "idb:" + permKey;
+                return window.BlobStore.del(pendingKey);
+              });
+            }).catch(function () {});
+        }
+        return chain.then(function () { return out; });
+      }
+
       function afterThumb(finalImg) {
-        // a rendered/uploaded thumbnail arrives as a big data: URL. Those must
-        // NOT sit in localStorage — a couple of them blow past its ~5MB quota
-        // and every save after that silently fails (only the first capture
-        // ever sticks). Keep the blob in IndexedDB and store a tiny reference.
         var isData = typeof finalImg === "string" && finalImg.indexOf("data:") === 0;
+
+        if (isUpdate) {
+          var existing = Archive.get(updateTarget);
+          var versions = (Array.isArray(existing.versions) && existing.versions.length)
+            ? existing.versions.slice()
+            : [{ created: existing.created, model: existing.model, img: existing.img }];
+          var vCreated = Date.now();
+          // unique per-version keys so the new scan never clobbers older ones
+          moveBlobs(updateTarget + "-" + vCreated, finalImg, isData).then(function (refs) {
+            versions.push({ created: vCreated, model: refs.model, img: refs.img });
+            var patch = { versions: versions, model: refs.model, img: refs.img };
+            Archive.update(updateTarget, patch);
+            if (window.Community && Community.get(updateTarget)) Community.update(updateTarget, patch);
+            clearSession(updateTarget);
+            goTo("object.html");
+          }, function () { clearSession(updateTarget); goTo("object.html"); });
+          return;
+        }
+
+        // ---- a brand-new capture ----
         var payload = {
           title: title.trim() || "untitled capture",
           feeling: feeling.trim(),
@@ -218,61 +284,19 @@
           country: country,
           annotations: annotations
         };
-        // a capture ALWAYS goes into the archive; sharing to the community is an
-        // additional choice, not an alternative
         var cap = window.Archive ? Archive.add(payload) : null;
+        if (!cap) { clearSession(); goTo("gallery.html"); return; }
 
-        function finish() {
-          try {
-            if (cap) sessionStorage.setItem("traces-item", cap.id);
-            sessionStorage.removeItem("traces-upload-img");
-            sessionStorage.removeItem("traces-upload-name");
-            sessionStorage.removeItem("traces-capture-model");
-            sessionStorage.removeItem("traces-capture-thumb");
-            sessionStorage.removeItem("traces-mode");
-            sessionStorage.removeItem("traces-task");
-            sessionStorage.removeItem("traces-task-error");
-          } catch (e) {}
-          goTo("gallery.html");
-        }
-        if (!cap) { finish(); return; }
-
-        var chain = Promise.resolve();
-
-        // (1) move the thumbnail blob into IndexedDB, keep only "idb:thumb:ID"
-        if (isData && window.BlobStore) {
-          var thumbKey = "thumb:" + cap.id;
-          chain = chain.then(function () {
-            return window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(finalImg));
-          }).then(function () {
-            Archive.update(cap.id, { img: "idb:" + thumbKey });
-            cap.img = "idb:" + thumbKey;
-          }).catch(function () {});
-        }
-
-        // (2) the model rode over in IndexedDB under a temporary key — move it
-        // to a permanent one keyed by the saved capture's own id
-        if (model && model.indexOf("idb:") === 0 && window.BlobStore) {
-          var pendingKey = model.slice(4);
-          chain = chain.then(function () {
-            return window.BlobStore.get(pendingKey);
-          }).then(function (blob) {
-            if (!blob) return;
-            var permKey = "cap:" + cap.id;
-            return window.BlobStore.set(permKey, blob).then(function () {
-              Archive.update(cap.id, { model: "idb:" + permKey });
-              cap.model = "idb:" + permKey;
-              return window.BlobStore.del(pendingKey);
-            });
-          }).catch(function () {});
-        }
-
-        // (3) the community copy reuses the very same IndexedDB blobs by
-        // reference, so it just needs the final cap with its resolved refs
-        chain.then(function () {
+        moveBlobs(cap.id, finalImg, isData).then(function (refs) {
+          // record the first timeline version so future re-scans extend it
+          var v0 = { created: cap.created, model: refs.model, img: refs.img };
+          Archive.update(cap.id, { img: refs.img, model: refs.model, versions: [v0] });
+          cap.img = refs.img; cap.model = refs.model; cap.versions = [v0];
+          // the community copy reuses the very same IndexedDB blobs by reference
           if (alsoCommunity && window.Community) Community.add(Object.assign({}, cap));
-          finish();
-        }, finish);
+          clearSession(cap.id);
+          goTo("gallery.html");
+        }, function () { clearSession(cap.id); goTo("gallery.html"); });
       }
 
       if (!tripoThumb && model) {
