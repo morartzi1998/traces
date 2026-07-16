@@ -45,6 +45,36 @@ Commit and push. Now the capture flow is live: **Upload a photo → Proceed →
 the processing screen shows Tripo's real progress → the finished 3D model lands
 in your archive.** With `TRACES_API` empty, the flow stays in its simulated form.
 
+## Turn on "scan with your phone"
+
+The upload screen's "Connect your phone" section shows a QR code; scanning it
+opens a small page on the phone that takes a photo with the phone's own
+camera and sends it to Tripo directly, then drops the resulting task off for
+the desktop to pick up. That hand-off needs a tiny key-value store:
+
+```bash
+# from this backend/ folder
+npx wrangler kv namespace create SESSIONS
+```
+
+This prints an id — paste it into `wrangler.toml`, uncommenting the
+`[[kv_namespaces]]` block:
+
+```toml
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "the-id-it-printed"
+```
+
+Then redeploy:
+
+```bash
+wrangler deploy
+```
+
+Without this, the QR code still shows, but the desktop side will show an
+error once the phone finishes (the relay has nowhere to store the hand-off).
+
 ## Notes
 - Tripo model URLs are time-limited signed links. A capture stored in the
   archive references that URL; if it expires the model would need regenerating.

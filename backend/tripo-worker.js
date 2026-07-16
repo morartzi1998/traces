@@ -11,6 +11,14 @@
     GET  /proxy?url=...         streams a Tripo asset back same-origin (used so
                                 model-viewer can load the GLB without CORS issues)
 
+    -- phone hand-off: the desktop shows a QR code for a random session id;
+       the phone scans it, takes a photo, and calls /generate itself, then
+       drops the resulting task_id in this tiny relay for the desktop to pick
+       up — the desktop never needs its own connection to the phone --
+    POST /session/<id>   body { task_id }               -> { ok: true }
+    GET  /session/<id>                                  -> { task_id }  (null until set)
+    Requires a KV namespace bound as SESSIONS (see backend/README.md).
+
   Deploy: see backend/README.md. Set the secret TRIPO_API_KEY in the Worker.
 
   The Tripo v2 openapi shape, confirmed live against the real API:
@@ -118,6 +126,29 @@ export default {
             "Content-Type": res.headers.get("Content-Type") || "model/gltf-binary",
           }),
         });
+      }
+
+      // ---- 4) phone hand-off relay (a tiny pigeonhole, not a live channel) --
+      if (url.pathname.startsWith("/session/")) {
+        const sessionId = url.pathname.slice("/session/".length);
+        if (!sessionId) return json({ error: "session id required" }, 400);
+        if (!env.SESSIONS) {
+          return json({ error: "SESSIONS KV namespace is not bound on this worker" }, 500);
+        }
+        if (request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          if (!body.task_id) return json({ error: "task_id required" }, 400);
+          // sessions are single-use and short-lived — the QR is shown for one
+          // capture, not kept around
+          await env.SESSIONS.put(sessionId, JSON.stringify({ task_id: body.task_id }), {
+            expirationTtl: 600,
+          });
+          return json({ ok: true });
+        }
+        if (request.method === "GET") {
+          const stored = await env.SESSIONS.get(sessionId);
+          return json(stored ? JSON.parse(stored) : { task_id: null });
+        }
       }
 
       return json({ error: "not found" }, 404);

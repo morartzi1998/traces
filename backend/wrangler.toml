@@ -4,3 +4,10 @@ compatibility_date = "2024-11-01"
 
 # The Tripo API key is a SECRET — do not put it here. Set it with:
 #   npx wrangler secret put TRIPO_API_KEY
+
+# Needed for the "scan with your phone" hand-off (see README). Create it with:
+#   npx wrangler kv namespace create SESSIONS
+# then paste the id it prints below.
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "paste-the-id-here"

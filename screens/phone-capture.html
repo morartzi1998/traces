@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Scan with your phone</title>
+<link rel="stylesheet" href="../css/base.css?v=20260717t">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260717t">
+<script src="../js/cursor.js?v=20260717t" defer></script>
+</head>
+<body>
+
+  <div class="pc-screen">
+    <a class="pc-logo" href="../index.html">traces</a>
+
+    <div class="pc-card" id="pcStart">
+      <h1 class="pc-title">Scan this object</h1>
+      <p class="pc-sub">Take one clear photo — the model builds on your computer.</p>
+      <label class="pc-btn pc-btn--solid" for="pcInput">Take a photo</label>
+      <input type="file" id="pcInput" accept="image/*" capture="environment" hidden>
+    </div>
+
+    <div class="pc-card" id="pcSending" hidden>
+      <p class="pc-status">Sending your photo…</p>
+    </div>
+
+    <div class="pc-card" id="pcDone" hidden>
+      <h1 class="pc-title">Done</h1>
+      <p class="pc-sub">Check your computer — the model is on its way.</p>
+    </div>
+
+    <div class="pc-card" id="pcError" hidden>
+      <h1 class="pc-title">Something went wrong</h1>
+      <p class="pc-sub" id="pcErrorText">Please try again.</p>
+      <button class="pc-btn" type="button" id="pcRetry">Try again</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var sessionId = params.get("session");
+      var api = (params.get("api") || "").replace(/\/$/, "");
+
+      var start = document.getElementById("pcStart");
+      var sending = document.getElementById("pcSending");
+      var done = document.getElementById("pcDone");
+      var errorEl = document.getElementById("pcError");
+      var errorText = document.getElementById("pcErrorText");
+
+      function showOnly(el) {
+        [start, sending, done, errorEl].forEach(function (s) { s.hidden = s !== el; });
+      }
+
+      function fail(msg) {
+        errorText.textContent = msg || "Please try again.";
+        showOnly(errorEl);
+      }
+
+      if (!sessionId || !api) {
+        fail("This link is missing its session — scan the QR code again from your computer.");
+      }
+
+      document.getElementById("pcInput").addEventListener("change", function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file || !sessionId || !api) return;
+        showOnly(sending);
+
+        var fd = new FormData();
+        fd.append("image", file, file.name || "capture.jpg");
+        fetch(api + "/generate", { method: "POST", body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || !d.task_id) { fail("The photo couldn't be processed."); return; }
+            return fetch(api + "/session/" + sessionId, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ task_id: d.task_id }),
+            }).then(function () { showOnly(done); });
+          })
+          .catch(function () { fail("Couldn't reach the server — check your connection."); });
+      });
+
+      document.getElementById("pcRetry").addEventListener("click", function () {
+        showOnly(start);
+      });
+    })();
+  </script>
+
+</body>
+</html>
