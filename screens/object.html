@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717j">
-<link rel="stylesheet" href="../css/object.css?v=20260717j">
-<script src="../js/cursor.js?v=20260717j" defer></script>
-<script src="../js/grain.js?v=20260717j" defer></script>
-<script src="../js/tilt3d.js?v=20260717j" defer></script>
-<script src="../js/archive.js?v=20260717j"></script>
-<script src="../js/blobstore.js?v=20260717j"></script>
-<script src="../js/flow.js?v=20260717j" defer></script>
-<script src="../js/layout-editor.js?v=20260717j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717k">
+<link rel="stylesheet" href="../css/object.css?v=20260717k">
+<script src="../js/cursor.js?v=20260717k" defer></script>
+<script src="../js/grain.js?v=20260717k" defer></script>
+<script src="../js/tilt3d.js?v=20260717k" defer></script>
+<script src="../js/archive.js?v=20260717k"></script>
+<script src="../js/blobstore.js?v=20260717k"></script>
+<script src="../js/flow.js?v=20260717k" defer></script>
+<script src="../js/layout-editor.js?v=20260717k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717k"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -612,6 +612,20 @@
       }
 
       var openRemarkAnnotation = null;
+      var remarkTrackBtn = null; // 3D hotspot the open card is currently glued to, if any
+
+      // a 3D hotspot's on-screen position moves every time the model turns,
+      // while remarkCard is a flat 2D div — pin it to the hotspot's live
+      // rect (not the annotation's stale flat x/y) so it stays glued to the
+      // marker as the model rotates instead of drifting away from it
+      function positionRemarkCardTo(hotspotEl) {
+        var stageRect = tags.getBoundingClientRect();
+        var hotRect = hotspotEl.getBoundingClientRect();
+        var hx = hotRect.left + hotRect.width / 2 - stageRect.left;
+        var hy = hotRect.top + hotRect.height / 2 - stageRect.top;
+        remarkCard.style.left = (hx + 12) + "px";
+        remarkCard.style.top = hy + "px";
+      }
 
       function openRemarkCard(annotation) {
         closeRemarkCard();
@@ -619,8 +633,14 @@
         // stacking context than this card, so it can never paint above the
         // card where they overlap — offset the card clear of the marker
         // instead of letting it get swallowed underneath
-        remarkCard.style.left = "calc(" + (annotation.x * 100) + "% + 12px)";
-        remarkCard.style.top = annotation.y * 100 + "%";
+        if (annotation.__btn && annotation.pos) {
+          remarkTrackBtn = annotation.__btn;
+          positionRemarkCardTo(remarkTrackBtn);
+        } else {
+          remarkTrackBtn = null;
+          remarkCard.style.left = "calc(" + (annotation.x * 100) + "% + 12px)";
+          remarkCard.style.top = annotation.y * 100 + "%";
+        }
         document.getElementById("remarkTitle").textContent = annotation.title;
         document.getElementById("remarkText").textContent = annotation.text;
         document.getElementById("remarkStoryBox").checked = false;
@@ -636,6 +656,7 @@
         remarkCard.hidden = true;
         if (openRemarkAnnotation && openRemarkAnnotation.__btn) openRemarkAnnotation.__btn.classList.remove("obj-tag--open");
         openRemarkAnnotation = null;
+        remarkTrackBtn = null;
       }
 
       var white = document.getElementById("objWhite");
@@ -691,6 +712,13 @@
 
       var photo = document.getElementById("objPhoto");
       var modelViewer = document.getElementById("objModel");
+
+      // the marker's screen position moves every frame while the model
+      // orbits; keep the open remark card glued to it instead of the stale
+      // spot it was opened at
+      modelViewer.addEventListener("camera-change", function () {
+        if (remarkTrackBtn && !remarkCard.hidden) positionRemarkCardTo(remarkTrackBtn);
+      });
 
       // model-viewer handles its own drag-to-orbit; suppress the stage's
       // click-to-toggle-info handler after a real drag, same as tilt3d does

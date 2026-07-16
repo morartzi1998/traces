@@ -1049,10 +1049,18 @@ body.layout-editing-active *:hover {
   outline-offset: 1px;
 }
 
+.layout-edit-dragging {
+  opacity: 0.6;
+  cursor: grabbing;
+}
+
 .layout-edit-panel {
   position: fixed;
   top: 16px;
-  right: 16px;
+  /* every real content card (whitePanel, bluePanel, linkCard) docks to the
+     right edge of the screen — defaulting the panel there too would sit
+     directly on top of the very content it's meant to edit */
+  left: 16px;
   z-index: 1001;
   display: flex;
   flex-direction: column;

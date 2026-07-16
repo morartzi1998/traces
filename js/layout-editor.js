@@ -29,12 +29,39 @@
   var CARDS_KEY = "traces-layout-overrides"; // card position/size, keyed by data-editable
   var PROPS_KEY = "traces-layout-props";     // everything else, keyed by a DOM path
   var INSERTS_KEY = "traces-layout-inserts"; // lines added during editing: [{after, id}]
+  var UNDO_KEY = "traces-layout-undo-stack"; // stack of {cards, props, inserts} snapshots
 
   function loadJSON(key) {
     try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; }
   }
   function saveJSON(key, obj) {
     try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
+  }
+
+  function loadUndoStack() {
+    try { return JSON.parse(localStorage.getItem(UNDO_KEY)) || []; } catch (e) { return []; }
+  }
+  function saveUndoStack(stack) {
+    try { localStorage.setItem(UNDO_KEY, JSON.stringify(stack)); } catch (e) {}
+  }
+  // snapshot all three stores together, so one Undo click always reverts
+  // one whole user action (a drag, a duplicate, a multi-select edit) even
+  // when that action touched more than one store at once
+  function snapshotForUndo() {
+    var stack = loadUndoStack();
+    stack.push({ cards: loadJSON(CARDS_KEY), props: loadJSON(PROPS_KEY), inserts: loadJSON(INSERTS_KEY) });
+    if (stack.length > 30) stack.shift();
+    saveUndoStack(stack);
+  }
+  function undoLast() {
+    var stack = loadUndoStack();
+    var snap = stack.pop();
+    if (!snap) return;
+    saveUndoStack(stack);
+    saveJSON(CARDS_KEY, snap.cards);
+    saveJSON(PROPS_KEY, snap.props);
+    saveJSON(INSERTS_KEY, snap.inserts);
+    location.reload();
   }
 
   // a reproducible address for an element, so the SAME element gets the
@@ -130,7 +157,7 @@
     startEvent.preventDefault();
     var startX = startEvent.clientX, startY = startEvent.clientY;
     function move(e) {
-      onMove(e.clientX - startX, e.clientY - startY);
+      onMove(e.clientX - startX, e.clientY - startY, e);
       startX = e.clientX; startY = e.clientY;
     }
     function up() {
@@ -144,6 +171,33 @@
 
   function isEditorChrome(el) {
     return !!el.closest(".layout-edit-bar, .layout-edit-panel, .layout-edit-json, .layout-edit-handle, .layout-edit-resize");
+  }
+
+  // move `el` to sit right before the first sibling whose vertical midpoint
+  // is below the cursor (or to the end, if none is) — lets a duplicated
+  // line/element be dropped anywhere among its siblings, not just glued
+  // right after wherever it was cloned from
+  function reorderAmongSiblings(el, clientY) {
+    var parent = el.parentNode;
+    if (!parent) return;
+    var siblings = Array.prototype.filter.call(parent.children, function (n) {
+      return n !== el && !isEditorChrome(n);
+    });
+    var target = null;
+    for (var i = 0; i < siblings.length; i++) {
+      var r = siblings[i].getBoundingClientRect();
+      if (clientY < r.top + r.height / 2) { target = siblings[i]; break; }
+    }
+    if (target) {
+      if (el.nextSibling !== target) parent.insertBefore(el, target);
+    } else if (parent.lastElementChild !== el) {
+      parent.appendChild(el);
+    }
+    // never let it land as the very first child — the insert model anchors
+    // to an existing preceding sibling, so it always needs one
+    if (parent.firstElementChild === el && siblings.length) {
+      parent.insertBefore(el, siblings[0].nextSibling);
+    }
   }
 
   function startEditMode() {
@@ -168,6 +222,7 @@
       el.classList.add("layout-editing");
 
       function persistCard() {
+        snapshotForUndo();
         var r = el.getBoundingClientRect();
         overrides[el.dataset.editable] = {
           left: Math.round(r.left), top: Math.round(r.top),
@@ -178,6 +233,7 @@
 
       handle.addEventListener("mousedown", function (e) {
         e.stopPropagation();
+        snapshotForUndo();
         dragMove(e, function (dx, dy) {
           el.style.left = (el.offsetLeft + dx) + "px";
           el.style.top = (el.offsetTop + dy) + "px";
@@ -186,6 +242,7 @@
 
       resize.addEventListener("mousedown", function (e) {
         e.stopPropagation();
+        snapshotForUndo();
         dragMove(e, function (dx, dy) {
           el.style.width = Math.max(120, el.offsetWidth + dx) + "px";
           el.style.height = Math.max(80, el.offsetHeight + dy) + "px";
@@ -330,16 +387,48 @@
       var el = e.target;
       selectElement(el, e.shiftKey);
       if (!selectedKey) return;
+
+      // a duplicated line/element can be dropped anywhere among its
+      // siblings — reorder it live under the cursor instead of only
+      // nudging its margin, since that's what "put it wherever I want"
+      // actually needs (margin can't cross past a neighbouring row)
+      if (el.dataset.insertId && items.length <= 1) {
+        var draggedInsert = false;
+        dragMove(e, function (dx, dy, ev) {
+          if (!draggedInsert) { snapshotForUndo(); draggedInsert = true; el.classList.add("layout-edit-dragging"); }
+          reorderAmongSiblings(el, (ev && ev.clientY) || e.clientY);
+        }, function () {
+          el.classList.remove("layout-edit-dragging");
+          if (!draggedInsert) return;
+          var prev = el.previousElementSibling;
+          var newAfterKey = prev ? pathKey(prev) : null;
+          if (!newAfterKey) return;
+          var inserts = loadJSON(INSERTS_KEY);
+          inserts.list = (inserts.list || []).map(function (entry) {
+            return String(entry.id) === String(el.dataset.insertId)
+              ? Object.assign({}, entry, { after: newAfterKey })
+              : entry;
+          });
+          saveJSON(INSERTS_KEY, inserts);
+        });
+        return;
+      }
+
       // drag applies the same delta to every selected element, not just
       // the one the mouse happens to be over
       var bases = items.map(function (it) { return { el: it.el, key: it.key, start: parseFloat(getComputedStyle(it.el).marginTop) || 0 }; });
+      var draggedYet = false;
       dragMove(e, function (dx, dy) {
+        if (!draggedYet) { snapshotForUndo(); draggedYet = true; }
         bases.forEach(function (b) {
           b.start = Math.max(0, b.start + dy);
           b.el.style.marginTop = b.start + "px";
         });
         marginInput.value = Math.round(bases[bases.length - 1].start);
       }, function () {
+        // a plain click (select only, no movement) must not silently write
+        // a marginTop override — only persist when something actually moved
+        if (!draggedYet) return;
         bases.forEach(function (b) { persistFor(b.key, { marginTop: parseFloat(b.el.style.marginTop) || 0 }); });
       });
     }, true);
@@ -354,35 +443,42 @@
 
     marginInput.addEventListener("input", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = parseFloat(marginInput.value) || 0;
       forEachSelected(function (el, key) { el.style.marginTop = v + "px"; persistFor(key, { marginTop: v }); });
     });
     fontInput.addEventListener("input", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = parseFloat(fontInput.value) || 0;
       forEachSelected(function (el, key) { el.style.fontSize = v + "px"; persistFor(key, { fontSize: v }); });
     });
     thicknessInput.addEventListener("input", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = parseFloat(thicknessInput.value) || 1;
       forEachSelected(function (el, key) { el.style.borderTopWidth = v + "px"; persistFor(key, { thickness: v }); });
     });
     widthInput.addEventListener("input", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = parseFloat(widthInput.value) || 0;
       forEachSelected(function (el, key) { el.style.width = v + "px"; persistFor(key, { width: v }); });
     });
     heightInput.addEventListener("input", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = parseFloat(heightInput.value) || 0;
       forEachSelected(function (el, key) { el.style.height = v + "px"; persistFor(key, { height: v }); });
     });
     hiddenInput.addEventListener("change", function () {
       if (!selected) return;
+      snapshotForUndo();
       var v = hiddenInput.checked;
       forEachSelected(function (el, key) { el.style.display = v ? "none" : ""; persistFor(key, { hidden: v }); });
     });
     deleteLineBtn.addEventListener("click", function () {
+      snapshotForUndo();
       forEachSelected(function (el, key) {
         if (el.tagName !== "HR") return;
         var insertId = el.dataset.insertId;
@@ -410,6 +506,7 @@
       '<span>Click anything to edit it (panel, top right). ⠇⠇ red / red corner move &amp; resize a whole card.</span>' +
       '<span id="layoutEditSwitcher"></span>' +
       '<button type="button" id="layoutEditCopy">Copy layout</button>' +
+      '<button type="button" id="layoutEditUndo">Undo</button>' +
       '<button type="button" id="layoutEditReset">Reset</button>' +
       '<button type="button" id="layoutEditDone">Done</button>';
     document.body.appendChild(bar);
@@ -457,6 +554,7 @@
     }
 
     function duplicateSelected() {
+      snapshotForUndo();
       if (items.length) {
         items.slice().forEach(function (it) { duplicateOne(it.el); });
         return;
@@ -494,10 +592,16 @@
       try { navigator.clipboard.writeText(json); } catch (e) {}
     });
 
+    document.getElementById("layoutEditUndo").addEventListener("click", function () {
+      undoLast();
+    });
+
     document.getElementById("layoutEditReset").addEventListener("click", function () {
       if (!confirm("Reset all card positions and element edits back to default?")) return;
       saveJSON(CARDS_KEY, {});
       saveJSON(PROPS_KEY, {});
+      saveJSON(INSERTS_KEY, {});
+      saveUndoStack([]);
       location.reload();
     });
 
