@@ -38,6 +38,7 @@
   height: 90vh;
   width: 68vw;
   --poster-color: transparent;
+  filter: blur(17px) saturate(0.85);
 }
 
 .proc-status {
