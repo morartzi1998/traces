@@ -211,9 +211,9 @@
   background: var(--photo-backdrop); /* archive: neutral gray backdrop */
 }
 
-/* community cards sit on the slate-violet backdrop - that's the color split */
+/* community cards sit on a blue-purple backdrop - that's the color split */
 .gal--community .gal-card img {
-  background: linear-gradient(180deg, #7f7fa3 0%, #6b6b8f 100%);
+  background: linear-gradient(180deg, #5a3fd1 0%, #3a1f8f 100%);
 }
 
 .gal-caption {
