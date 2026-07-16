@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717q">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717q">
-<link rel="stylesheet" href="../css/object.css?v=20260717q">
-<script src="../js/cursor.js?v=20260717q" defer></script>
-<script src="../js/grain.js?v=20260717q" defer></script>
-<script src="../js/tilt3d.js?v=20260717q" defer></script>
-<script src="../js/archive.js?v=20260717q"></script>
-<script src="../js/blobstore.js?v=20260717q"></script>
-<script src="../js/flow.js?v=20260717q" defer></script>
-<script src="../js/layout-editor.js?v=20260717q" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717q"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717r">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717r">
+<link rel="stylesheet" href="../css/object.css?v=20260717r">
+<script src="../js/cursor.js?v=20260717r" defer></script>
+<script src="../js/grain.js?v=20260717r" defer></script>
+<script src="../js/tilt3d.js?v=20260717r" defer></script>
+<script src="../js/archive.js?v=20260717r"></script>
+<script src="../js/blobstore.js?v=20260717r"></script>
+<script src="../js/flow.js?v=20260717r" defer></script>
+<script src="../js/layout-editor.js?v=20260717r" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717r"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -474,7 +474,12 @@
         document.getElementById("linkCardTitle").textContent = item.title;
         document.getElementById("linkCardObj").checked = item.kind !== "space";
         document.getElementById("linkCardSpace").checked = item.kind === "space";
-        document.getElementById("linkCardImg").src = item.img || "";
+        var linkImgEl = document.getElementById("linkCardImg");
+        if (window.BlobStore) {
+          window.BlobStore.url(item.img).then(function (u) { linkImgEl.src = u || ""; });
+        } else {
+          linkImgEl.src = item.img || "";
+        }
         document.getElementById("linkCardFeeling").textContent = item.feeling || "";
         document.getElementById("linkCardAnnCount").textContent = item.annotations.length;
         document.getElementById("linkCardPrivate").checked = item.visibility !== "community";
@@ -1015,7 +1020,14 @@
           stage.dataset.mode = "photo";
           modelViewer.hidden = true;
           photo.hidden = false;
-          photo.src = catalog[k].img;
+          // a real capture's thumbnail may be an idb: reference now
+          if (window.BlobStore) {
+            window.BlobStore.url(catalog[k].img).then(function (u) {
+              if (key === k) photo.src = u || "";
+            });
+          } else {
+            photo.src = catalog[k].img;
+          }
           photo.alt = catalog[k].title;
         }
         // a capture shared to the community gets a blue-purple backdrop

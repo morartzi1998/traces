@@ -4,15 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717q">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717q">
-<link rel="stylesheet" href="../css/gallery.css?v=20260717q">
-<script src="../js/cursor.js?v=20260717q" defer></script>
-<script src="../js/grain.js?v=20260717q" defer></script>
-<script src="../js/archive.js?v=20260717q"></script>
-<script src="../js/designer-archive.js?v=20260717q"></script>
-<script src="../js/gallery-title.js?v=20260717q" defer></script>
-<script src="../js/flow.js?v=20260717q" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717r">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717r">
+<link rel="stylesheet" href="../css/gallery.css?v=20260717r">
+<script src="../js/cursor.js?v=20260717r" defer></script>
+<script src="../js/grain.js?v=20260717r" defer></script>
+<script src="../js/archive.js?v=20260717r"></script>
+<script src="../js/blobstore.js?v=20260717r"></script>
+<script src="../js/designer-archive.js?v=20260717r"></script>
+<script src="../js/gallery-title.js?v=20260717r" defer></script>
+<script src="../js/flow.js?v=20260717r" defer></script>
 </head>
 <body>
 
@@ -150,7 +151,16 @@
             '<p class="gal-meta">[' + idx + ']<br>' + ago(c.created) + '</p>' +
             '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
             '<button class="gal-delete" type="button" hidden>delete capture</button>';
-          art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
+          var imgEl = art.querySelector("img");
+          // a real capture's thumbnail lives in IndexedDB now (idb:thumb:…) —
+          // resolve it to an object URL; plain paths pass straight through
+          if (window.BlobStore) {
+            window.BlobStore.url(c.img).then(function (u) {
+              imgEl.src = u || "../assets/images/photo-room.png";
+            });
+          } else {
+            imgEl.src = c.img || "../assets/images/photo-room.png";
+          }
           art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
 
           var card = art.querySelector(".gal-card");

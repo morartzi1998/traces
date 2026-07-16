@@ -55,5 +55,35 @@ window.BlobStore = (function () {
     });
   }
 
-  return { set: set, get: get, del: del };
+  // resolve a stored reference to something an <img>/<model-viewer> src can
+  // use: an "idb:KEY" reference becomes a live object URL from the blob it
+  // points at; anything else (a real path, a plain URL) passes through
+  // untouched. Returns a Promise<string|null>.
+  function url(ref) {
+    if (!ref) return Promise.resolve(ref || null);
+    if (ref.indexOf("idb:") !== 0) return Promise.resolve(ref);
+    return get(ref.slice(4)).then(function (blob) {
+      return blob ? URL.createObjectURL(blob) : null;
+    });
+  }
+
+  // a data: URL is base64 text; turn it back into a real Blob so it can live
+  // in IndexedDB instead of bloating localStorage
+  function dataURLToBlob(dataURL) {
+    var comma = dataURL.indexOf(",");
+    var header = dataURL.slice(0, comma);
+    var body = dataURL.slice(comma + 1);
+    var mime = (header.match(/data:([^;]+)/) || [])[1] || "application/octet-stream";
+    var bytes;
+    if (header.indexOf("base64") !== -1) {
+      var bin = atob(body);
+      bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } else {
+      bytes = new TextEncoder().encode(decodeURIComponent(body));
+    }
+    return new Blob([bytes], { type: mime });
+  }
+
+  return { set: set, get: get, del: del, url: url, dataURLToBlob: dataURLToBlob };
 })();
