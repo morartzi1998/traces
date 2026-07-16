@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717p">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717p">
-<link rel="stylesheet" href="../css/object.css?v=20260717p">
-<script src="../js/cursor.js?v=20260717p" defer></script>
-<script src="../js/grain.js?v=20260717p" defer></script>
-<script src="../js/tilt3d.js?v=20260717p" defer></script>
-<script src="../js/archive.js?v=20260717p"></script>
-<script src="../js/blobstore.js?v=20260717p"></script>
-<script src="../js/flow.js?v=20260717p" defer></script>
-<script src="../js/layout-editor.js?v=20260717p" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717p"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717q">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717q">
+<link rel="stylesheet" href="../css/object.css?v=20260717q">
+<script src="../js/cursor.js?v=20260717q" defer></script>
+<script src="../js/grain.js?v=20260717q" defer></script>
+<script src="../js/tilt3d.js?v=20260717q" defer></script>
+<script src="../js/archive.js?v=20260717q"></script>
+<script src="../js/blobstore.js?v=20260717q"></script>
+<script src="../js/flow.js?v=20260717q" defer></script>
+<script src="../js/layout-editor.js?v=20260717q" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717q"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -858,12 +858,22 @@
         stage.classList.add("obj-stage--pan-ready");
         if (catalog[key].model && !modelViewer.hidden) modelViewer.removeAttribute("camera-controls");
       });
-      document.addEventListener("keyup", function (e) {
-        if (e.code !== "Space" && e.key !== " ") return;
+      function releasePan() {
         spaceHeld = false;
         panDrag = null;
         stage.classList.remove("obj-stage--pan-ready", "obj-stage--panning");
         if (catalog[key].model) modelViewer.setAttribute("camera-controls", "");
+      }
+      document.addEventListener("keyup", function (e) {
+        if (e.code !== "Space" && e.key !== " ") return;
+        releasePan();
+      });
+      // the keyup can miss entirely if focus leaves the page while Space is
+      // still held (alt-tab, a browser dialog, switching apps) — without
+      // this, camera-controls stays off and the model can never rotate again
+      window.addEventListener("blur", releasePan);
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) releasePan();
       });
 
       // right/up vectors for the current view, plus a pixels->world scale
@@ -1038,6 +1048,7 @@
         renderLinks();
         SPACE_VIEW_ACTIVE = false;
         refreshViewToggle();
+        releasePan();
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
