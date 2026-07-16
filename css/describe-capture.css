@@ -132,7 +132,10 @@
 }
 
 .choice input {
+  -webkit-appearance: none;
   appearance: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
   width: 17px;
   height: 17px;
   border: 1px solid var(--color-ink-blue);
