@@ -185,18 +185,43 @@
   }
 }
 
-/* revealed under a capture on long-press */
-.gal-delete {
-  display: block;
+/* revealed under a capture on long-press — delete and hide sit side by side,
+   both pill buttons so the two actions read as equally deliberate choices
+   rather than one plain link */
+.gal-item-actions {
+  display: flex;
+  gap: 8px;
   margin-top: 10px;
+}
+
+.gal-delete,
+.gal-hide {
+  flex: 1 1 0;
   font-family: var(--font-display);
-  font-size: 0.95rem;
-  color: var(--color-ink-blue);
-  background: none;
-  border: none;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  font-size: 0.85rem;
+  border: 1.5px solid var(--color-ink-blue);
+  border-radius: 4px;
+  padding: 6px 4px;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gal-delete {
+  background: var(--color-cream);
+  color: var(--color-ink-blue);
+}
+.gal-delete:hover {
+  background: var(--color-ink-blue);
+  color: var(--color-cream);
+}
+
+.gal-hide {
+  background: var(--color-ink-blue);
+  color: var(--color-cream);
+}
+.gal-hide:hover {
+  background: var(--color-cream);
+  color: var(--color-ink-blue);
 }
 
 .gal-meta {
@@ -252,5 +277,100 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* a vertical tab docked to the right edge, like a folder tab sticking out —
+   only appears once something's actually hidden, so it never clutters an
+   archive where nothing has been tucked away */
+.gal-hidden-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  z-index: 30;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: var(--color-cream);
+  background: var(--color-ink-blue);
+  border: none;
+  border-radius: 6px 0 0 6px;
+  padding: 16px 8px;
+  cursor: pointer;
+}
+
+.gal-hidden-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 39;
+}
+
+.gal-hidden-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(340px, 88vw);
+  background: var(--color-bg);
+  border-left: 1.5px solid var(--color-ink-blue);
+  z-index: 40;
+  padding: 6vh 20px;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+.gal-hidden-panel.is-open {
+  transform: translateX(0);
+}
+
+.gal-hidden-panel h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-cream);
+  margin: 0 0 4vh;
+}
+
+.gal-hidden-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.gal-hidden-row img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: var(--photo-backdrop);
+}
+.gal-hidden-row-title {
+  flex: 1;
+  font-family: var(--font-caption);
+  font-size: 1rem;
+  color: var(--color-cream);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gal-hidden-restore {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: var(--color-ink-blue);
+  background: var(--color-cream);
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.gal-hidden-empty {
+  font-size: 0.85rem;
+  color: var(--color-cream);
+  opacity: 0.6;
 }
 

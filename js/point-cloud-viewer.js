@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717cx";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717dx";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -89,6 +89,35 @@ export function mountPointCloudViewer(container, geometry, opts) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.12;
   controls.update();
+
+  // hold Space + drag to pan — orbit alone only spins around one fixed
+  // pivot, which isn't enough to explore a room-sized space scan; this
+  // reuses OrbitControls' own built-in pan (already wired to the right
+  // mouse button) by remapping the left button to it for as long as Space
+  // is held, rather than reimplementing panning by hand
+  var spaceHeld = false;
+  var hovering = false;
+  container.addEventListener("pointerenter", function () { hovering = true; });
+  container.addEventListener("pointerleave", function () { hovering = false; });
+
+  function isTypingTarget(el) {
+    return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+  }
+
+  function onKeyDown(e) {
+    if (e.code !== "Space" || spaceHeld) return;
+    if (!hovering || isTypingTarget(document.activeElement)) return;
+    e.preventDefault(); // stop the page from scrolling while panning
+    spaceHeld = true;
+    controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+  }
+  function onKeyUp(e) {
+    if (e.code !== "Space") return;
+    spaceHeld = false;
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  }
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
 
   function resize() {
     var w = container.clientWidth || 1, h = container.clientHeight || 1;
@@ -175,6 +204,12 @@ export function mountPointCloudViewer(container, geometry, opts) {
       frameCallbacks.length = 0;
       if (raf) cancelAnimationFrame(raf);
       if (ro) ro.disconnect();
+      // container (the stage's fixed points slot) outlives any one mount —
+      // switching captures repeatedly without this leaked a fresh pair of
+      // window-level key listeners every time, each still watching the same
+      // long-lived container for hover
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
       controls.dispose();
       material.dispose();
       renderer.dispose();

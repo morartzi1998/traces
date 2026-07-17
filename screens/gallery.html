@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717cx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717cx">
-<link rel="stylesheet" href="../css/gallery.css?v=20260717cx">
-<script src="../js/cursor.js?v=20260717cx" defer></script>
-<script src="../js/grain.js?v=20260717cx" defer></script>
-<script src="../js/archive.js?v=20260717cx"></script>
-<script src="../js/blobstore.js?v=20260717cx"></script>
-<script src="../js/designer-archive.js?v=20260717cx"></script>
-<script src="../js/gallery-title.js?v=20260717cx" defer></script>
-<script src="../js/flow.js?v=20260717cx" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717dx">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717dx">
+<link rel="stylesheet" href="../css/gallery.css?v=20260717dx">
+<script src="../js/cursor.js?v=20260717dx" defer></script>
+<script src="../js/grain.js?v=20260717dx" defer></script>
+<script src="../js/archive.js?v=20260717dx"></script>
+<script src="../js/blobstore.js?v=20260717dx"></script>
+<script src="../js/designer-archive.js?v=20260717dx"></script>
+<script src="../js/gallery-title.js?v=20260717dx" defer></script>
+<script src="../js/flow.js?v=20260717dx" defer></script>
 </head>
 <body>
 
@@ -49,6 +49,14 @@
       <button class="nav-link nav-corner nav-corner--bl" type="button" onclick="goTo('community.html')">Community</button>
       <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
+
+    <!-- only shown once something has actually been hidden -->
+    <button class="gal-hidden-tab" type="button" id="galHiddenTab" hidden>Hidden (<span id="galHiddenCount">0</span>)</button>
+    <div class="gal-hidden-backdrop" id="galHiddenBackdrop" hidden></div>
+    <aside class="gal-hidden-panel" id="galHiddenPanel">
+      <h2>Hidden captures</h2>
+      <div id="galHiddenList"></div>
+    </aside>
 
   </div>
 
@@ -153,14 +161,16 @@
       filters.addEventListener("change", applyFilter);
 
       function render() {
-        var items = (window.Archive ? Archive.all() : []);
+        var allItems = (window.Archive ? Archive.all() : []);
+        var items = allItems.filter(function (c) { return !c.hidden; });
         grid.innerHTML = "";
         empty.hidden = true;
         if (add) add.hidden = false;
 
-        if (!items.length) {
+        if (!allItems.length) {
           renderDesigner();
           if (window.alignGalleryTitle) window.alignGalleryTitle();
+          refreshHiddenPanel();
           return;
         }
 
@@ -173,7 +183,10 @@
           art.innerHTML =
             '<p class="gal-meta">[' + idx + ']<br>' + ago(c.created) + '</p>' +
             '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-            '<button class="gal-delete" type="button" hidden>delete capture</button>';
+            '<div class="gal-item-actions" hidden>' +
+              '<button class="gal-hide" type="button">hide</button>' +
+              '<button class="gal-delete" type="button">delete</button>' +
+            '</div>';
           var imgEl = art.querySelector("img");
           // a real capture's thumbnail lives in IndexedDB now (idb:thumb:…) —
           // resolve it to an object URL; plain paths pass straight through
@@ -187,7 +200,9 @@
           art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
 
           var card = art.querySelector(".gal-card");
+          var actions = art.querySelector(".gal-item-actions");
           var del = art.querySelector(".gal-delete");
+          var hideBtn = art.querySelector(".gal-hide");
           var timer = null, longPressed = false;
 
           function open() {
@@ -198,9 +213,9 @@
             longPressed = false;
             timer = setTimeout(function () {
               longPressed = true;
-              // reveal delete on this card, hide any others
-              grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
-              del.hidden = false;
+              // reveal this card's actions, hide any other card's
+              grid.querySelectorAll(".gal-item-actions").forEach(function (a) { if (a !== actions) a.hidden = true; });
+              actions.hidden = false;
             }, 480);
           }
           function endPress() { clearTimeout(timer); }
@@ -211,25 +226,85 @@
           card.addEventListener("mouseleave", endPress);
           card.addEventListener("touchend", endPress);
           card.addEventListener("click", function (e) {
-            if (longPressed) { e.preventDefault(); return; } // long-press opened delete, not the capture
+            if (longPressed) { e.preventDefault(); return; } // long-press opened actions, not the capture
             open();
           });
           del.addEventListener("click", function () {
             if (window.Archive) Archive.remove(c.id);
             render();
           });
+          hideBtn.addEventListener("click", function () {
+            if (window.Archive) Archive.update(c.id, { hidden: true });
+            render();
+          });
           grid.appendChild(art);
         });
         applyFilter();
         if (window.alignGalleryTitle) window.alignGalleryTitle();
+        refreshHiddenPanel();
       }
 
-      // tapping elsewhere dismisses an open delete button
+      // tapping elsewhere dismisses an open actions row
       document.addEventListener("click", function (e) {
         if (!e.target.closest(".gal-item")) {
-          grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
+          grid.querySelectorAll(".gal-item-actions").forEach(function (a) { a.hidden = true; });
         }
       });
+
+      // the vertical tab docked to the right edge only appears once
+      // something is actually hidden; opening it slides in a panel listing
+      // every hidden capture with a one-tap way to bring it back
+      var hiddenTab = document.getElementById("galHiddenTab");
+      var hiddenCountEl = document.getElementById("galHiddenCount");
+      var hiddenBackdrop = document.getElementById("galHiddenBackdrop");
+      var hiddenPanel = document.getElementById("galHiddenPanel");
+      var hiddenList = document.getElementById("galHiddenList");
+
+      function closeHiddenPanel() {
+        hiddenPanel.classList.remove("is-open");
+        hiddenBackdrop.hidden = true;
+      }
+      function openHiddenPanel() {
+        hiddenPanel.classList.add("is-open");
+        hiddenBackdrop.hidden = false;
+      }
+      hiddenTab.addEventListener("click", function () {
+        if (hiddenPanel.classList.contains("is-open")) closeHiddenPanel();
+        else openHiddenPanel();
+      });
+      hiddenBackdrop.addEventListener("click", closeHiddenPanel);
+
+      function refreshHiddenPanel() {
+        var hidden = (window.Archive ? Archive.all() : []).filter(function (c) { return c.hidden; });
+        hiddenTab.hidden = !hidden.length;
+        if (!hidden.length) closeHiddenPanel();
+        hiddenCountEl.textContent = hidden.length;
+        hiddenList.innerHTML = "";
+        if (!hidden.length) {
+          hiddenList.innerHTML = '<p class="gal-hidden-empty">nothing hidden right now.</p>';
+          return;
+        }
+        hidden.forEach(function (c) {
+          var row = document.createElement("div");
+          row.className = "gal-hidden-row";
+          row.innerHTML =
+            '<img alt="">' +
+            '<span class="gal-hidden-row-title"></span>' +
+            '<button class="gal-hidden-restore" type="button">restore</button>';
+          var imgEl = row.querySelector("img");
+          if (window.BlobStore) {
+            window.BlobStore.url(c.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+          } else {
+            imgEl.src = c.img || "../assets/images/photo-room.png";
+          }
+          row.querySelector(".gal-hidden-row-title").textContent = c.title || "untitled capture";
+          row.querySelector(".gal-hidden-restore").addEventListener("click", function () {
+            Archive.update(c.id, { hidden: false });
+            render();
+          });
+          hiddenList.appendChild(row);
+        });
+      }
 
       render();
     })();
