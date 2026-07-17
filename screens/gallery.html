@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717dx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717dx">
-<link rel="stylesheet" href="../css/gallery.css?v=20260717dx">
-<script src="../js/cursor.js?v=20260717dx" defer></script>
-<script src="../js/grain.js?v=20260717dx" defer></script>
-<script src="../js/archive.js?v=20260717dx"></script>
-<script src="../js/blobstore.js?v=20260717dx"></script>
-<script src="../js/designer-archive.js?v=20260717dx"></script>
-<script src="../js/gallery-title.js?v=20260717dx" defer></script>
-<script src="../js/flow.js?v=20260717dx" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ex">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717ex">
+<link rel="stylesheet" href="../css/gallery.css?v=20260717ex">
+<script src="../js/cursor.js?v=20260717ex" defer></script>
+<script src="../js/grain.js?v=20260717ex" defer></script>
+<script src="../js/archive.js?v=20260717ex"></script>
+<script src="../js/blobstore.js?v=20260717ex"></script>
+<script src="../js/designer-archive.js?v=20260717ex"></script>
+<script src="../js/gallery-title.js?v=20260717ex" defer></script>
+<script src="../js/flow.js?v=20260717ex" defer></script>
 </head>
 <body>
 
@@ -54,7 +54,11 @@
     <button class="gal-hidden-tab" type="button" id="galHiddenTab" hidden>Hidden (<span id="galHiddenCount">0</span>)</button>
     <div class="gal-hidden-backdrop" id="galHiddenBackdrop" hidden></div>
     <aside class="gal-hidden-panel" id="galHiddenPanel">
-      <h2>Hidden captures</h2>
+      <div class="gal-hidden-panel-head">
+        <h2>Hidden captures</h2>
+        <button class="gal-hidden-close" type="button" id="galHiddenClose" aria-label="Close">&times;</button>
+      </div>
+      <hr class="gal-hidden-rule">
       <div id="galHiddenList"></div>
     </aside>
 
@@ -84,66 +88,40 @@
         if (updEl) updEl.textContent = sub;
       }
 
-      // shared with archive-mine.html — she's still deciding what belongs in
-      // the designer showcase, so it's deletable from here too for now
-      var HIDDEN_KEY = "traces-archive-hidden";
-      function hiddenKeys() {
-        try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { return []; }
+      // every capture reachable anywhere in the interface belongs in "your
+      // archive" so it can be found and toggled from one place: the
+      // visitor's own real captures, plus the designer's own fixed showcase
+      // (previously shown only as a placeholder before she'd captured
+      // anything herself — but showcase items can carry real links to other
+      // captures, so they need to live here too, not just be reachable
+      // through those links). Both hide the same way, through the one
+      // side panel — showcase items just persist their hidden state in a
+      // plain key list instead of a mutable Archive record, since they're
+      // not real records to begin with.
+      var DESIGNER_HIDDEN_KEY = "traces-archive-hidden";
+      function designerHiddenKeys() {
+        try { return JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) { return []; }
       }
-      function hideForever(key) {
-        var keys = hiddenKeys();
+      function hideDesignerItem(key) {
+        var keys = designerHiddenKeys();
         if (keys.indexOf(key) === -1) keys.push(key);
-        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+      }
+      function restoreDesignerItem(key) {
+        var keys = designerHiddenKeys().filter(function (k) { return k !== key; });
+        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
       }
 
-      // Until the visitor captures anything, the archive shows the designer's
-      // own archive (the home she grew up in). Once they add a scan it becomes
-      // their own archive of their captures.
-      function renderDesigner() {
-        var hidden = hiddenKeys();
-        var list = (window.DESIGNER_ARCHIVE || []).filter(function (d) { return hidden.indexOf(d.key) === -1; });
-        setHeading("my archive", "the home i grew up in");
-        list.forEach(function (d, i) {
-          var idx = ("0" + (i + 1)).slice(-2);
-          var art = document.createElement("article");
-          art.className = "gal-item";
-          art.dataset.kind = d.kind || "object";
-          art.innerHTML =
-            '<p class="gal-meta">[' + idx + ']<br>' + d.meta + '</p>' +
-            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-            '<button class="gal-delete" type="button" hidden>delete capture</button>';
-          art.querySelector("img").src = d.img;
-          art.querySelector(".gal-caption").textContent = d.title;
-
-          var card = art.querySelector(".gal-card");
-          var del = art.querySelector(".gal-delete");
-          var timer = null, longPressed = false;
-          function startPress() {
-            longPressed = false;
-            timer = setTimeout(function () {
-              longPressed = true;
-              grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
-              del.hidden = false;
-            }, 480);
-          }
-          function endPress() { clearTimeout(timer); }
-          card.addEventListener("mousedown", startPress);
-          card.addEventListener("touchstart", startPress, { passive: true });
-          card.addEventListener("mouseup", endPress);
-          card.addEventListener("mouseleave", endPress);
-          card.addEventListener("touchend", endPress);
-          card.addEventListener("click", function (e) {
-            if (longPressed) { e.preventDefault(); return; }
-            try { sessionStorage.setItem("traces-item", d.key); } catch (er) {}
-            goTo("object.html");
-          });
-          del.addEventListener("click", function () {
-            hideForever(d.key);
-            art.remove();
-          });
-          grid.appendChild(art);
-        });
-        applyFilter();
+      // showcase items aren't Archive records, so editing one's kind/title
+      // from within object.html never had anywhere to sync to — it only
+      // ever wrote object.html's own per-capture overlay. Reading that same
+      // overlay here (object.html: STORE = "traces-store-v1") is what makes
+      // an edit like "mark this space" actually show up in this filter.
+      function overlayFor(key) {
+        try {
+          var s = JSON.parse(localStorage.getItem("traces-store-v1")) || {};
+          return s[key] || {};
+        } catch (e) { return {}; }
       }
 
       // square checkbox toggles above the grid — checking one or both narrows
@@ -160,85 +138,116 @@
       }
       filters.addEventListener("change", applyFilter);
 
+      // one polaroid card, shared by real captures and designer showcase
+      // items — they only differ in their metadata line and in which store
+      // "hide"/"delete" reach into
+      function buildCard(entry) {
+        var art = document.createElement("article");
+        art.className = "gal-item";
+        art.dataset.kind = entry.kind || "object";
+        art.innerHTML =
+          '<p class="gal-meta">[' + entry.idx + ']<br>' + entry.metaText + '</p>' +
+          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+          '<div class="gal-item-actions" hidden>' +
+            '<button class="gal-hide" type="button">hide</button>' +
+            (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
+          '</div>';
+        var imgEl = art.querySelector("img");
+        if (window.BlobStore) {
+          window.BlobStore.url(entry.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+        } else {
+          imgEl.src = entry.img || "../assets/images/photo-room.png";
+        }
+        art.querySelector(".gal-caption").textContent = entry.title || "untitled capture";
+
+        var card = art.querySelector(".gal-card");
+        var actions = art.querySelector(".gal-item-actions");
+        var hideBtn = art.querySelector(".gal-hide");
+        var del = art.querySelector(".gal-delete");
+        var timer = null, longPressed = false;
+
+        function startPress() {
+          longPressed = false;
+          timer = setTimeout(function () {
+            longPressed = true;
+            // reveal this card's actions, hide any other card's
+            grid.querySelectorAll(".gal-item-actions").forEach(function (a) { if (a !== actions) a.hidden = true; });
+            actions.hidden = false;
+          }, 480);
+        }
+        function endPress() { clearTimeout(timer); }
+
+        card.addEventListener("mousedown", startPress);
+        card.addEventListener("touchstart", startPress, { passive: true });
+        card.addEventListener("mouseup", endPress);
+        card.addEventListener("mouseleave", endPress);
+        card.addEventListener("touchend", endPress);
+        card.addEventListener("click", function (e) {
+          if (longPressed) { e.preventDefault(); return; } // long-press opened actions, not the capture
+          try { sessionStorage.setItem("traces-item", entry.id); } catch (er) {}
+          goTo("object.html");
+        });
+        hideBtn.addEventListener("click", function () {
+          entry.hide();
+          render();
+        });
+        if (del) {
+          del.addEventListener("click", function () {
+            entry.remove();
+            render();
+          });
+        }
+        return art;
+      }
+
       function render() {
         var allItems = (window.Archive ? Archive.all() : []);
-        var items = allItems.filter(function (c) { return !c.hidden; });
+        var realItems = allItems.filter(function (c) { return !c.hidden; });
+        var hiddenDesigner = designerHiddenKeys();
+        var showcase = (window.DESIGNER_ARCHIVE || [])
+          .filter(function (d) { return hiddenDesigner.indexOf(d.key) === -1; })
+          .map(function (d) {
+            var o = overlayFor(d.key);
+            return {
+              key: d.key,
+              title: o.title != null ? o.title : d.title,
+              img: d.img,
+              meta: d.meta,
+              kind: o.kind != null ? o.kind : d.kind,
+            };
+          });
+
         grid.innerHTML = "";
         empty.hidden = true;
         if (add) add.hidden = false;
 
-        if (!allItems.length) {
-          renderDesigner();
-          if (window.alignGalleryTitle) window.alignGalleryTitle();
-          refreshHiddenPanel();
-          return;
-        }
+        setHeading(
+          allItems.length ? "your archive" : "my archive",
+          allItems.length ? "everything you capture lives here" : "the home i grew up in"
+        );
 
-        setHeading("your archive", "everything you capture lives here");
-        items.forEach(function (c, i) {
-          var idx = ("0" + (items.length - i)).slice(-2);
-          var art = document.createElement("article");
-          art.className = "gal-item";
-          art.dataset.kind = c.kind || "object";
-          art.innerHTML =
-            '<p class="gal-meta">[' + idx + ']<br>' + ago(c.created) + '</p>' +
-            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-            '<div class="gal-item-actions" hidden>' +
-              '<button class="gal-hide" type="button">hide</button>' +
-              '<button class="gal-delete" type="button">delete</button>' +
-            '</div>';
-          var imgEl = art.querySelector("img");
-          // a real capture's thumbnail lives in IndexedDB now (idb:thumb:…) —
-          // resolve it to an object URL; plain paths pass straight through
-          if (window.BlobStore) {
-            window.BlobStore.url(c.img).then(function (u) {
-              imgEl.src = u || "../assets/images/photo-room.png";
-            });
-          } else {
-            imgEl.src = c.img || "../assets/images/photo-room.png";
-          }
-          art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
-
-          var card = art.querySelector(".gal-card");
-          var actions = art.querySelector(".gal-item-actions");
-          var del = art.querySelector(".gal-delete");
-          var hideBtn = art.querySelector(".gal-hide");
-          var timer = null, longPressed = false;
-
-          function open() {
-            try { sessionStorage.setItem("traces-item", c.id); } catch (e) {}
-            goTo("object.html");
-          }
-          function startPress() {
-            longPressed = false;
-            timer = setTimeout(function () {
-              longPressed = true;
-              // reveal this card's actions, hide any other card's
-              grid.querySelectorAll(".gal-item-actions").forEach(function (a) { if (a !== actions) a.hidden = true; });
-              actions.hidden = false;
-            }, 480);
-          }
-          function endPress() { clearTimeout(timer); }
-
-          card.addEventListener("mousedown", startPress);
-          card.addEventListener("touchstart", startPress, { passive: true });
-          card.addEventListener("mouseup", endPress);
-          card.addEventListener("mouseleave", endPress);
-          card.addEventListener("touchend", endPress);
-          card.addEventListener("click", function (e) {
-            if (longPressed) { e.preventDefault(); return; } // long-press opened actions, not the capture
-            open();
-          });
-          del.addEventListener("click", function () {
-            if (window.Archive) Archive.remove(c.id);
-            render();
-          });
-          hideBtn.addEventListener("click", function () {
-            if (window.Archive) Archive.update(c.id, { hidden: true });
-            render();
-          });
-          grid.appendChild(art);
+        var total = realItems.length + showcase.length;
+        var pos = 0;
+        realItems.forEach(function (c) {
+          var idx = ("0" + (total - pos)).slice(-2);
+          pos++;
+          grid.appendChild(buildCard({
+            id: c.id, title: c.title, img: c.img, kind: c.kind,
+            idx: idx, metaText: ago(c.created),
+            hide: function () { Archive.update(c.id, { hidden: true }); },
+            remove: function () { if (window.Archive) Archive.remove(c.id); },
+          }));
         });
+        showcase.forEach(function (d) {
+          var idx = ("0" + (total - pos)).slice(-2);
+          pos++;
+          grid.appendChild(buildCard({
+            id: d.key, title: d.title, img: d.img, kind: d.kind,
+            idx: idx, metaText: d.meta,
+            hide: function () { hideDesignerItem(d.key); },
+          }));
+        });
+
         applyFilter();
         if (window.alignGalleryTitle) window.alignGalleryTitle();
         refreshHiddenPanel();
@@ -251,13 +260,15 @@
         }
       });
 
-      // the vertical tab docked to the right edge only appears once
-      // something is actually hidden; opening it slides in a panel listing
-      // every hidden capture with a one-tap way to bring it back
+      // a plain text link, fixed like the other corner links, only appears
+      // once something is actually hidden; opening it slides in a panel
+      // (same paper-card design as object.html's white details panel)
+      // listing every hidden capture with a one-tap way to bring it back
       var hiddenTab = document.getElementById("galHiddenTab");
       var hiddenCountEl = document.getElementById("galHiddenCount");
       var hiddenBackdrop = document.getElementById("galHiddenBackdrop");
       var hiddenPanel = document.getElementById("galHiddenPanel");
+      var hiddenClose = document.getElementById("galHiddenClose");
       var hiddenList = document.getElementById("galHiddenList");
 
       function closeHiddenPanel() {
@@ -273,36 +284,52 @@
         else openHiddenPanel();
       });
       hiddenBackdrop.addEventListener("click", closeHiddenPanel);
+      hiddenClose.addEventListener("click", closeHiddenPanel);
+
+      function addHiddenRow(title, img, onRestore) {
+        var row = document.createElement("div");
+        row.className = "gal-hidden-row";
+        row.innerHTML =
+          '<img alt="">' +
+          '<span class="gal-hidden-row-title"></span>' +
+          '<button class="gal-hidden-restore" type="button">restore</button>';
+        var imgEl = row.querySelector("img");
+        if (window.BlobStore) {
+          window.BlobStore.url(img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+        } else {
+          imgEl.src = img || "../assets/images/photo-room.png";
+        }
+        row.querySelector(".gal-hidden-row-title").textContent = title || "untitled capture";
+        row.querySelector(".gal-hidden-restore").addEventListener("click", onRestore);
+        hiddenList.appendChild(row);
+      }
 
       function refreshHiddenPanel() {
-        var hidden = (window.Archive ? Archive.all() : []).filter(function (c) { return c.hidden; });
-        hiddenTab.hidden = !hidden.length;
-        if (!hidden.length) closeHiddenPanel();
-        hiddenCountEl.textContent = hidden.length;
+        var hiddenReal = (window.Archive ? Archive.all() : []).filter(function (c) { return c.hidden; });
+        var hiddenKeys = designerHiddenKeys();
+        var hiddenShowcase = (window.DESIGNER_ARCHIVE || []).filter(function (d) { return hiddenKeys.indexOf(d.key) !== -1; });
+        var total = hiddenReal.length + hiddenShowcase.length;
+
+        hiddenTab.hidden = !total;
+        if (!total) closeHiddenPanel();
+        hiddenCountEl.textContent = total;
         hiddenList.innerHTML = "";
-        if (!hidden.length) {
+        if (!total) {
           hiddenList.innerHTML = '<p class="gal-hidden-empty">nothing hidden right now.</p>';
           return;
         }
-        hidden.forEach(function (c) {
-          var row = document.createElement("div");
-          row.className = "gal-hidden-row";
-          row.innerHTML =
-            '<img alt="">' +
-            '<span class="gal-hidden-row-title"></span>' +
-            '<button class="gal-hidden-restore" type="button">restore</button>';
-          var imgEl = row.querySelector("img");
-          if (window.BlobStore) {
-            window.BlobStore.url(c.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
-          } else {
-            imgEl.src = c.img || "../assets/images/photo-room.png";
-          }
-          row.querySelector(".gal-hidden-row-title").textContent = c.title || "untitled capture";
-          row.querySelector(".gal-hidden-restore").addEventListener("click", function () {
+        hiddenReal.forEach(function (c) {
+          addHiddenRow(c.title, c.img, function () {
             Archive.update(c.id, { hidden: false });
             render();
           });
-          hiddenList.appendChild(row);
+        });
+        hiddenShowcase.forEach(function (d) {
+          var o = overlayFor(d.key);
+          addHiddenRow(o.title != null ? o.title : d.title, d.img, function () {
+            restoreDesignerItem(d.key);
+            render();
+          });
         });
       }
 
