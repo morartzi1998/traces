@@ -1349,13 +1349,20 @@
         item.kind = document.getElementById("whiteSpace").checked ? "space" : "object";
         item.visibility = document.getElementById("whiteCommunity").checked ? "community" : "private";
         persist(key);
-        // keep the shared community feed in sync with the choice, for
-        // captures that actually live in the Archive/Community stores
+        // the edits above only updated this page's own catalog/overlay —
+        // gallery.html and community.html read the Archive/Community
+        // records directly, so a real capture's title/feeling/kind needs
+        // writing back there too or a change here (e.g. object -> space)
+        // never shows up on those screens
         if (window.Archive && Archive.get(key)) {
+          Archive.update(key, { title: item.title, feeling: item.feeling, kind: item.kind });
+          // keep the shared community feed in sync with the choice
           if (item.visibility === "community") {
             if (window.Community && !Community.get(key)) {
               var base = Archive.get(key);
               Community.add(Object.assign({}, base, { id: key }));
+            } else if (window.Community && Community.get(key)) {
+              Community.update(key, { title: item.title, feeling: item.feeling, kind: item.kind });
             }
           } else if (window.Community && Community.get(key)) {
             Community.remove(key);
