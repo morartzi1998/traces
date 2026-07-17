@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717z">
-<link rel="stylesheet" href="../css/processing.css?v=20260717z">
-<script src="../js/config.js?v=20260717z"></script>
-<script src="../js/cursor.js?v=20260717z" defer></script>
-<script src="../js/grain.js?v=20260717z" defer></script>
-<script src="../js/blobstore.js?v=20260717z"></script>
-<script src="../js/flow.js?v=20260717z" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717z"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717aa">
+<link rel="stylesheet" href="../css/processing.css?v=20260717aa">
+<script src="../js/config.js?v=20260717aa"></script>
+<script src="../js/cursor.js?v=20260717aa" defer></script>
+<script src="../js/grain.js?v=20260717aa" defer></script>
+<script src="../js/blobstore.js?v=20260717aa"></script>
+<script src="../js/flow.js?v=20260717aa" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717aa"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -35,6 +35,7 @@
       interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
+    <p class="proc-error-detail" id="procErrorDetail" hidden></p>
 
     <div class="proc-density" id="procDensityRow" hidden>
       <label for="procDensitySlider">point density</label>
@@ -136,6 +137,14 @@
         cloud.style.filter = "blur(6px) saturate(0.6)";
         model.style.filter = "blur(6px) saturate(0.6)";
         console.warn("Tripo:", msg);
+        // shown on-screen (not just the console) so the actual reason can be
+        // read off a screenshot without opening dev tools
+        var detail = document.getElementById("procErrorDetail");
+        if (detail) {
+          var text = typeof msg === "string" ? msg : JSON.stringify(msg);
+          detail.textContent = text;
+          detail.hidden = false;
+        }
       }
 
       var api = (window.TRACES_API || "").replace(/\/$/, "");
