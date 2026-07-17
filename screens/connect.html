@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="../css/gallery.css?v=20260717bg">
 <script src="../js/cursor.js?v=20260717bg" defer></script>
 <script src="../js/grain.js?v=20260717bg" defer></script>
+<script src="../js/archive.js?v=20260717bg"></script>
+<script src="../js/blobstore.js?v=20260717bg"></script>
+<script src="../js/designer-archive.js?v=20260717bg"></script>
 <script src="../js/flow.js?v=20260717bg" defer></script>
 </head>
 <body>
@@ -23,73 +26,7 @@
 
     <h1 class="gal-connect-title">Choose Captured Object That You Wish To Connect</h1>
 
-    <main class="gal-grid">
-
-      <article class="gal-item">
-        <p class="gal-meta">[01]<br>2 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('chandelier')">
-          <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
-          <span class="gal-caption">old living room lamp</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[02]<br>13 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('room')">
-          <img src="../assets/images/photo-room.png" alt="My old living room">
-          <span class="gal-caption">my living room</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[03]<br>25 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('teddy')">
-          <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
-          <span class="gal-caption">childhood teddy</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[04]<br>36 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('souvenirs')">
-          <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
-          <span class="gal-caption">souvenirs from europe</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[05]<br>42 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('bed')">
-          <img src="../assets/images/photo-bed.png" alt="20 year old bed">
-          <span class="gal-caption">20 year old bed</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[06]<br>140 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('couch')">
-          <img src="../assets/images/photo-couch.png" alt="Father's couch">
-          <span class="gal-caption">father's couch</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[07]<br>a year ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('curtain')">
-          <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
-          <span class="gal-caption">favorite corner</span>
-        </button>
-      </article>
-
-      <article class="gal-item">
-        <p class="gal-meta">[08]<br>2 days ago</p>
-        <button class="gal-card" type="button" onclick="connectObject('television')">
-          <img src="../assets/images/photo-television.png" alt="Living room tv">
-          <span class="gal-caption">living room tv</span>
-        </button>
-      </article>
-
-    </main>
+    <main class="gal-grid" id="galGrid"></main>
 
     <footer class="nav-bottom">
       <button class="nav-link nav-corner nav-corner--bl" type="button" onclick="goTo('community.html')">Community</button>
@@ -99,6 +36,69 @@
   </div>
 
   <script>
+    (function () {
+      var grid = document.getElementById("galGrid");
+
+      function ago(ts) {
+        if (!ts) return "just now";
+        var d = Math.floor((Date.now() - ts) / 86400000);
+        if (d <= 0) return "today";
+        if (d === 1) return "1 day ago";
+        if (d < 30) return d + " days ago";
+        var m = Math.floor(d / 30);
+        return m === 1 ? "a month ago" : m + " months ago";
+      }
+
+      // every connectable capture: the designer's showcase items plus
+      // whatever the visitor has captured themselves (archive + community),
+      // deduped so a capture only shows once even if it's in more than one list
+      function buildTargets() {
+        var used = {};
+        var targets = [];
+        (window.DESIGNER_ARCHIVE || []).forEach(function (d) {
+          used[d.key] = true;
+          targets.push({ id: d.key, title: d.title, img: d.img, meta: d.meta });
+        });
+        [window.Archive, window.Community].forEach(function (store) {
+          if (!store) return;
+          store.all().forEach(function (c) {
+            if (used[c.id]) return;
+            used[c.id] = true;
+            targets.push({ id: c.id, title: c.title || "untitled capture", img: c.img, meta: ago(c.created) });
+          });
+        });
+        return targets;
+      }
+
+      function render() {
+        var targets = buildTargets();
+        grid.innerHTML = "";
+        targets.forEach(function (t, i) {
+          var idx = ("0" + (i + 1)).slice(-2);
+          var art = document.createElement("article");
+          art.className = "gal-item";
+          art.innerHTML =
+            '<p class="gal-meta">[' + idx + ']<br>' + t.meta + '</p>' +
+            '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
+          var imgEl = art.querySelector("img");
+          if (window.BlobStore) {
+            window.BlobStore.url(t.img).then(function (u) {
+              imgEl.src = u || "../assets/images/photo-room.png";
+            });
+          } else {
+            imgEl.src = t.img || "../assets/images/photo-room.png";
+          }
+          art.querySelector(".gal-caption").textContent = t.title;
+          art.querySelector(".gal-card").addEventListener("click", function () {
+            connectObject(t.id);
+          });
+          grid.appendChild(art);
+        });
+      }
+
+      render();
+    })();
+
     // Connecting an object to a space also needs a point IN the space marking
     // where that object sits. Two ways to arrive here:
     //  - from an OBJECT: pick the space now, then place the point there next.
