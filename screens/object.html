@@ -5,17 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717be">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717be">
-<link rel="stylesheet" href="../css/object.css?v=20260717be">
-<script src="../js/cursor.js?v=20260717be" defer></script>
-<script src="../js/grain.js?v=20260717be" defer></script>
-<script src="../js/tilt3d.js?v=20260717be" defer></script>
-<script src="../js/archive.js?v=20260717be"></script>
-<script src="../js/blobstore.js?v=20260717be"></script>
-<script src="../js/flow.js?v=20260717be" defer></script>
-<script src="../js/layout-editor.js?v=20260717be" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717be"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bf">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bf">
+<link rel="stylesheet" href="../css/object.css?v=20260717bf">
+<script src="../js/cursor.js?v=20260717bf" defer></script>
+<script src="../js/grain.js?v=20260717bf" defer></script>
+<script src="../js/tilt3d.js?v=20260717bf" defer></script>
+<script src="../js/archive.js?v=20260717bf"></script>
+<script src="../js/blobstore.js?v=20260717bf"></script>
+<script src="../js/flow.js?v=20260717bf" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bf"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -24,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717be" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bf" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717be";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717be";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bf";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bf";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -54,7 +53,6 @@
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li><button type="button" id="menuToggleView" hidden>Show in its space</button></li>
-        <li><button type="button" id="menuEditLayout">Edit card layout</button></li>
       </ul>
     </header>
 
@@ -1411,21 +1409,6 @@
         white.hidden = true;
         enterAnnotateMode();
       });
-      document.getElementById("menuEditLayout").addEventListener("click", function () {
-        menu.hidden = true;
-        objTimeline.hidden = !timelineHasHistory();
-        // whitePanel / linkCard / remarkCard never appear together in real
-        // use (each covers a different situation) — only show one at a time
-        // here too, switchable from the edit bar, so editing doesn't look
-        // like two cards stacked on top of each other
-        white.hidden = false;
-        var link = document.getElementById("linkCard");
-        if (link) link.hidden = true;
-        var remark = document.getElementById("remarkCard");
-        if (remark) remark.hidden = true;
-        if (window.LayoutEditor) window.LayoutEditor.start();
-      });
-
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && annotateMode) exitAnnotateMode();
         if (e.key === "Escape" && linkMode) exitLinkMode();

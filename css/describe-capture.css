@@ -117,7 +117,7 @@
 
 .sidebar .rule {
   border: none;
-  border-top: 1px solid var(--color-ink-blue);
+  border-top: 2px solid var(--color-ink-blue);
   margin: 0 -34px 0 -36px;
 }
 
@@ -218,7 +218,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--color-ink-blue);
+  border-bottom: 2px solid var(--color-ink-blue);
 }
 
 .annotation-row::before {

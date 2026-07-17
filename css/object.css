@@ -111,7 +111,7 @@
 }
 
 .obj-menu li {
-  border-bottom: 1px solid rgba(240, 238, 234, 0.5);
+  border-bottom: 2px solid rgba(240, 238, 234, 0.5);
 }
 
 .obj-menu button {
@@ -423,7 +423,7 @@
   font-weight: 400;
   text-transform: uppercase;
   line-height: 1.35;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
   padding-bottom: 14px;
   margin-bottom: 18px;
 }
@@ -432,7 +432,7 @@
 
 .obj-blue-rule {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-top: 2px solid rgba(255, 255, 255, 0.7);
   margin: 14px 0;
 }
 
@@ -870,7 +870,7 @@
 
 .obj-white-rule {
   border: none;
-  border-top: 1px solid var(--color-ink-blue);
+  border-top: 2px solid var(--color-ink-blue);
   margin: 24px 0 16px;
 }
 
@@ -937,13 +937,13 @@
   align-items: center;
   gap: 12px;
   padding: 14px 0;
-  border-bottom: 1px solid var(--color-ink-blue);
+  border-bottom: 2px solid var(--color-ink-blue);
   font-size: 1.5rem;
 }
 
 /* a line above the first row too, so the list is evenly bracketed */
 .obj-white-list li:first-child {
-  border-top: 1px solid var(--color-ink-blue);
+  border-top: 2px solid var(--color-ink-blue);
 }
 
 .obj-white-list li::before {
