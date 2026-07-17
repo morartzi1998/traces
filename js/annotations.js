@@ -17,6 +17,8 @@
 
   var empty = list.querySelector(".annotations-empty");
   var hint = document.querySelector(".annotations-hint");
+  var emptyRuleTop = document.getElementById("annotationsEmptyRuleTop");
+  var emptyRuleBottom = document.getElementById("annotationsEmptyRuleBottom");
   // a fresh capture starts with NO annotations — the user adds their own
   var annotations = [];
   var pendingSpot = null;
@@ -26,9 +28,12 @@
   function render() {
     count.textContent = annotations.length;
     empty.style.display = annotations.length ? "none" : "";
-    // the hint only makes sense while there's nothing yet to look at —
-    // once real annotations exist, they speak for themselves
+    // the hint and the dotted brackets around "no annotations yet" only
+    // make sense while there's nothing yet to look at — once real
+    // annotations exist, their own solid row separators take over
     if (hint) hint.style.display = annotations.length ? "none" : "";
+    if (emptyRuleTop) emptyRuleTop.style.display = annotations.length ? "none" : "";
+    if (emptyRuleBottom) emptyRuleBottom.style.display = annotations.length ? "none" : "";
     list.querySelectorAll(".annotation-row").forEach(function (n) { n.remove(); });
     canvas.querySelectorAll(".annotation-marker:not(.annotation-marker--pending)").forEach(function (n) { n.remove(); });
 
