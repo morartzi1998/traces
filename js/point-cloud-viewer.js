@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bs";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bt";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -198,6 +198,12 @@ export function mountPointCloudViewer(container, geometry, opts) {
       frameCallbacks.length = 0;
       if (raf) cancelAnimationFrame(raf);
       if (ro) ro.disconnect();
+      // container (the stage's fixed points slot) outlives any one mount —
+      // switching captures repeatedly without this leaked a fresh pair of
+      // window-level key listeners every time, each still watching the same
+      // long-lived container for hover
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
       controls.dispose();
       material.dispose();
       renderer.dispose();
