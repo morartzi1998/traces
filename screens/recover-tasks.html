@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Recover scans</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717ag">
-<script src="../js/config.js?v=20260717ag"></script>
-<script src="../js/archive.js?v=20260717ag"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ah">
+<script src="../js/config.js?v=20260717ah"></script>
+<script src="../js/archive.js?v=20260717ah"></script>
 <style>
   /* one-off recovery tool — not part of the normal visitor flow, so it gets
      its own minimal styling instead of the full chrome/nav CSS */
@@ -86,8 +86,12 @@
             return;
           }
           row.dataset.modelUrl = d.model_url;
-          if (d.thumb) img.src = api + "/proxy?url=" + encodeURIComponent(d.thumb);
-          else img.alt = "no preview";
+          if (d.thumb) {
+            row.dataset.thumbUrl = api + "/proxy?url=" + encodeURIComponent(d.thumb);
+            img.src = row.dataset.thumbUrl;
+          } else {
+            img.alt = "no preview";
+          }
         })
         .catch(function () {
           statusEl.textContent = "error";
@@ -104,9 +108,10 @@
         var modelUrl = row.dataset.modelUrl;
         if (!checkbox.checked || !modelUrl) return;
         var proxied = api + "/proxy?url=" + encodeURIComponent(modelUrl);
+        var thumb = row.dataset.thumbUrl || "";
         var title = row.querySelector(".name").value.trim() || "recovered scan";
-        var cap = window.Archive.add({ title: title, feeling: "", kind: "object", img: "", model: proxied });
-        window.Archive.update(cap.id, { model: proxied, versions: [{ created: cap.created, model: proxied, img: "" }] });
+        var cap = window.Archive.add({ title: title, feeling: "", kind: "object", img: thumb, model: proxied });
+        window.Archive.update(cap.id, { model: proxied, img: thumb, versions: [{ created: cap.created, model: proxied, img: thumb }] });
         checkbox.disabled = true;
         row.style.opacity = "0.4";
         added++;
