@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717aj">
-<link rel="stylesheet" href="../css/processing.css?v=20260717aj">
-<script src="../js/config.js?v=20260717aj"></script>
-<script src="../js/cursor.js?v=20260717aj" defer></script>
-<script src="../js/grain.js?v=20260717aj" defer></script>
-<script src="../js/blobstore.js?v=20260717aj"></script>
-<script src="../js/flow.js?v=20260717aj" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717aj"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ak">
+<link rel="stylesheet" href="../css/processing.css?v=20260717ak">
+<script src="../js/config.js?v=20260717ak"></script>
+<script src="../js/cursor.js?v=20260717ak" defer></script>
+<script src="../js/grain.js?v=20260717ak" defer></script>
+<script src="../js/blobstore.js?v=20260717ak"></script>
+<script src="../js/flow.js?v=20260717ak" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ak"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -44,7 +44,7 @@
     </div>
 
     <div class="proc-actions">
-      <button class="proc-cancel" type="button" onclick="goTo('../index.html')">Cancel</button>
+      <button class="proc-cancel" type="button" onclick="goTo('upload.html')">Cancel</button>
       <button class="proc-proceed" type="button" id="procProceed" onclick="goTo('describe-capture.html')" hidden>Proceed</button>
     </div>
 
