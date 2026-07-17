@@ -146,11 +146,12 @@ export function exportScene(scene) {
 
 export function buildVoxelGlb(rawGeometry, targetCount) {
   var geometry = voxelize(rawGeometry, targetCount);
-  var cubeMaterial = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: 0.9,
-    metalness: 0,
-  });
+  // unlit: a shaded (MeshStandardMaterial) particle reads as a tiny 3D
+  // object with its own visible facets and shadow, which is exactly the
+  // "blocky" look point-cloud viewers avoid by drawing flat, unlit dots.
+  // Flat vertex color removes that shading cue so neighbouring particles
+  // blend into a smooth surface instead of a field of little dice.
+  var cubeMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
   var scene = new THREE.Scene();
   scene.add(new THREE.Mesh(geometry, cubeMaterial));
   return exportScene(scene);
