@@ -168,13 +168,31 @@
 /* Mobile */
 
 @media (max-width: 640px) {
+  .screen {
+    padding: 2.5vw 6vw;
+  }
+
   .main {
     flex-direction: column;
-    gap: 3rem;
+    gap: 5.5rem;
     padding-top: 6rem;
+    padding-bottom: 5.5rem; /* keep the CTA clear of the fixed bottom nav */
+    justify-content: flex-start;
+  }
+
+  /* the stack's polaroids are absolutely positioned and sized off the
+     container's width (78% each), so they can extend well past its
+     declared height — the gap above accounts for that real overflow */
+  .polaroid-stack {
+    width: min(190px, 55vw);
+    height: min(160px, 20vh);
   }
 
   .hero-text {
     text-align: left;
+  }
+
+  .headline {
+    white-space: normal;
   }
 }

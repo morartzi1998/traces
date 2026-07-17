@@ -82,3 +82,18 @@
   opacity: 1;
   cursor: default;
 }
+
+/* Mobile: pages routinely scroll on a narrow screen (they mostly don't on
+   desktop), so the fixed corners end up sitting over whatever content has
+   scrolled underneath. A small scrim keeps the pinned chrome legible without
+   changing its position or size. */
+@media (max-width: 640px) {
+  .nav-corner {
+    background: rgba(22, 22, 22, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 4px;
+    padding: 3px 7px;
+    margin: -3px -7px;
+  }
+}

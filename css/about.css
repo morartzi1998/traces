@@ -137,12 +137,37 @@ body {
 @media (max-width: 900px) {
   .ab-main {
     flex-direction: column;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .ab-pile {
     position: relative;
+    left: 0;
     top: 0;
     width: 100%;
     height: 46vh;
+  }
+
+  .ab-text {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .ab-screen {
+    padding: 12vh 6vw 8rem; /* extra bottom room to clear the fixed bottom nav */
+  }
+
+  .ab-pile {
+    height: 34vh;
+  }
+
+  .ab-text h1 {
+    margin-bottom: 3.5vh;
+  }
+
+  .ab-text p {
+    max-width: none;
   }
 }

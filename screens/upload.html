@@ -97,13 +97,13 @@
 
       <section class="up-option">
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="upload">
-          <span>Upload Video / Image</span>
+          <span>Upload Image</span>
           <span class="up-toggle" aria-hidden="true">+</span>
         </button>
         <div class="up-option-body" id="acc-upload" hidden>
 
           <label class="up-drop" id="dropZone">
-            <input type="file" id="fileInput" accept="video/*,image/*" multiple>
+            <input type="file" id="fileInput" accept="image/*">
             <span class="up-drop-line">click to browse &mdash; no file has been uploaded yet</span>
           </label>
 
@@ -403,9 +403,9 @@
       try {
         sessionStorage.removeItem("traces-task");
         sessionStorage.removeItem("traces-mode");
-        // this is the flat image/video flow, not a ready-made point-cloud
-        // scan — clear any leftover density-slider state from a previous
-        // scan upload in this tab so it doesn't wrongly show up here
+        // this is the flat image flow, not a ready-made point-cloud scan —
+        // clear any leftover density-slider state from a previous scan
+        // upload in this tab so it doesn't wrongly show up here
         sessionStorage.setItem("traces-capture-is-cloud", "0");
       } catch (e) {}
       window.BlobStore.del("capture-pending-raw").catch(function () {});

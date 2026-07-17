@@ -135,6 +135,19 @@
 }
 @media (max-width: 720px) {
   .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* the fixed "add new capture" link is placed via left:85vw, meant for the
+     wide desktop layout — on a narrow screen that pushes it straight off
+     the right edge, so it switches to a right-anchored, wrapping label */
+  .gal-add {
+    left: auto;
+    right: 4vw;
+    top: 17.5vh;
+    max-width: 42vw;
+    white-space: normal;
+    text-align: right;
+    font-size: 1rem;
+  }
 }
 
 /* revealed under a capture on long-press */

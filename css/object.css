@@ -1005,3 +1005,24 @@
 .obj-white-btn:hover {
   opacity: 0.88;
 }
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 640px) {
+  /* the side panels are drawers over the stage — on a narrow phone a sliver
+     of the stage left showing behind them reads as broken, not a preview */
+  .obj-white,
+  .obj-blue,
+  .obj-link-card {
+    width: 100%;
+  }
+
+  .obj-head {
+    left: 5vw;
+    right: 5vw;
+  }
+
+  .obj-timeline {
+    left: 5vw;
+  }
+}
