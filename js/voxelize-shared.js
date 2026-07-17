@@ -23,6 +23,83 @@ import { GLTFExporter } from "./vendor/three/GLTFExporter.js";
 var PARTICLE_SCALE = 1.3;
 var JITTER = 0.25; // fraction of cell edge to randomly offset each particle by
 
+// Raw AR/photogrammetry scans routinely carry stray "drift" points — frames
+// where tracking briefly lost accuracy project a handful of points way off
+// from any real surface, which show up as long streaks or scattered
+// confetti extending past the actual scanned room/object. A real surface is
+// locally dense (lots of neighbouring points close together); drift noise
+// is comparatively isolated. Bin points into a coarse grid and drop any
+// point whose cell has far fewer neighbours than a typical occupied cell —
+// this only touches which points get voxelized, it runs before voxelize().
+export function removeOutliers(geometry) {
+  var pos = geometry.getAttribute("position");
+  var col = geometry.getAttribute("color");
+  var count = pos.count;
+  if (count < 1000) return geometry; // too small a scan to risk over-trimming
+
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (var i = 0; i < count; i++) {
+    var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  // coarse enough that a real but sparser patch (an edge, thin trim) still
+  // lands in a reasonably populated cell; fine enough to actually separate
+  // "on a surface" from "adrift in empty space"
+  var cellsPerAxis = 60;
+  var span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1e-6);
+  var edge = span / cellsPerAxis;
+
+  var counts = new Map();
+  var cellKeys = new Int32Array(count * 3);
+  for (var i = 0; i < count; i++) {
+    var ix = Math.floor((pos.getX(i) - minX) / edge);
+    var iy = Math.floor((pos.getY(i) - minY) / edge);
+    var iz = Math.floor((pos.getZ(i) - minZ) / edge);
+    cellKeys[i * 3] = ix; cellKeys[i * 3 + 1] = iy; cellKeys[i * 3 + 2] = iz;
+    var key = ix + "_" + iy + "_" + iz;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  // the median occupied-cell density describes a "normal" patch of scanned
+  // surface; anything far below that reads as isolated noise, not surface
+  var densities = Array.from(counts.values()).sort(function (a, b) { return a - b; });
+  var median = densities[Math.floor(densities.length / 2)] || 1;
+  var threshold = Math.max(2, median * 0.12);
+
+  var keep = new Uint8Array(count);
+  var kept = 0;
+  for (var i = 0; i < count; i++) {
+    var key = cellKeys[i * 3] + "_" + cellKeys[i * 3 + 1] + "_" + cellKeys[i * 3 + 2];
+    if (counts.get(key) >= threshold) { keep[i] = 1; kept++; }
+  }
+  // never strip more than half — if the threshold would gut a naturally
+  // sparse capture, it isn't actually noise, so leave the scan untouched
+  if (kept < count * 0.5) return geometry;
+
+  var positions = new Float32Array(kept * 3);
+  var colors = col ? new Float32Array(kept * 3) : null;
+  var w = 0;
+  for (var i = 0; i < count; i++) {
+    if (!keep[i]) continue;
+    positions[w * 3] = pos.getX(i);
+    positions[w * 3 + 1] = pos.getY(i);
+    positions[w * 3 + 2] = pos.getZ(i);
+    if (col) {
+      colors[w * 3] = col.getX(i);
+      colors[w * 3 + 1] = col.getY(i);
+      colors[w * 3 + 2] = col.getZ(i);
+    }
+    w++;
+  }
+  var out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (colors) out.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return out;
+}
+
 export function voxelize(geometry, targetCount) {
   var pos = geometry.getAttribute("position");
   var col = geometry.getAttribute("color");
