@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bu";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bv";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -113,6 +113,34 @@ export function mountPointCloudViewer(container, geometry, opts) {
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
 
+  // a trackpad's two-finger swipe has no mouse button to hold down, so
+  // OrbitControls (which only treats an actual button-drag as rotate) never
+  // sees it as anything but a wheel event — which it always reads as zoom,
+  // regardless of direction. That reads as "only forward/backward, never
+  // circular" to someone used to a real orbit gesture. Browsers tag a real
+  // pinch gesture's wheel events with ctrlKey (even though no key is
+  // physically held), which is the one reliable way to tell "pinch to zoom"
+  // apart from "two-finger swipe" at the DOM level — so pinch still zooms,
+  // and a swipe orbits by hand via spherical coordinates around the target
+  // instead. Registered in the capture phase so it can pre-empt
+  // OrbitControls' own bubble-phase wheel listener on this same element.
+  var rotateSpherical = new THREE.Spherical();
+  var rotateOffset = new THREE.Vector3();
+  function onWheel(e) {
+    if (e.ctrlKey) return; // pinch — let OrbitControls' own zoom handle it
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    rotateOffset.copy(camera.position).sub(controls.target);
+    rotateSpherical.setFromVector3(rotateOffset);
+    rotateSpherical.theta -= e.deltaX * 0.0025;
+    rotateSpherical.phi = Math.max(0.001, Math.min(Math.PI - 0.001, rotateSpherical.phi - e.deltaY * 0.0025));
+    rotateOffset.setFromSpherical(rotateSpherical);
+    camera.position.copy(controls.target).add(rotateOffset);
+    camera.lookAt(controls.target);
+    controls.update();
+  }
+  renderer.domElement.addEventListener("wheel", onWheel, { passive: false, capture: true });
+
   function resize() {
     var w = container.clientWidth || 1, h = container.clientHeight || 1;
     renderer.setSize(w, h, false);
@@ -204,6 +232,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
       // long-lived container for hover
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      renderer.domElement.removeEventListener("wheel", onWheel, { capture: true });
       controls.dispose();
       material.dispose();
       renderer.dispose();
