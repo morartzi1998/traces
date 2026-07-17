@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bv";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bw";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -58,16 +58,21 @@ export function mountPointCloudViewer(container, geometry, opts) {
   scene.add(points);
 
   var controls = new OrbitControls(camera, renderer.domElement);
+  // the orbit always pivots around the scan's own actual center — a saved
+  // view only ever replaces the starting *camera position* (the angle/
+  // distance someone picked as looking right), never the pivot itself.
+  // Letting a saved view also carry its own target let the pivot drift off
+  // the object's center (e.g. from a pan before saving), which reads as
+  // "rotating around the wrong point" the moment you orbit afterward.
+  controls.target.copy(sphere.center);
   // a raw scan's own coordinate frame is whatever orientation the phone
   // happened to be in when the capture started — there's no single default
   // angle that reads sensibly across every scan. A saved view (the person's
   // own hand-picked "this is the right way up/around" orbit) overrides the
   // generic centered/backed-off guess once they've set one for this capture.
   if (opts.initialView) {
-    controls.target.set(opts.initialView.target.x, opts.initialView.target.y, opts.initialView.target.z);
     camera.position.set(opts.initialView.position.x, opts.initialView.position.y, opts.initialView.position.z);
   } else {
-    controls.target.copy(sphere.center);
     camera.position.copy(sphere.center).add(new THREE.Vector3(0, 0, sphere.radius * 2.4 || 3));
   }
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
