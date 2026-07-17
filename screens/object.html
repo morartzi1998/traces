@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bw">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bw">
-<link rel="stylesheet" href="../css/object.css?v=20260717bw">
-<script src="../js/cursor.js?v=20260717bw" defer></script>
-<script src="../js/grain.js?v=20260717bw" defer></script>
-<script src="../js/tilt3d.js?v=20260717bw" defer></script>
-<script src="../js/archive.js?v=20260717bw"></script>
-<script src="../js/blobstore.js?v=20260717bw"></script>
-<script src="../js/flow.js?v=20260717bw" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bw"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bx">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bx">
+<link rel="stylesheet" href="../css/object.css?v=20260717bx">
+<script src="../js/cursor.js?v=20260717bx" defer></script>
+<script src="../js/grain.js?v=20260717bx" defer></script>
+<script src="../js/tilt3d.js?v=20260717bx" defer></script>
+<script src="../js/archive.js?v=20260717bx"></script>
+<script src="../js/blobstore.js?v=20260717bx"></script>
+<script src="../js/flow.js?v=20260717bx" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bx"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bw" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bx" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bw";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bw";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bx";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bx";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -353,6 +353,17 @@
           if (Array.isArray(o.annotations)) catalog[k].annotations = o.annotations;
           if (Array.isArray(o.links)) catalog[k].links = o.links;
           if (o.defaultView) catalog[k].defaultView = o.defaultView;
+          // one-time backfill: edits made before title/feeling/kind started
+          // syncing to the Archive/Community record only ever reached this
+          // page's own overlay — gallery.html's filter (and anything else
+          // reading the record directly) never saw them. Catching it up here
+          // means just opening the capture once repairs it going forward.
+          if (window.Archive && Archive.get(k)) {
+            Archive.update(k, { title: catalog[k].title, feeling: catalog[k].feeling, kind: catalog[k].kind });
+            if (window.Community && Community.get(k)) {
+              Community.update(k, { title: catalog[k].title, feeling: catalog[k].feeling, kind: catalog[k].kind });
+            }
+          }
         });
       })();
       function persist(k) {
@@ -1265,6 +1276,11 @@
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
+          // a saved default view restores model-viewer's own camera-orbit
+          // string — set before .src so it's already queued once the model
+          // itself finishes loading, same idea as the point-cloud initialView
+          var dv = catalog[k].defaultView;
+          if (dv && dv.cameraOrbit) modelViewer.cameraOrbit = dv.cameraOrbit;
           // a capture saved from the "ready-made scan" flow keeps its GLB in
           // IndexedDB (too large for localStorage) — fetch it in on demand
           if (model.indexOf("idb:") === 0) {
@@ -1551,27 +1567,40 @@
         // the open menu sits over the history timeline — hide it while open,
         // and only restore it when this capture actually has a history to show
         objTimeline.hidden = menu.hidden ? !timelineHasHistory() : true;
-        // only meaningful on a live point-cloud capture — a raw scan's own
-        // coordinate frame is arbitrary, so there's a real angle to save here
-        menuSetDefaultView.hidden = !(pcViewer && !objPoints.hidden);
+        // meaningful on any live 3D capture — a raw scan's own coordinate
+        // frame is arbitrary, and even a modeled object may not open on its
+        // best side, so there's a real angle worth saving in both cases
+        var onLiveModel = catalog[key].model && !modelViewer.hidden && modelViewer.loaded;
+        var onLivePoints = pcViewer && !objPoints.hidden;
+        menuSetDefaultView.hidden = !(onLiveModel || onLivePoints);
       });
+      // writes a freshly-captured thumbnail back to the Archive/Community
+      // record — gallery.html, community.html and connect.html all read a
+      // capture's `img` straight from there, not from this page's catalog
+      function saveThumbnail(dataUrl) {
+        if (!(window.Archive && Archive.get(key) && window.BlobStore)) return;
+        var thumbKey = "thumb:" + key;
+        window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(dataUrl)).then(function () {
+          var ref = "idb:" + thumbKey;
+          catalog[key].img = ref;
+          Archive.update(key, { img: ref });
+          if (window.Community && Community.get(key)) Community.update(key, { img: ref });
+        }).catch(function () {});
+      }
       menuSetDefaultView.addEventListener("click", function () {
         menu.hidden = true;
-        if (!pcViewer) return;
-        catalog[key].defaultView = pcViewer.getView();
-        persist(key);
-        // this same angle becomes the polaroid thumbnail too — gallery.html,
-        // community.html and connect.html all read a capture's `img` straight
-        // from its Archive/Community record, so the change needs writing
-        // there, not just onto this page's own in-memory catalog
-        if (window.Archive && Archive.get(key) && window.BlobStore) {
-          var shot = pcViewer.screenshot();
-          var thumbKey = "thumb:" + key;
-          window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(shot)).then(function () {
-            var ref = "idb:" + thumbKey;
-            catalog[key].img = ref;
-            Archive.update(key, { img: ref });
-            if (window.Community && Community.get(key)) Community.update(key, { img: ref });
+        if (pcViewer && !objPoints.hidden) {
+          catalog[key].defaultView = pcViewer.getView();
+          persist(key);
+          saveThumbnail(pcViewer.screenshot());
+        } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
+          var orbit = modelViewer.getCameraOrbit();
+          catalog[key].defaultView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
+          persist(key);
+          modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
+            var reader = new FileReader();
+            reader.onload = function () { saveThumbnail(reader.result); };
+            reader.readAsDataURL(blob);
           }).catch(function () {});
         }
       });

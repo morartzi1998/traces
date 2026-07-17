@@ -56,4 +56,23 @@
   // "your archive" (private) and the shared community feed — two persisted lists
   window.Archive = store("traces-user-captures");
   window.Community = store("traces-community-captures");
+
+  // one-time backfill: before title/feeling/kind edits synced from
+  // object.html's white panel back to these records, an edit only ever
+  // reached object.html's own per-capture overlay ("traces-store-v1") —
+  // gallery.html's filter (and anything else reading a capture straight
+  // from Archive/Community) never saw it. Runs on every page that loads
+  // this file, not just object.html, so a change shows up in the gallery
+  // right away instead of only after opening that capture again.
+  (function backfillFromOverlay() {
+    var overlay;
+    try { overlay = JSON.parse(localStorage.getItem("traces-store-v1")) || {}; } catch (e) { return; }
+    Object.keys(overlay).forEach(function (id) {
+      var o = overlay[id];
+      if (o.title == null && o.feeling == null && o.kind == null) return;
+      var patch = { title: o.title, feeling: o.feeling, kind: o.kind };
+      if (window.Archive.get(id)) window.Archive.update(id, patch);
+      if (window.Community.get(id)) window.Community.update(id, patch);
+    });
+  })();
 })();
