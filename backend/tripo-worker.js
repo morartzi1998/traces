@@ -10,6 +10,9 @@
     GET  /status?task_id=...   -> { status, progress, model_url, thumb, raw }
     GET  /proxy?url=...         streams a Tripo asset back same-origin (used so
                                 model-viewer can load the GLB without CORS issues)
+    GET  /debug                 -> { hasKey1, hasKey2, hasSessions, activeSlot, ... }
+                                (no secrets, just whether each is set — open this
+                                URL directly in a browser to sanity-check a deploy)
 
     -- phone hand-off: the desktop shows a QR code for a random session id;
        the phone scans it, takes a photo, and calls /generate itself, then
@@ -192,6 +195,27 @@ export default {
           const stored = await env.SESSIONS.get(sessionId);
           return json(stored ? JSON.parse(stored) : { task_id: null });
         }
+      }
+
+      // ---- 5) diagnostics: which keys/bindings does this worker actually see? -
+      // never returns the secrets themselves, only whether each is set — safe
+      // to open straight in a browser to sanity-check a deploy
+      if (url.pathname === "/debug" && request.method === "GET") {
+        const hasKey1 = !!env.TRIPO_API_KEY;
+        const hasKey2 = !!env.TRIPO_API_KEY_2;
+        const hasSessions = !!env.SESSIONS;
+        let activatedAt = null, exhausted = false, slot = "1";
+        if (hasSessions) {
+          activatedAt = await env.SESSIONS.get("key1-activated-at");
+          exhausted = !!(await env.SESSIONS.get("key1-exhausted"));
+        }
+        slot = await activeKeySlot(env);
+        return json({
+          hasKey1, hasKey2, hasSessions,
+          activeSlot: slot,
+          key1ActivatedAt: activatedAt ? new Date(Number(activatedAt)).toISOString() : null,
+          key1Exhausted: exhausted,
+        });
       }
 
       return json({ error: "not found" }, 404);

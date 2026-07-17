@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717x">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717x">
-<link rel="stylesheet" href="../css/upload.css?v=20260717x">
-<script src="../js/config.js?v=20260717x"></script>
-<script src="../js/cursor.js?v=20260717x" defer></script>
-<script src="../js/grain.js?v=20260717x" defer></script>
-<script src="../js/blobstore.js?v=20260717x"></script>
-<script src="../js/flow.js?v=20260717x" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260717x"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717y">
+<link rel="stylesheet" href="../css/upload.css?v=20260717y">
+<script src="../js/config.js?v=20260717y"></script>
+<script src="../js/cursor.js?v=20260717y" defer></script>
+<script src="../js/grain.js?v=20260717y" defer></script>
+<script src="../js/blobstore.js?v=20260717y"></script>
+<script src="../js/flow.js?v=20260717y" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260717y"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717y"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -366,7 +366,7 @@
     function startScanCapture(btn) {
       var file = window.__selectedScanFile;
       if (!file) return;
-      if (btn) { btn.disabled = true; btn.textContent = "Reading…"; }
+      if (btn) { btn.disabled = true; btn.textContent = "Reading..."; }
       try {
         sessionStorage.removeItem("traces-task");
         sessionStorage.removeItem("traces-task-error");
@@ -405,24 +405,28 @@
       } catch (e) {}
       window.BlobStore.del("capture-pending-raw").catch(function () {});
       if (api && file && file.type && file.type.indexOf("image/") === 0) {
-        if (btn) { btn.disabled = true; btn.textContent = "Uploading…"; }
+        if (btn) { btn.disabled = true; btn.textContent = "Uploading..."; }
         var fd = new FormData();
         fd.append("image", file, file.name || "capture.jpg");
         fetch(api + "/generate", { method: "POST", body: fd })
           .then(function (r) { return r.json(); })
           .then(function (d) {
+            // set traces-mode even on failure — otherwise processing.html
+            // can't tell this was a real (failed) Tripo attempt and instead
+            // fakes a successful simulated run into a broken next screen
+            try { sessionStorage.setItem("traces-mode", "tripo"); } catch (e) {}
             if (d && d.task_id) {
-              try {
-                sessionStorage.setItem("traces-mode", "tripo");
-                sessionStorage.setItem("traces-task", d.task_id);
-              } catch (e) {}
+              try { sessionStorage.setItem("traces-task", d.task_id); } catch (e) {}
             } else {
               try { sessionStorage.setItem("traces-task-error", JSON.stringify(d)); } catch (e) {}
             }
             goTo("processing.html");
           })
           .catch(function (e) {
-            try { sessionStorage.setItem("traces-task-error", String(e)); } catch (er) {}
+            try {
+              sessionStorage.setItem("traces-mode", "tripo");
+              sessionStorage.setItem("traces-task-error", String(e));
+            } catch (er) {}
             goTo("processing.html");
           });
       } else {
