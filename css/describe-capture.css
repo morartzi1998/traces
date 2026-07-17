@@ -11,6 +11,17 @@
 .capture-canvas {
   position: relative;
   flex: 1;
+  /* flex items default to min-width:auto, which lets their content's
+     intrinsic size (the model-viewer's own natural size, once it has a
+     real model loaded) impose a floor wider than the flex-basis — that
+     silently steals space from .sidebar (which allows shrinking) the
+     moment the model finishes loading, even though .sidebar's own width
+     never changed. Before the model loads there's no such content to
+     impose a floor, so the sidebar sits at its full width — then visibly
+     shrinks once loading completes. min-width:0 makes this item actually
+     respect flex:1 regardless of its content's natural size.
+  */
+  min-width: 0;
   height: 100%;
   display: flex;
   align-items: center;
