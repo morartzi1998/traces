@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717t">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717t">
-<link rel="stylesheet" href="../css/gallery.css?v=20260717t">
-<script src="../js/cursor.js?v=20260717t" defer></script>
-<script src="../js/grain.js?v=20260717t" defer></script>
-<script src="../js/archive.js?v=20260717t"></script>
-<script src="../js/blobstore.js?v=20260717t"></script>
-<script src="../js/flow.js?v=20260717t" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717u">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717u">
+<link rel="stylesheet" href="../css/gallery.css?v=20260717u">
+<script src="../js/cursor.js?v=20260717u" defer></script>
+<script src="../js/grain.js?v=20260717u" defer></script>
+<script src="../js/archive.js?v=20260717u"></script>
+<script src="../js/blobstore.js?v=20260717u"></script>
+<script src="../js/flow.js?v=20260717u" defer></script>
 </head>
 <body>
 
@@ -26,7 +26,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">2 days ago<br>lea's capture from usa</p>
-        <button class="gal-card" type="button" onclick="openObject('chandelier')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('chandelier')">
           <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
           <span class="gal-caption">old living room lamp</span>
         </button>
@@ -34,7 +34,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">16 days ago<br>dhhh5's capture from france</p>
-        <button class="gal-card" type="button" onclick="openObject('couch')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('couch')">
           <img src="../assets/images/photo-couch.png" alt="Father's couch">
           <span class="gal-caption">father's couch</span>
         </button>
@@ -42,7 +42,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">27 days ago<br>lexi's capture from spain</p>
-        <button class="gal-card" type="button" onclick="openObject('teddy')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('teddy')">
           <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
           <span class="gal-caption">childhood tedy</span>
         </button>
@@ -50,7 +50,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">39 days ago<br>neo's capture from poland</p>
-        <button class="gal-card" type="button" onclick="openObject('souvenirs')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('souvenirs')">
           <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
           <span class="gal-caption">souvenirs from europe</span>
         </button>
@@ -58,7 +58,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">55 days ago<br>xxl's capture from mexico</p>
-        <button class="gal-card" type="button" onclick="openObject('bed')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('bed')">
           <img src="../assets/images/photo-bed.png" alt="20 year old bed">
           <span class="gal-caption">20 year old bed</span>
         </button>
@@ -66,7 +66,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">164 days ago<br>mishl's capture from israel</p>
-        <button class="gal-card" type="button" onclick="openObject('cabinet')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('cabinet')">
           <img src="../assets/images/photo-cabinet.png" alt="Souvenirs storage cabinet">
           <span class="gal-caption">souvenirs storage</span>
         </button>
@@ -74,7 +74,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">a year ago<br>sweetcherry's capture from usa</p>
-        <button class="gal-card" type="button" onclick="openObject('curtain')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('curtain')">
           <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
           <span class="gal-caption">favorite corner</span>
         </button>
@@ -82,7 +82,7 @@
 
       <article class="gal-item">
         <p class="gal-meta">a year ago<br>dada's capture from israel</p>
-        <button class="gal-card" type="button" onclick="openObject('table')">
+        <button class="gal-card" type="button" onclick="openCommunityObject('table')">
           <img src="../assets/images/photo-table.png" alt="Old table">
           <span class="gal-caption">old table</span>
         </button>
@@ -98,6 +98,14 @@
   </div>
 
   <script>
+    // opening any capture from here (including the fixed showcase cards,
+    // which carry no visibility flag of their own) should show the
+    // community's blue-purple backdrop on the object view too
+    window.openCommunityObject = function (key) {
+      try { sessionStorage.setItem("traces-from-community", "1"); } catch (e) {}
+      openObject(key);
+    };
+
     (function () {
       // the visitor's own captures shared to the community appear first
       var grid = document.querySelector(".gal-grid");
@@ -146,7 +154,10 @@
         card.addEventListener("touchend", endPress);
         card.addEventListener("click", function (e) {
           if (longPressed) { e.preventDefault(); return; }
-          try { sessionStorage.setItem("traces-item", c.id); } catch (er) {}
+          try {
+            sessionStorage.setItem("traces-item", c.id);
+            sessionStorage.setItem("traces-from-community", "1");
+          } catch (er) {}
           goTo("object.html");
         });
         del.addEventListener("click", function () {

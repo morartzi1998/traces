@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717t">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717t">
-<link rel="stylesheet" href="../css/object.css?v=20260717t">
-<script src="../js/cursor.js?v=20260717t" defer></script>
-<script src="../js/grain.js?v=20260717t" defer></script>
-<script src="../js/tilt3d.js?v=20260717t" defer></script>
-<script src="../js/archive.js?v=20260717t"></script>
-<script src="../js/blobstore.js?v=20260717t"></script>
-<script src="../js/flow.js?v=20260717t" defer></script>
-<script src="../js/layout-editor.js?v=20260717t" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717t"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717u">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717u">
+<link rel="stylesheet" href="../css/object.css?v=20260717u">
+<script src="../js/cursor.js?v=20260717u" defer></script>
+<script src="../js/grain.js?v=20260717u" defer></script>
+<script src="../js/tilt3d.js?v=20260717u" defer></script>
+<script src="../js/archive.js?v=20260717u"></script>
+<script src="../js/blobstore.js?v=20260717u"></script>
+<script src="../js/flow.js?v=20260717u" defer></script>
+<script src="../js/layout-editor.js?v=20260717u" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717u"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -360,6 +360,16 @@
       var key = "chandelier";
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
       if (!catalog[key]) key = "chandelier";
+
+      // the fixed showcase items carry no visibility flag of their own, so
+      // arriving here via a community.html link (openCommunityObject) marks
+      // it explicitly. One-shot: consumed by the very first show() call
+      // (the item just navigated to), not by any later prev/next browsing.
+      var cameFromCommunity = false;
+      try {
+        cameFromCommunity = sessionStorage.getItem("traces-from-community") === "1";
+        sessionStorage.removeItem("traces-from-community");
+      } catch (e) {}
       var pendingSpot = null;
       var editingAnnotation = null; // the saved annotation currently open in edit mode, if any
       var annotateMode = false; // true only between "Add an annotations" and the point-picking click
@@ -1058,10 +1068,13 @@
         document.getElementById("objTitle").textContent = catalog[k].title;
         swapScan(k, catalog[k].model, catalog[k].img);
         // a capture shared to the community gets a blue-purple backdrop
-        // here too, matching its card on the community gallery
+        // here too, matching its card on the community gallery — either
+        // because it's genuinely community-visible, or because this
+        // specific visit just arrived from the community screen
         document.querySelector(".obj-screen").classList.toggle(
-          "obj-screen--community", catalog[k].visibility === "community"
+          "obj-screen--community", catalog[k].visibility === "community" || cameFromCommunity
         );
+        cameFromCommunity = false;
 
         // a capture linked to another (via the connect screen) glows blue
         var conn = null;
