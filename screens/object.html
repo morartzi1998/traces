@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717br">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717br">
-<link rel="stylesheet" href="../css/object.css?v=20260717br">
-<script src="../js/cursor.js?v=20260717br" defer></script>
-<script src="../js/grain.js?v=20260717br" defer></script>
-<script src="../js/tilt3d.js?v=20260717br" defer></script>
-<script src="../js/archive.js?v=20260717br"></script>
-<script src="../js/blobstore.js?v=20260717br"></script>
-<script src="../js/flow.js?v=20260717br" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717br"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bs">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bs">
+<link rel="stylesheet" href="../css/object.css?v=20260717bs">
+<script src="../js/cursor.js?v=20260717bs" defer></script>
+<script src="../js/grain.js?v=20260717bs" defer></script>
+<script src="../js/tilt3d.js?v=20260717bs" defer></script>
+<script src="../js/archive.js?v=20260717bs"></script>
+<script src="../js/blobstore.js?v=20260717bs"></script>
+<script src="../js/flow.js?v=20260717bs" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bs"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717br" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bs" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717br";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717br";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bs";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bs";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -53,6 +53,7 @@
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li><button type="button" id="menuToggleView" hidden>Show in its space</button></li>
+        <li><button type="button" id="menuSetDefaultView" hidden>Set this angle as default view</button></li>
       </ul>
     </header>
 
@@ -351,6 +352,7 @@
           if (o.visibility != null) catalog[k].visibility = o.visibility;
           if (Array.isArray(o.annotations)) catalog[k].annotations = o.annotations;
           if (Array.isArray(o.links)) catalog[k].links = o.links;
+          if (o.defaultView) catalog[k].defaultView = o.defaultView;
         });
       })();
       function persist(k) {
@@ -369,6 +371,7 @@
             return { x: l.x, y: l.y, target: l.target, title: l.title,
               pos: l.pos || null, normal: l.normal || null, ppos: l.ppos || null };
           }),
+          defaultView: it.defaultView || null,
         };
         saveStore(s);
       }
@@ -1250,7 +1253,8 @@
             }).then(function (buf) {
               if (!buf || key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
-              pcViewer = window.__mountPointCloudViewer(objPoints, geometry, { pointSize: 0.013 });
+              pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
+                { pointSize: 0.013, initialView: catalog[k].defaultView || null });
               // once the cloud is ready, (re)draw annotations as 3D-anchored
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
@@ -1541,11 +1545,21 @@
         renderAnnotations();
       }
 
+      var menuSetDefaultView = document.getElementById("menuSetDefaultView");
       document.getElementById("objMenuBtn").addEventListener("click", function () {
         menu.hidden = !menu.hidden;
         // the open menu sits over the history timeline — hide it while open,
         // and only restore it when this capture actually has a history to show
         objTimeline.hidden = menu.hidden ? !timelineHasHistory() : true;
+        // only meaningful on a live point-cloud capture — a raw scan's own
+        // coordinate frame is arbitrary, so there's a real angle to save here
+        menuSetDefaultView.hidden = !(pcViewer && !objPoints.hidden);
+      });
+      menuSetDefaultView.addEventListener("click", function () {
+        menu.hidden = true;
+        if (!pcViewer) return;
+        catalog[key].defaultView = pcViewer.getView();
+        persist(key);
       });
       document.getElementById("menuUpdateCapture").addEventListener("click", function () {
         // re-scanning a real capture appends a new dated version to its

@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717br";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bs";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -58,8 +58,18 @@ export function mountPointCloudViewer(container, geometry, opts) {
   scene.add(points);
 
   var controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.copy(sphere.center);
-  camera.position.copy(sphere.center).add(new THREE.Vector3(0, 0, sphere.radius * 2.4 || 3));
+  // a raw scan's own coordinate frame is whatever orientation the phone
+  // happened to be in when the capture started — there's no single default
+  // angle that reads sensibly across every scan. A saved view (the person's
+  // own hand-picked "this is the right way up/around" orbit) overrides the
+  // generic centered/backed-off guess once they've set one for this capture.
+  if (opts.initialView) {
+    controls.target.set(opts.initialView.target.x, opts.initialView.target.y, opts.initialView.target.z);
+    camera.position.set(opts.initialView.position.x, opts.initialView.position.y, opts.initialView.position.z);
+  } else {
+    controls.target.copy(sphere.center);
+    camera.position.copy(sphere.center).add(new THREE.Vector3(0, 0, sphere.radius * 2.4 || 3));
+  }
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
   camera.updateProjectionMatrix();
@@ -171,6 +181,14 @@ export function mountPointCloudViewer(container, geometry, opts) {
     raycastFromScreen: raycastFromScreen,
     project: project,
     onFrame: onFrame,
+    // the current orbit, in a form that can be stored and handed back to
+    // opts.initialView on a later mount to reproduce this exact framing
+    getView: function () {
+      return {
+        position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+      };
+    },
     screenshot: function () {
       renderer.render(scene, camera);
       return renderer.domElement.toDataURL("image/png");
