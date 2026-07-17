@@ -84,7 +84,7 @@
     <main class="up-main">
       <h1 class="up-heading">How do you want to capture<br>your object / space ?</h1>
 
-      <section class="up-option">
+      <section class="up-option" id="phoneOption">
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="phone">
           <span>Connect your phone</span>
           <span class="up-toggle" aria-hidden="true">+</span>
@@ -94,6 +94,14 @@
           <p class="up-qr-hint" id="phoneQrHint">scan with your phone's camera, then take the photo there</p>
         </div>
       </section>
+      <script>
+        // this option scans a QR code to hand the capture off to a phone —
+        // meaningless if you're already on the phone, so skip it there
+        // (unlike the userAgent, "coarse pointer" can't be spoofed by width alone)
+        if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
+          document.getElementById("phoneOption").hidden = true;
+        }
+      </script>
 
       <section class="up-option">
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="upload">

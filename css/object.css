@@ -814,6 +814,33 @@
   gap: 6px;
 }
 
+.obj-white-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.obj-white-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.obj-white-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--color-ink-blue);
+  color: var(--color-ink-blue);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.obj-white-close:hover {
+  opacity: 0.8;
+}
+
 .obj-white-title {
   font-family: var(--font-display);
   font-size: 1.2rem;

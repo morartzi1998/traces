@@ -147,10 +147,15 @@
 
     <!-- white details panel: read the capture, or edit it in place (no page change) -->
     <aside class="obj-white" id="objWhite" data-editable="whitePanel" data-editable-group="cards" hidden>
-      <h2 class="obj-white-title wo-read" id="whiteTitle">Old living room lamp</h2>
-      <p class="obj-white-sub wo-read" id="whiteSub">connected to the space "my old living room"</p>
+      <header class="obj-white-head">
+        <div class="obj-white-head-text">
+          <h2 class="obj-white-title wo-read" id="whiteTitle">Old living room lamp</h2>
+          <p class="obj-white-sub wo-read" id="whiteSub">connected to the space "my old living room"</p>
 
-      <h2 class="obj-white-title wo-edit">Describe your capture</h2>
+          <h2 class="obj-white-title wo-edit">Describe your capture</h2>
+        </div>
+        <button class="obj-white-close" type="button" id="whiteClose" aria-label="Close">&times;</button>
+      </header>
 
       <hr class="obj-white-rule">
       <p class="obj-white-label">Type of capture</p>
@@ -1174,6 +1179,14 @@
         fillWhite(catalog[key]);
         white.hidden = !white.hidden;
         if (!white.hidden) { closeBlue(); closeRemarkCard(); }
+      });
+
+      // full-width on mobile (see object.css), so the panel itself covers
+      // the title that would otherwise toggle it closed — give it its own
+      // explicit close button instead of relying on that
+      document.getElementById("whiteClose").addEventListener("click", function () {
+        exitWhiteEdit();
+        white.hidden = true;
       });
 
       // ----- edit the capture in place (no jump to the scan screen) -----

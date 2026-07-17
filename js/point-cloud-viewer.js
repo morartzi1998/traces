@@ -68,6 +68,34 @@ export function mountPointCloudViewer(container, geometry, opts) {
   controls.dampingFactor = 0.12;
   controls.update();
 
+  // hold Space + drag to pan (Blender-style temporary pan), instead of the
+  // default left-drag orbit — OrbitControls already has real pan behaviour
+  // wired to the right mouse button, so this just remaps the left button to
+  // it for as long as Space is held, rather than reimplementing pan by hand
+  var spaceHeld = false;
+  var hovering = false;
+  container.addEventListener("pointerenter", function () { hovering = true; });
+  container.addEventListener("pointerleave", function () { hovering = false; });
+
+  function isTypingTarget(el) {
+    return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+  }
+
+  function onKeyDown(e) {
+    if (e.code !== "Space" || spaceHeld) return;
+    if (!hovering || isTypingTarget(document.activeElement)) return;
+    e.preventDefault(); // stop the page from scrolling while panning
+    spaceHeld = true;
+    controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+  }
+  function onKeyUp(e) {
+    if (e.code !== "Space") return;
+    spaceHeld = false;
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  }
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+
   function resize() {
     var w = container.clientWidth || 1, h = container.clientHeight || 1;
     renderer.setSize(w, h, false);
