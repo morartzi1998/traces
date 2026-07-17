@@ -827,18 +827,17 @@
 
 .obj-white-close {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: 1px solid var(--color-ink-blue);
+  background: none;
+  border: none;
   color: var(--color-ink-blue);
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
+  padding: 2px;
 }
 
 .obj-white-close:hover {
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .obj-white-title {

@@ -107,24 +107,38 @@
           if (!blob) return;
           return blob.arrayBuffer();
         }).then(function (buf) {
-          if (!buf || !window.__deserializeGeometry || !window.__mountPointCloudViewer) {
-            status.textContent = "Reconstruction failed";
-            return;
+          if (!buf) { status.textContent = "Reconstruction failed"; return; }
+
+          // the module script (head) that defines these two loads three.js +
+          // OrbitControls over the network — on a first, uncached visit that
+          // can easily lose the race against this plain classic script, which
+          // runs synchronously and gets here almost immediately. Retry for a
+          // few seconds instead of failing outright the instant it's not
+          // ready yet (same pattern upload.html already uses for the PLY
+          // module race).
+          function ready(attempts) {
+            attempts = attempts || 0;
+            if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
+              var geometry = window.__deserializeGeometry(buf);
+              cloud.hidden = true;
+              pointsEl.hidden = false;
+              pointsEl.style.filter = "blur(17px) saturate(0.85)";
+              viewer = window.__mountPointCloudViewer(pointsEl, geometry, { pointSize: SIZE_LEVELS[2] });
+              densityRow.hidden = false;
+              status.textContent = "Capturing complete";
+              proceed.hidden = false;
+              // same "comes into focus" reveal every other capture path gets —
+              // this got dropped when the fake progress animation (the thing
+              // that drove it for those paths) was skipped for point clouds
+              requestAnimationFrame(function () {
+                pointsEl.style.filter = "blur(0px) saturate(1)";
+              });
+              return;
+            }
+            if (attempts > 40) { status.textContent = "Reconstruction failed"; return; }
+            setTimeout(function () { ready(attempts + 1); }, 150);
           }
-          var geometry = window.__deserializeGeometry(buf);
-          cloud.hidden = true;
-          pointsEl.hidden = false;
-          pointsEl.style.filter = "blur(17px) saturate(0.85)";
-          viewer = window.__mountPointCloudViewer(pointsEl, geometry, { pointSize: SIZE_LEVELS[2] });
-          densityRow.hidden = false;
-          status.textContent = "Capturing complete";
-          proceed.hidden = false;
-          // same "comes into focus" reveal every other capture path gets —
-          // this got dropped when the fake progress animation (the thing
-          // that drove it for those paths) was skipped for point clouds
-          requestAnimationFrame(function () {
-            pointsEl.style.filter = "blur(0px) saturate(1)";
-          });
+          ready();
         }).catch(function () { status.textContent = "Reconstruction failed"; });
 
         densitySlider.addEventListener("input", function () {
