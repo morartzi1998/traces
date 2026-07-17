@@ -764,7 +764,7 @@
 .obj-link-card-actions {
   display: flex;
   gap: 20px;
-  margin: -4px 0 4px;
+  margin: 10px 0 4px;
 }
 
 .obj-link-card-act {

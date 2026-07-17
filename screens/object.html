@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bp">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bp">
-<link rel="stylesheet" href="../css/object.css?v=20260717bp">
-<script src="../js/cursor.js?v=20260717bp" defer></script>
-<script src="../js/grain.js?v=20260717bp" defer></script>
-<script src="../js/tilt3d.js?v=20260717bp" defer></script>
-<script src="../js/archive.js?v=20260717bp"></script>
-<script src="../js/blobstore.js?v=20260717bp"></script>
-<script src="../js/flow.js?v=20260717bp" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bp"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717br">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717br">
+<link rel="stylesheet" href="../css/object.css?v=20260717br">
+<script src="../js/cursor.js?v=20260717br" defer></script>
+<script src="../js/grain.js?v=20260717br" defer></script>
+<script src="../js/tilt3d.js?v=20260717br" defer></script>
+<script src="../js/archive.js?v=20260717br"></script>
+<script src="../js/blobstore.js?v=20260717br"></script>
+<script src="../js/flow.js?v=20260717br" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717br"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bp" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717br" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bp";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bp";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717br";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717br";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -367,7 +367,7 @@
           }),
           links: (it.links || []).map(function (l) {
             return { x: l.x, y: l.y, target: l.target, title: l.title,
-              pos: l.pos || null, normal: l.normal || null };
+              pos: l.pos || null, normal: l.normal || null, ppos: l.ppos || null };
           }),
         };
         saveStore(s);
@@ -499,7 +499,7 @@
         if (!spot || spot.space !== k || !catalog[spot.target]) return;
         catalog[k].links.push({
           x: spot.x, y: spot.y, pos: spot.pos || null, normal: spot.normal || null,
-          target: spot.target, title: catalog[spot.target].title,
+          ppos: spot.ppos || null, target: spot.target, title: catalog[spot.target].title,
         });
         persist(k);
       }
@@ -599,8 +599,10 @@
       function renderLinks() {
         tags.querySelectorAll(".obj-link-marker:not(.obj-link-hotspot)").forEach(function (n) { n.remove(); });
         clearLinkHotspots();
+        clearLinkFrameSubs();
         var isModel = !!catalog[key].model && !modelViewer.hidden;
         var ready = isModel && modelViewer.loaded;
+        var isPoints = !!pcViewer && !objPoints.hidden;
         catalog[key].links.forEach(function (l, i) {
           if (ready) {
             if (!l.pos) convertTo3D(l);
@@ -616,6 +618,29 @@
               modelViewer.appendChild(h);
               return;
             }
+          }
+          if (isPoints) {
+            if (!l.ppos) convertFromPoints(l);
+            // same reasoning as annotations: a link that never found a
+            // nearby point has no trustworthy place to float, so it's
+            // better left off the stage than shown somewhere misleading
+            if (!l.ppos) return;
+            var p = document.createElement("button");
+            p.className = "obj-link-marker";
+            p.type = "button";
+            buildLinkMarker(p);
+            p.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+            tags.appendChild(p);
+            var worldPos = strToVec3(l.ppos);
+            var updateProjection = function () {
+              var proj = pcViewer.project(worldPos);
+              p.style.display = proj.behind ? "none" : "";
+              p.style.left = proj.x * 100 + "%";
+              p.style.top = proj.y * 100 + "%";
+            };
+            updateProjection();
+            linkFrameUnsubs.push(pcViewer.onFrame(updateProjection));
+            return;
           }
           var b = document.createElement("button");
           b.className = "obj-link-marker";
@@ -1117,15 +1142,7 @@
         closeRemarkCard();
         closeLinkCard();
         if (linkMode) {
-          var lr = stage.getBoundingClientRect();
-          var lspot = { x: (e.clientX - lr.left) / lr.width, y: (e.clientY - lr.top) / lr.height };
-          if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
-            var lhit = modelViewer.positionAndNormalFromPoint(e.clientX, e.clientY);
-            if (lhit && lhit.position) {
-              lspot.pos = lhit.position.toString();
-              lspot.normal = lhit.normal ? lhit.normal.toString() : null;
-            }
-          }
+          var lspot = pickSpotFromEvent(e);
           var t = linkTarget;
           var editing = linkEditingLink;
           var placedIn = key;
@@ -1136,13 +1153,14 @@
             editing.y = lspot.y;
             editing.pos = lspot.pos || null;
             editing.normal = lspot.normal || null;
+            editing.ppos = lspot.ppos || null;
             persist(placedIn);
             renderLinks();
           } else if (t) {
             // came from the object side — target already chosen
             catalog[placedIn].links.push({
               x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
-              target: t, title: catalog[t].title,
+              ppos: lspot.ppos || null, target: t, title: catalog[t].title,
             });
             persist(placedIn);
             renderLinks();
@@ -1151,6 +1169,7 @@
             try {
               sessionStorage.setItem("traces-pending-spot", JSON.stringify({
                 space: placedIn, x: lspot.x, y: lspot.y, pos: lspot.pos || null, normal: lspot.normal || null,
+                ppos: lspot.ppos || null,
               }));
             } catch (e) {}
             goTo("connect.html");
@@ -1192,8 +1211,16 @@
         pcFrameUnsubs.forEach(function (u) { u(); });
         pcFrameUnsubs = [];
       }
+      // same idea, for point-cloud link markers (renderLinks runs and
+      // re-runs independently of renderAnnotations)
+      var linkFrameUnsubs = [];
+      function clearLinkFrameSubs() {
+        linkFrameUnsubs.forEach(function (u) { u(); });
+        linkFrameUnsubs = [];
+      }
       function disposePcViewer() {
         clearPcFrameSubs();
+        clearLinkFrameSubs();
         if (pcViewer) { pcViewer.dispose(); pcViewer = null; }
         objPoints.hidden = true;
       }
