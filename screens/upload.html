@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717aa">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717aa">
-<link rel="stylesheet" href="../css/upload.css?v=20260717aa">
-<script src="../js/config.js?v=20260717aa"></script>
-<script src="../js/cursor.js?v=20260717aa" defer></script>
-<script src="../js/grain.js?v=20260717aa" defer></script>
-<script src="../js/blobstore.js?v=20260717aa"></script>
-<script src="../js/flow.js?v=20260717aa" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260717aa"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717aa"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ab">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717ab">
+<link rel="stylesheet" href="../css/upload.css?v=20260717ab">
+<script src="../js/config.js?v=20260717ab"></script>
+<script src="../js/cursor.js?v=20260717ab" defer></script>
+<script src="../js/grain.js?v=20260717ab" defer></script>
+<script src="../js/blobstore.js?v=20260717ab"></script>
+<script src="../js/flow.js?v=20260717ab" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260717ab"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ab"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -247,15 +247,20 @@
         try { sessionStorage.setItem("traces-upload-name", f.name); } catch (e) {}
         if (f.type && f.type.indexOf("image/") === 0) {
           try { thumb.src = URL.createObjectURL(f); } catch (e) {}
-          // keep a persistable copy so the capture carries the real image
-          // across to the describe / archive screens
-          var reader = new FileReader();
-          reader.onload = function () {
-            try { sessionStorage.setItem("traces-upload-img", reader.result); } catch (e) {}
-          };
-          reader.readAsDataURL(f);
+          // a data: URL in sessionStorage silently fails once the photo is
+          // more than a few MB (an ordinary phone photo routinely is) — the
+          // write throws QuotaExceededError, gets swallowed by the empty
+          // catch below, and every later screen falls back to its hardcoded
+          // placeholder image instead of the real photo. Ride the real file
+          // in IndexedDB instead, same as ready-made scans already do.
+          window.BlobStore.set("upload-source-img", f).then(function () {
+            try { sessionStorage.setItem("traces-upload-img", "idb:upload-source-img"); } catch (e) {}
+          }).catch(function () {
+            try { sessionStorage.removeItem("traces-upload-img"); } catch (e) {}
+          });
         } else {
           try { sessionStorage.removeItem("traces-upload-img"); } catch (e) {}
+          window.BlobStore.del("upload-source-img").catch(function () {});
         }
         drop.hidden = true;
         selected.hidden = false;

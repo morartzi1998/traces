@@ -103,9 +103,18 @@ async function callTripo(apiKey, file) {
       // Tripo defaults to its coarsest settings if these are left out —
       // "detailed" texture and letting it size the model against the photo
       // both help on fine/textured surfaces (fur, fabric) that the
-      // bare-bones default tends to smear into a blob
+      // bare-bones default tends to smear into a blob. geometry_quality is
+      // the separate mesh-shape counterpart — Tripo's own docs recommend
+      // "detailed" specifically for organic/furry shapes (vs. "standard",
+      // tuned for simple hard-surface objects), which is exactly where a
+      // warped/melted face on a stuffed animal tends to come from
       texture_quality: "detailed",
+      geometry_quality: "detailed",
       auto_size: true,
+      // without this Tripo poses the model however it wants, often on its
+      // side/back with the face turned away from the viewer — align it to
+      // how the object was actually framed in the photo instead
+      orientation: "align_image",
     }),
   });
   const taskData = await taskRes.json().catch(() => ({}));
