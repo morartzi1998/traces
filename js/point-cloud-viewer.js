@@ -56,6 +56,16 @@ export function mountPointCloudViewer(container, geometry, opts) {
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
   camera.updateProjectionMatrix();
+  // default zoomSpeed (1) reads as barely responding on a scan-sized scene —
+  // scrolling should visibly close the distance in a couple of ticks, and
+  // minDistance needs to allow getting genuinely close (matching camera.near)
+  // instead of stopping well short of it, since "inspect fine detail up
+  // close" is the whole point of this viewer
+  controls.zoomSpeed = 4;
+  controls.minDistance = Math.max(sphere.radius * 0.01, 0.005);
+  controls.maxDistance = (sphere.radius || 1) * 15;
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
   controls.update();
 
   function resize() {

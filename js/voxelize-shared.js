@@ -26,11 +26,17 @@ var JITTER = 0.25; // fraction of cell edge to randomly offset each particle by
 // Raw AR/photogrammetry scans routinely carry stray "drift" points — frames
 // where tracking briefly lost accuracy project a handful of points way off
 // from any real surface, which show up as long streaks or scattered
-// confetti extending past the actual scanned room/object. A real surface is
-// locally dense (lots of neighbouring points close together); drift noise
-// is comparatively isolated. Bin points into a coarse grid and drop any
-// point whose cell has far fewer neighbours than a typical occupied cell —
-// this only touches which points get voxelized, it runs before voxelize().
+// confetti extending past the actual scanned room/object. Density alone
+// isn't enough to catch this: drift often clumps into its own small,
+// spatially separate island rather than a single stray point, and a
+// per-cell density check treats that island as "locally dense" and keeps
+// it. What actually distinguishes it from the real scan is that it isn't
+// *connected* to the main scanned mass. So: drop clearly-sparse cells first
+// (cheap, catches lone stray points), then label connected components over
+// what's left and keep only the single largest one — one connected sweep
+// removes a whole drift island at once instead of point-by-point, and as a
+// side effect the camera framing (computed from this filtered geometry's
+// bounding sphere) stops being dragged wide by far-off stray clusters.
 export function removeOutliers(geometry) {
   var pos = geometry.getAttribute("position");
   var col = geometry.getAttribute("color");
@@ -52,32 +58,77 @@ export function removeOutliers(geometry) {
   var span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1e-6);
   var edge = span / cellsPerAxis;
 
-  var counts = new Map();
-  var cellKeys = new Int32Array(count * 3);
+  // packed-integer keys instead of string concatenation — a real scan is
+  // easily millions of points, and hashing/allocating a fresh string per
+  // point for a Map key is by far the slowest part of this pass at that
+  // scale. Grid indices comfortably fit under 2048 per axis at this
+  // resolution, so they pack into one safe-integer key with no collisions.
+  var BASE = 2048;
+  var cellCount = new Map();
+  var cellKeys = new Float64Array(count);
   for (var i = 0; i < count; i++) {
     var ix = Math.floor((pos.getX(i) - minX) / edge);
     var iy = Math.floor((pos.getY(i) - minY) / edge);
     var iz = Math.floor((pos.getZ(i) - minZ) / edge);
-    cellKeys[i * 3] = ix; cellKeys[i * 3 + 1] = iy; cellKeys[i * 3 + 2] = iz;
-    var key = ix + "_" + iy + "_" + iz;
-    counts.set(key, (counts.get(key) || 0) + 1);
+    var key = (ix * BASE + iy) * BASE + iz;
+    cellKeys[i] = key;
+    cellCount.set(key, (cellCount.get(key) || 0) + 1);
   }
 
   // the median occupied-cell density describes a "normal" patch of scanned
   // surface; anything far below that reads as isolated noise, not surface
-  var densities = Array.from(counts.values()).sort(function (a, b) { return a - b; });
+  var densities = Array.from(cellCount.values()).sort(function (a, b) { return a - b; });
   var median = densities[Math.floor(densities.length / 2)] || 1;
-  var threshold = Math.max(2, median * 0.12);
+  var minCellDensity = Math.max(2, median * 0.12);
 
+  // 26-connectivity (not just the 6 face neighbours) so a patch of the real
+  // scan doesn't get needlessly split into "separate" components just
+  // because a diagonal is the only cell linking two parts of it
+  var offsets = [];
+  for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dz = -1; dz <= 1; dz++) {
+        if (dx || dy || dz) offsets.push((dx * BASE + dy) * BASE + dz);
+      }
+    }
+  }
+
+  var visited = new Set();
+  var bestComponent = null, bestSize = 0;
+  cellCount.forEach(function (_, startKey) {
+    if (visited.has(startKey)) return;
+    if (cellCount.get(startKey) < minCellDensity) { visited.add(startKey); return; }
+    var stack = [startKey];
+    visited.add(startKey);
+    var component = [startKey];
+    var size = cellCount.get(startKey);
+    while (stack.length) {
+      var k = stack.pop();
+      for (var o = 0; o < offsets.length; o++) {
+        var nk = k + offsets[o];
+        if (visited.has(nk) || !cellCount.has(nk)) continue;
+        if (cellCount.get(nk) < minCellDensity) { visited.add(nk); continue; }
+        visited.add(nk);
+        component.push(nk);
+        size += cellCount.get(nk);
+        stack.push(nk);
+      }
+    }
+    if (size > bestSize) { bestSize = size; bestComponent = component; }
+  });
+  if (!bestComponent) return geometry;
+
+  var keepKeys = new Set(bestComponent);
   var keep = new Uint8Array(count);
   var kept = 0;
   for (var i = 0; i < count; i++) {
-    var key = cellKeys[i * 3] + "_" + cellKeys[i * 3 + 1] + "_" + cellKeys[i * 3 + 2];
-    if (counts.get(key) >= threshold) { keep[i] = 1; kept++; }
+    if (keepKeys.has(cellKeys[i])) { keep[i] = 1; kept++; }
   }
-  // never strip more than half — if the threshold would gut a naturally
-  // sparse capture, it isn't actually noise, so leave the scan untouched
-  if (kept < count * 0.5) return geometry;
+  // a real scan is never this fragmented — if the single largest connected
+  // mass is under 30% of all points, something about this scan doesn't fit
+  // the assumption (e.g. two genuinely separate objects), so leave it alone
+  // rather than risk discarding most of the actual capture
+  if (kept < count * 0.3) return geometry;
 
   var positions = new Float32Array(kept * 3);
   var colors = col ? new Float32Array(kept * 3) : null;
@@ -125,13 +176,20 @@ export function voxelize(geometry, targetCount) {
   // pitch from bbox-volume/targetCount way overshoots (too few, too big
   // cubes), and a handful of stray far-flung points make it worse. Binary
   // search the pitch directly against the actual resulting cube count instead.
+  // Packed-integer keys instead of string concatenation: this runs a full
+  // pass per binary-search iteration (14x), and a real scan is easily
+  // millions of points — hashing a fresh string per point per iteration is
+  // by far the slowest part of converting a large scan. Index range at the
+  // finest tested edge is bounded by ~5000 per axis (loEdge = hiEdge/5000),
+  // so BASE=8192 packs all three axes into one safe-integer key.
+  var BASE = 8192;
   function occupiedCount(edge) {
     var seen = new Set();
     for (var i = 0; i < count; i++) {
       var ix = Math.floor((pos.getX(i) - minX) / edge);
       var iy = Math.floor((pos.getY(i) - minY) / edge);
       var iz = Math.floor((pos.getZ(i) - minZ) / edge);
-      seen.add(ix + "_" + iy + "_" + iz);
+      seen.add((ix * BASE + iy) * BASE + iz);
     }
     return seen.size;
   }
@@ -155,7 +213,7 @@ export function voxelize(geometry, targetCount) {
     var ix = Math.floor((x - minX) / edge);
     var iy = Math.floor((y - minY) / edge);
     var iz = Math.floor((z - minZ) / edge);
-    var key = ix + "_" + iy + "_" + iz;
+    var key = (ix * BASE + iy) * BASE + iz;
     var cell = cells.get(key);
     var r = 0.8, g = 0.8, b = 0.8;
     if (col) { r = col.getX(i); g = col.getY(i); b = col.getZ(i); }
