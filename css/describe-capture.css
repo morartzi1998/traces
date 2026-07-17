@@ -235,9 +235,14 @@
 
 /* Push visibility + actions to the bottom */
 
+/* absorbs the sidebar's own leftover height (it's forced to fill the
+   viewport, but content is often shorter) so it collects here, before
+   the actions row, rather than trailing as blank space below the
+   buttons — matches the Figma reference, where the buttons sit close to
+   the panel's actual bottom edge regardless of how tall the panel is */
 .sidebar .spacer {
-  flex: none;
-  height: 2.5vh;
+  flex: 1 1 auto;
+  min-height: 2.5vh;
 }
 
 /* ---------- Action buttons ---------- */
