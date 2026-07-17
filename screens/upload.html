@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717ab">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717ab">
-<link rel="stylesheet" href="../css/upload.css?v=20260717ab">
-<script src="../js/config.js?v=20260717ab"></script>
-<script src="../js/cursor.js?v=20260717ab" defer></script>
-<script src="../js/grain.js?v=20260717ab" defer></script>
-<script src="../js/blobstore.js?v=20260717ab"></script>
-<script src="../js/flow.js?v=20260717ab" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260717ab"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ab"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ac">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717ac">
+<link rel="stylesheet" href="../css/upload.css?v=20260717ac">
+<script src="../js/config.js?v=20260717ac"></script>
+<script src="../js/cursor.js?v=20260717ac" defer></script>
+<script src="../js/grain.js?v=20260717ac" defer></script>
+<script src="../js/blobstore.js?v=20260717ac"></script>
+<script src="../js/flow.js?v=20260717ac" defer></script>
+<script src="../js/normalize-image.js?v=20260717ac"></script>
+<script src="../js/vendor/qrcode.js?v=20260717ac"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ac"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -411,9 +412,11 @@
       window.BlobStore.del("capture-pending-raw").catch(function () {});
       if (api && file && file.type && file.type.indexOf("image/") === 0) {
         if (btn) { btn.disabled = true; btn.textContent = "Uploading..."; }
-        var fd = new FormData();
-        fd.append("image", file, file.name || "capture.jpg");
-        fetch(api + "/generate", { method: "POST", body: fd })
+        window.normalizeImageToJpeg(file).then(function (jpegBlob) {
+          var fd = new FormData();
+          fd.append("image", jpegBlob, "capture.jpg");
+          return fetch(api + "/generate", { method: "POST", body: fd });
+        })
           .then(function (r) { return r.json(); })
           .then(function (d) {
             // set traces-mode even on failure — otherwise processing.html
