@@ -16,6 +16,7 @@
   if (!canvas || !list || !count || !blueSidebar || !defaultSidebar) return;
 
   var empty = list.querySelector(".annotations-empty");
+  var hint = document.querySelector(".annotations-hint");
   // a fresh capture starts with NO annotations — the user adds their own
   var annotations = [];
   var pendingSpot = null;
@@ -25,6 +26,9 @@
   function render() {
     count.textContent = annotations.length;
     empty.style.display = annotations.length ? "none" : "";
+    // the hint only makes sense while there's nothing yet to look at —
+    // once real annotations exist, they speak for themselves
+    if (hint) hint.style.display = annotations.length ? "none" : "";
     list.querySelectorAll(".annotation-row").forEach(function (n) { n.remove(); });
     canvas.querySelectorAll(".annotation-marker:not(.annotation-marker--pending)").forEach(function (n) { n.remove(); });
 

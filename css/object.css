@@ -716,17 +716,18 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: clamp(320px, 26vw, 440px);
+  width: clamp(360px, 30vw, 480px);
   overflow-y: auto;
   z-index: 6;
   background: #f0eeea url("../assets/images/paper-texture.png") center / cover;
   color: var(--color-ink-blue);
   font-family: var(--font-caption);
-  padding: 28px 30px;
+  padding: 32px 34px;
   box-shadow: -14px 0 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  /* content reuses .obj-white-label/.obj-white-rule, which already carry
+     their own margins — no extra gap here, same reasoning as .obj-white */
   pointer-events: auto;
 }
 
@@ -801,23 +802,27 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: clamp(320px, 26vw, 440px);
+  width: clamp(400px, 34vw, 560px);
   overflow-y: auto;
   z-index: 5;
   background: #f0eeea url("../assets/images/paper-texture.png") center / cover;
   color: var(--color-ink-blue);
   font-family: var(--font-caption);
-  padding: 28px 30px;
+  padding: 36px 40px;
   box-shadow: -14px 0 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  /* spacing comes entirely from .obj-white-rule's own margin (a consistent
+     lead-in before each section) plus each label's margin-bottom (a tight
+     label-to-content pairing) rather than a blanket flex gap on top of
+     that — mixing the two compounded unevenly section to section */
 }
 
 .obj-white-head {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 18px;
+  margin-bottom: 4px;
 }
 
 .obj-white-head-text {
@@ -842,14 +847,18 @@
 
 .obj-white-title {
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  line-height: 1.3;
   text-transform: uppercase;
 }
 
 .obj-white-sub {
-  font-size: 0.82rem;
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-top: 7px;
   text-decoration: underline;
   text-underline-offset: 2px;
   opacity: 0.85;
@@ -858,26 +867,26 @@
 .obj-white-rule {
   border: none;
   border-top: 1px solid var(--color-ink-blue);
-  margin: 8px 0;
+  margin: 24px 0 16px;
 }
 
 .obj-white-label {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 10px;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
 }
 
 .obj-white-choices {
   display: flex;
-  gap: 26px;
-  font-size: 0.85rem;
+  gap: 30px;
+  font-size: 0.95rem;
 }
 
 .obj-white-choices label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .obj-white-choices input {
@@ -885,8 +894,8 @@
   -webkit-appearance: none;
   box-sizing: border-box;
   flex-shrink: 0;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   border: 1px solid var(--color-ink-blue);
   margin: 0;
 }
@@ -896,8 +905,21 @@
 }
 
 .obj-white-feeling {
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* shown only while there's nothing yet to look at, same logic as the
+   describe-capture sidebar's annotations hint — once real annotations
+   exist they speak for themselves */
+.obj-white-hint {
+  margin: 0 0 10px;
+  padding-left: 28px;
+  list-style: disc;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-transform: lowercase;
+  opacity: 0.85;
 }
 
 .obj-white-list {
@@ -910,9 +932,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  padding: 13px 0;
   border-bottom: 1px solid var(--color-ink-blue);
-  font-size: 0.88rem;
+  font-size: 0.95rem;
 }
 
 /* a line above the first row too, so the list is evenly bracketed */
@@ -962,15 +984,15 @@
 }
 
 .obj-white-edit {
-  margin-top: 14px;
+  margin-top: 16px;
   background: var(--color-ink-blue);
   border: none;
   color: #ffffff;
   font-family: var(--font-drawn);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 11px;
+  padding: 13px;
   cursor: pointer;
 }
 

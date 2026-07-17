@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717av";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717aw";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
