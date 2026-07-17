@@ -4,23 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717an">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717an">
-<link rel="stylesheet" href="../css/object.css?v=20260717an">
-<script src="../js/cursor.js?v=20260717an" defer></script>
-<script src="../js/grain.js?v=20260717an" defer></script>
-<script src="../js/tilt3d.js?v=20260717an" defer></script>
-<script src="../js/archive.js?v=20260717an"></script>
-<script src="../js/blobstore.js?v=20260717an"></script>
-<script src="../js/flow.js?v=20260717an" defer></script>
-<script src="../js/layout-editor.js?v=20260717an" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717an"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ao">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717ao">
+<link rel="stylesheet" href="../css/object.css?v=20260717ao">
+<script src="../js/cursor.js?v=20260717ao" defer></script>
+<script src="../js/grain.js?v=20260717ao" defer></script>
+<script src="../js/tilt3d.js?v=20260717ao" defer></script>
+<script src="../js/archive.js?v=20260717ao"></script>
+<script src="../js/blobstore.js?v=20260717ao"></script>
+<script src="../js/flow.js?v=20260717ao" defer></script>
+<script src="../js/layout-editor.js?v=20260717ao" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ao"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
+</script>
+<script type="importmap">
+  { "imports": { "three": "../js/vendor/three/three.module.js" } }
+</script>
+<script type="module">
+  import { deserializeGeometry } from "../js/voxelize-shared.js";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js";
+  window.__deserializeGeometry = deserializeGeometry;
+  window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
 </head>
 <body>
@@ -76,6 +85,7 @@
       <img class="obj-photo" id="objPhoto" src="" alt="">
       <model-viewer class="obj-model" id="objModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
+      <div class="obj-points" id="objPoints" hidden></div>
     </div>
 
     <div class="obj-tags" id="objTags">
@@ -279,6 +289,7 @@
               title: c.title || "untitled capture",
               img: c.img || "../assets/images/photo-room.png",
               model: c.model || null,
+              points: c.points || null,
               connected: c.connected || "",
               connectedKey: c.connectedKey || null,
               feeling: c.feeling || "",
@@ -289,10 +300,10 @@
               versions: (Array.isArray(c.versions) && c.versions.length)
                 ? c.versions.map(function (v) {
                     return { year: new Date(v.created || Date.now()).getFullYear(),
-                      created: v.created, model: v.model, img: v.img };
+                      created: v.created, model: v.model, img: v.img, points: v.points };
                   })
                 : [{ year: new Date(c.created || Date.now()).getFullYear(),
-                     created: c.created, model: c.model, img: c.img }]
+                     created: c.created, model: c.model, img: c.img, points: c.points }]
             };
             order.push(c.id);
           });
@@ -306,7 +317,7 @@
       catalog.chandelier.versions = [{ year: 2021 }, { year: 2023 }, { year: 2026 }];
       Object.keys(catalog).forEach(function (k) {
         if (!catalog[k].versions) {
-          catalog[k].versions = [{ year: 2026, model: catalog[k].model, img: catalog[k].img }];
+          catalog[k].versions = [{ year: 2026, model: catalog[k].model, img: catalog[k].img, points: catalog[k].points }];
         }
       });
 
@@ -852,6 +863,7 @@
 
       var photo = document.getElementById("objPhoto");
       var modelViewer = document.getElementById("objModel");
+      var objPoints = document.getElementById("objPoints");
 
       // the marker's screen position moves every frame while the model
       // orbits; keep the open remark card glued to it instead of the stale
@@ -1043,12 +1055,41 @@
         }
       });
 
+      var pcViewer = null;
+      function disposePcViewer() {
+        if (pcViewer) { pcViewer.dispose(); pcViewer = null; }
+        objPoints.hidden = true;
+      }
+
       // load one scan (a 3D model or a flat photo) into the stage. Used both
       // for the current capture and for scrubbing between its timeline
       // versions — `k` guards against a late async load landing after the
       // user has already navigated to a different capture.
-      function swapScan(k, model, img) {
-        if (model) {
+      function swapScan(k, model, img, points) {
+        disposePcViewer();
+        if (points) {
+          // a raw point cloud gets real per-point rendering instead of a
+          // voxelized-mesh GLB — glTF/model-viewer has no notion of point
+          // size, so that path never stays crisp at close zoom. Dataset mode
+          // stays "model" (not a new "points" value) so tilt3D's existing
+          // "skip when the viewer handles its own drag/orbit" guard already
+          // covers this too, same as it does for model-viewer
+          stage.dataset.mode = "model";
+          photo.hidden = true;
+          modelViewer.hidden = true;
+          objPoints.hidden = false;
+          var pointsKey = points.indexOf("idb:") === 0 ? points.slice(4) : null;
+          if (pointsKey && window.BlobStore && window.__deserializeGeometry && window.__mountPointCloudViewer) {
+            window.BlobStore.get(pointsKey).then(function (blob) {
+              if (!blob || key !== k) return;
+              return blob.arrayBuffer();
+            }).then(function (buf) {
+              if (!buf || key !== k) return;
+              var geometry = window.__deserializeGeometry(buf);
+              pcViewer = window.__mountPointCloudViewer(objPoints, geometry, { pointSize: 0.013 });
+            }).catch(function () {});
+          }
+        } else if (model) {
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
@@ -1082,7 +1123,7 @@
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         clearHotspots();
         document.getElementById("objTitle").textContent = catalog[k].title;
-        swapScan(k, catalog[k].model, catalog[k].img);
+        swapScan(k, catalog[k].model, catalog[k].img, catalog[k].points);
         // a capture shared to the community gets a blue-purple backdrop
         // here too, matching its card on the community gallery — either
         // because it's genuinely community-visible, or because this whole
@@ -1308,7 +1349,7 @@
           isLatest ? "[latest — " + v.year + "]" : "[version — " + v.year + "]";
         // a version with its own scan swaps the stage; the curated
         // annotation-only history (chandelier) keeps the current scan
-        if (v.model || v.img) swapScan(k, v.model, v.img);
+        if (v.model || v.img || v.points) swapScan(k, v.model, v.img, v.points);
         closeBlue();
         closeRemarkCard();
         renderAnnotations();

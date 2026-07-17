@@ -4,20 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717an">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260717an">
-<script src="../js/cursor.js?v=20260717an" defer></script>
-<script src="../js/grain.js?v=20260717an" defer></script>
-<script src="../js/tilt3d.js?v=20260717an" defer></script>
-<script src="../js/annotations.js?v=20260717an" defer></script>
-<script src="../js/archive.js?v=20260717an"></script>
-<script src="../js/blobstore.js?v=20260717an"></script>
-<script src="../js/flow.js?v=20260717an" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717an"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ao">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260717ao">
+<script src="../js/cursor.js?v=20260717ao" defer></script>
+<script src="../js/grain.js?v=20260717ao" defer></script>
+<script src="../js/tilt3d.js?v=20260717ao" defer></script>
+<script src="../js/annotations.js?v=20260717ao" defer></script>
+<script src="../js/archive.js?v=20260717ao"></script>
+<script src="../js/blobstore.js?v=20260717ao"></script>
+<script src="../js/flow.js?v=20260717ao" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ao"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
+</script>
+<script type="importmap">
+  { "imports": { "three": "../js/vendor/three/three.module.js" } }
+</script>
+<script type="module">
+  import { deserializeGeometry } from "../js/voxelize-shared.js";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js";
+  window.__deserializeGeometry = deserializeGeometry;
+  window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
 </head>
 <body>
@@ -29,6 +38,7 @@
            alt="Captured object: an old living room chandelier">
       <model-viewer class="capture-model" id="captureModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
+      <div class="capture-points" id="capturePoints" hidden></div>
     </div>
 
     <aside class="sidebar" id="describeSidebar" data-editable="describeSidebar" data-editable-group="cards">
@@ -107,10 +117,32 @@
 
   </div>
 
-  <script src="../js/layout-editor.js?v=20260717an" defer></script>
+  <script src="../js/layout-editor.js?v=20260717ao" defer></script>
   <script>
     (function () {
       function boot() {
+        var isCloud = false;
+        try { isCloud = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
+
+        if (isCloud) {
+          // a raw point cloud gets real per-point rendering here too — same
+          // reason as processing.html: glTF/model-viewer has no notion of
+          // point size, so a voxelized-mesh preview never stays crisp up close
+          document.querySelector(".capture-object").hidden = true;
+          var pointsEl = document.getElementById("capturePoints");
+          pointsEl.hidden = false;
+          window.BlobStore.get("capture-pending-raw").then(function (blob) {
+            if (!blob) return;
+            return blob.arrayBuffer();
+          }).then(function (buf) {
+            if (!buf || !window.__deserializeGeometry || !window.__mountPointCloudViewer) return;
+            var geometry = window.__deserializeGeometry(buf);
+            // saveCapture() (a separate closure) reads this back to snapshot
+            // a thumbnail — model-viewer has mv.toBlob() for the same purpose,
+            // this is the point-cloud-viewer equivalent
+            window.__pcViewer = window.__mountPointCloudViewer(pointsEl, geometry, { pointSize: 0.013 });
+          }).catch(function () {});
+        } else {
         // a real 3D capture (Tripo reconstruction, or a ready-made scan)
         // takes priority over the flat image — show it as an actual
         // rotatable model instead of the placeholder photo
@@ -140,6 +172,7 @@
             }
           } catch (e) {}
           initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
+        }
         }
         try {
           var nm = sessionStorage.getItem("traces-upload-name");
@@ -182,6 +215,31 @@
           reader.readAsDataURL(blob);
         });
       }).catch(function () { return null; });
+    }
+
+    // the point-cloud-viewer equivalent of captureModelThumbnail() above
+    function capturePointCloudThumbnail() {
+      if (!window.__pcViewer) return Promise.resolve(null);
+      try { return Promise.resolve(window.__pcViewer.screenshot()); }
+      catch (e) { return Promise.resolve(null); }
+    }
+
+    // the raw point geometry only lives in the transient "capture-pending-raw"
+    // BlobStore key (set by upload.html) — move it to a permanent per-capture
+    // key, same pattern moveBlobs() already uses for the model/thumbnail, so
+    // object.html can re-render it later with real per-point detail instead
+    // of a voxelized mesh
+    function movePointsBlob(base) {
+      var isCloud = false;
+      try { isCloud = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
+      if (!isCloud || !window.BlobStore) return Promise.resolve("");
+      var permKey = "points:" + base;
+      return window.BlobStore.get("capture-pending-raw").then(function (blob) {
+        if (!blob) return "";
+        return window.BlobStore.set(permKey, blob).then(function () {
+          return window.BlobStore.del("capture-pending-raw");
+        }).then(function () { return "idb:" + permKey; });
+      }).catch(function () { return ""; });
     }
 
     function saveCapture() {
@@ -266,17 +324,19 @@
           var existing = Archive.get(updateTarget);
           var versions = (Array.isArray(existing.versions) && existing.versions.length)
             ? existing.versions.slice()
-            : [{ created: existing.created, model: existing.model, img: existing.img }];
+            : [{ created: existing.created, model: existing.model, img: existing.img, points: existing.points }];
           var vCreated = Date.now();
           // unique per-version keys so the new scan never clobbers older ones
-          moveBlobs(updateTarget + "-" + vCreated, finalImg, isData).then(function (refs) {
-            versions.push({ created: vCreated, model: refs.model, img: refs.img });
-            var patch = { versions: versions, model: refs.model, img: refs.img };
-            Archive.update(updateTarget, patch);
-            if (window.Community && Community.get(updateTarget)) Community.update(updateTarget, patch);
-            clearSession(updateTarget);
-            goTo("object.html");
-          }, function () { clearSession(updateTarget); goTo("object.html"); });
+          Promise.all([moveBlobs(updateTarget + "-" + vCreated, finalImg, isData), movePointsBlob(updateTarget + "-" + vCreated)])
+            .then(function (r) {
+              var refs = r[0], pointsRef = r[1];
+              versions.push({ created: vCreated, model: refs.model, img: refs.img, points: pointsRef });
+              var patch = { versions: versions, model: refs.model, img: refs.img, points: pointsRef };
+              Archive.update(updateTarget, patch);
+              if (window.Community && Community.get(updateTarget)) Community.update(updateTarget, patch);
+              clearSession(updateTarget);
+              goTo("object.html");
+            }, function () { clearSession(updateTarget); goTo("object.html"); });
           return;
         }
 
@@ -294,11 +354,12 @@
         var cap = window.Archive ? Archive.add(payload) : null;
         if (!cap) { clearSession(); goTo("gallery.html"); return; }
 
-        moveBlobs(cap.id, finalImg, isData).then(function (refs) {
+        Promise.all([moveBlobs(cap.id, finalImg, isData), movePointsBlob(cap.id)]).then(function (r) {
+          var refs = r[0], pointsRef = r[1];
           // record the first timeline version so future re-scans extend it
-          var v0 = { created: cap.created, model: refs.model, img: refs.img };
-          Archive.update(cap.id, { img: refs.img, model: refs.model, versions: [v0] });
-          cap.img = refs.img; cap.model = refs.model; cap.versions = [v0];
+          var v0 = { created: cap.created, model: refs.model, img: refs.img, points: pointsRef };
+          Archive.update(cap.id, { img: refs.img, model: refs.model, points: pointsRef, versions: [v0] });
+          cap.img = refs.img; cap.model = refs.model; cap.points = pointsRef; cap.versions = [v0];
           // the community copy reuses the very same IndexedDB blobs by reference
           if (alsoCommunity && window.Community) Community.add(Object.assign({}, cap));
           clearSession(cap.id);
@@ -306,7 +367,11 @@
         }, function () { clearSession(cap.id); goTo("gallery.html"); });
       }
 
-      if (!tripoThumb && model) {
+      var isCloudSave = false;
+      try { isCloudSave = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
+      if (isCloudSave) {
+        capturePointCloudThumbnail().then(function (thumb) { afterThumb(thumb || img); });
+      } else if (!tripoThumb && model) {
         captureModelThumbnail().then(function (thumb) { afterThumb(thumb || img); });
       } else {
         afterThumb(img);

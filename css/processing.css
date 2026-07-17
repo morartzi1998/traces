@@ -41,6 +41,17 @@
   filter: blur(17px) saturate(0.85);
 }
 
+/* a raw point cloud renders through a live three.js canvas instead of
+   model-viewer (which has no notion of point size) — same full-bleed
+   footprint as .proc-model */
+.proc-points {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .proc-density {
   position: absolute;
   left: 50%;

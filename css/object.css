@@ -299,6 +299,13 @@
   background-color: transparent;
 }
 
+/* a raw point cloud renders through a live three.js canvas instead of
+   model-viewer (which has no notion of point size) */
+.obj-points {
+  width: 100%;
+  height: 100%;
+}
+
 .obj-tags {
   position: absolute;
   inset: 0;
