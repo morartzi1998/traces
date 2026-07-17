@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717as";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717at";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -40,16 +40,16 @@ export function mountPointCloudViewer(container, geometry, opts) {
     ? geometry.boundingSphere
     : new THREE.Sphere(new THREE.Vector3(), 1);
 
-  // pointSize is expressed as a fraction of the scan's own scale (its
-  // bounding-sphere radius), not an absolute world-unit size — a fixed
-  // absolute size that reads as a reasonable dot on a chair-sized object
-  // is completely imperceptible against a multi-metre room scan, and the
-  // density slider it drives would visibly do nothing on anything larger
-  // than roughly object-sized
-  var sizeScale = sphere.radius || 1;
+  // pointSize is a plain absolute world-unit size, not scaled by the scan's
+  // bounding-sphere radius: the camera itself already backs off
+  // proportionally to that same radius (below), so a fixed size already
+  // reads consistently across scan scales without also scaling it —
+  // multiplying by radius on top of that double-counts the scale and
+  // oversizes badly on a large scan (looks like a solid blob up close,
+  // no per-point detail).
   var hasColor = !!geometry.getAttribute("color");
   var material = new THREE.PointsMaterial({
-    size: (opts.pointSize || 0.01) * sizeScale,
+    size: opts.pointSize || 0.01,
     sizeAttenuation: true,
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,
@@ -68,7 +68,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // minDistance needs to allow getting genuinely close (matching camera.near)
   // instead of stopping well short of it, since "inspect fine detail up
   // close" is the whole point of this viewer
-  controls.zoomSpeed = 4;
+  controls.zoomSpeed = 8;
   controls.minDistance = Math.max(sphere.radius * 0.01, 0.005);
   controls.maxDistance = (sphere.radius || 1) * 15;
   controls.enableDamping = true;
@@ -123,7 +123,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   })();
 
   return {
-    setPointSize: function (size) { material.size = size * sizeScale; },
+    setPointSize: function (size) { material.size = size; },
     resize: resize,
     screenshot: function () {
       renderer.render(scene, camera);
