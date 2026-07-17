@@ -97,7 +97,16 @@ async function callTripo(apiKey, file) {
   const taskRes = await fetch(TRIPO_BASE + IMAGE_TASK_PATH, {
     method: "POST",
     headers: { ...auth, "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "image_to_model", file: { type: ext, file_token: token } }),
+    body: JSON.stringify({
+      type: "image_to_model",
+      file: { type: ext, file_token: token },
+      // Tripo defaults to its coarsest settings if these are left out —
+      // "detailed" texture and letting it size the model against the photo
+      // both help on fine/textured surfaces (fur, fabric) that the
+      // bare-bones default tends to smear into a blob
+      texture_quality: "detailed",
+      auto_size: true,
+    }),
   });
   const taskData = await taskRes.json().catch(() => ({}));
   const taskId = taskData?.data?.task_id;
