@@ -180,7 +180,11 @@ export default {
           status: d.status,
           progress: d.progress || 0,
           model_url: out.model_url || out.pbr_model || out.model || null,
-          thumb: out.rendered_image_url || null,
+          // Tripo's actual field names, confirmed against a real completed
+          // task's raw response — "rendered_image_url" (the guess this used
+          // to use) doesn't exist, which is why every thumbnail has been
+          // silently blank
+          thumb: out.rendered_image || d.thumbnail || null,
           raw: data,
         });
       }

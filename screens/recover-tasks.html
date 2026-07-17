@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Recover scans</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717af">
-<script src="../js/config.js?v=20260717af"></script>
-<script src="../js/archive.js?v=20260717af"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ag">
+<script src="../js/config.js?v=20260717ag"></script>
+<script src="../js/archive.js?v=20260717ag"></script>
 <style>
   /* one-off recovery tool — not part of the normal visitor flow, so it gets
      its own minimal styling instead of the full chrome/nav CSS */
@@ -17,6 +17,7 @@
   .row img { width: 72px; height: 72px; object-fit: cover; background: #333; flex-shrink: 0; }
   .row .id { font-size: 0.75rem; opacity: 0.6; font-family: monospace; word-break: break-all; }
   .row .status { font-size: 0.85rem; min-width: 90px; }
+  .row .when { font-size: 0.8rem; opacity: 0.7; min-width: 90px; }
   .row input[type="text"] { flex: 1; min-width: 120px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: inherit; padding: 6px 8px; font: inherit; }
   button#addBtn { margin-top: 3vh; padding: 12px 24px; font-size: 1rem; cursor: pointer; }
   #result { margin-top: 2vh; }
@@ -62,12 +63,14 @@
         '<img alt="">' +
         '<input type="text" class="name" value="Recovered scan">' +
         '<span class="status">checking…</span>' +
-        '<span class="id">' + id + "</span>";
+        '<span class="when"></span>' +
+        '<span class="id">' + id.slice(0, 8) + "</span>";
       listEl.appendChild(row);
 
       var checkbox = row.querySelector(".pick");
       var img = row.querySelector("img");
       var statusEl = row.querySelector(".status");
+      var whenEl = row.querySelector(".when");
 
       if (!api) { statusEl.textContent = "no API configured"; checkbox.checked = false; checkbox.disabled = true; return; }
 
@@ -75,6 +78,8 @@
         .then(function (r) { return r.json(); })
         .then(function (d) {
           statusEl.textContent = d.status || "unknown";
+          var createTime = d.raw && d.raw.data && d.raw.data.create_time;
+          if (createTime) whenEl.textContent = new Date(createTime * 1000).toLocaleTimeString();
           if (d.status !== "success" || !d.model_url) {
             checkbox.checked = false;
             checkbox.disabled = true;
@@ -82,6 +87,7 @@
           }
           row.dataset.modelUrl = d.model_url;
           if (d.thumb) img.src = api + "/proxy?url=" + encodeURIComponent(d.thumb);
+          else img.alt = "no preview";
         })
         .catch(function () {
           statusEl.textContent = "error";
