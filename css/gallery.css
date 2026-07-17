@@ -96,30 +96,6 @@
   cursor: pointer;
 }
 
-.gal-tools {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-}
-
-.gal-search {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  color: var(--color-cream);
-}
-
-.gal-search input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--color-cream);
-  color: var(--color-cream);
-  font-family: inherit;
-  font-size: 1rem;
-  width: clamp(120px, 14vw, 220px);
-  padding: 2px 4px;
-}
-
 /* ---------- Connect screen heading ---------- */
 
 .gal-connect-title {

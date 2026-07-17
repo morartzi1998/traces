@@ -67,11 +67,6 @@
   padding-top: 20px;
 }
 
-.up-hint {
-  font-size: 0.95rem;
-  opacity: 0.75;
-}
-
 /* Drop zone */
 
 .up-drop {
@@ -93,22 +88,8 @@
   margin-bottom: 8px;
 }
 
-.up-drop-status {
-  display: inline-block;
-  font-size: 0.95rem;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .up-drop--over .up-drop-line {
   color: #ffffff;
-}
-
-.up-drop--ready .up-drop-status {
-  color: var(--color-caption-blue);
-  background: #ffffff;
-  padding: 1px 6px;
-  text-decoration: none;
 }
 
 /* Back button — a full-width action aligned to the options column */

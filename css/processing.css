@@ -126,6 +126,9 @@
   transform: translateX(-50%);
   display: flex;
   gap: 16px;
+  /* keep Cancel/Proceed above the full-screen point-cloud canvas explicitly
+     instead of relying on DOM order for the stacking */
+  z-index: 2;
 }
 
 .proc-cancel,

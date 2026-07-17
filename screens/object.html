@@ -4,17 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717aq">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717aq">
-<link rel="stylesheet" href="../css/object.css?v=20260717aq">
-<script src="../js/cursor.js?v=20260717aq" defer></script>
-<script src="../js/grain.js?v=20260717aq" defer></script>
-<script src="../js/tilt3d.js?v=20260717aq" defer></script>
-<script src="../js/archive.js?v=20260717aq"></script>
-<script src="../js/blobstore.js?v=20260717aq"></script>
-<script src="../js/flow.js?v=20260717aq" defer></script>
-<script src="../js/layout-editor.js?v=20260717aq" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717aq"></script>
+<link rel="icon" type="image/png" href="../assets/images/favicon.png">
+<link rel="stylesheet" href="../css/base.css?v=20260717ar">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717ar">
+<link rel="stylesheet" href="../css/object.css?v=20260717ar">
+<script src="../js/cursor.js?v=20260717ar" defer></script>
+<script src="../js/grain.js?v=20260717ar" defer></script>
+<script src="../js/tilt3d.js?v=20260717ar" defer></script>
+<script src="../js/archive.js?v=20260717ar"></script>
+<script src="../js/blobstore.js?v=20260717ar"></script>
+<script src="../js/flow.js?v=20260717ar" defer></script>
+<script src="../js/layout-editor.js?v=20260717ar" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ar"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -876,10 +877,10 @@
       // click-to-toggle-info handler after a real drag, same as tilt3d does
       // for the flat-photo fallback.
       var mvDown = null;
-      modelViewer.addEventListener("pointerdown", function (e) {
+      function dragSuppressDown(e) {
         mvDown = { x: e.clientX, y: e.clientY };
-      });
-      modelViewer.addEventListener("pointerup", function (e) {
+      }
+      function dragSuppressUp(e) {
         if (mvDown) {
           var moved = Math.abs(e.clientX - mvDown.x) + Math.abs(e.clientY - mvDown.y);
           if (moved > 6) {
@@ -888,7 +889,13 @@
           }
         }
         mvDown = null;
-      });
+      }
+      modelViewer.addEventListener("pointerdown", dragSuppressDown);
+      modelViewer.addEventListener("pointerup", dragSuppressUp);
+      // the point-cloud viewer orbits with its own controls too — same guard,
+      // or every orbit-drag on a points capture ends by toggling the panel
+      objPoints.addEventListener("pointerdown", dragSuppressDown);
+      objPoints.addEventListener("pointerup", dragSuppressUp);
 
       // once the mesh is ready, (re)draw annotations as 3D-anchored hotspots
       // — skipped while showing a different capture's space (SPACE_VIEW_ACTIVE),

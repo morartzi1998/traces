@@ -113,6 +113,23 @@
     editingIndex = -1;
   }
 
+  // tilt3d sets __suppressClick after drags on the flat-photo path, but a
+  // model-viewer or point-cloud capture handles its own drag-to-orbit — the
+  // click that browsers fire at the END of that drag would otherwise open
+  // the annotation panel on every orbit. Track drag distance here directly
+  // so every capture type gets the same "a drag is not a pick" guard.
+  var downAt = null;
+  canvas.addEventListener("pointerdown", function (e) {
+    downAt = { x: e.clientX, y: e.clientY };
+  }, true);
+  canvas.addEventListener("pointerup", function (e) {
+    if (downAt && Math.abs(e.clientX - downAt.x) + Math.abs(e.clientY - downAt.y) > 6) {
+      canvas.__suppressClick = true;
+      setTimeout(function () { canvas.__suppressClick = false; }, 0);
+    }
+    downAt = null;
+  }, true);
+
   canvas.addEventListener("click", function (e) {
     if (canvas.__suppressClick) return; // a drag on the capture, not a pick
     if (e.target.closest(".annotation-marker")) return;
