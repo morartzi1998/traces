@@ -12,7 +12,7 @@
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
 import * as THREE from "three";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260717bx";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260717cx";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
@@ -325,11 +325,11 @@ export function deserializeGeometry(arrayBuffer) {
     var colors = new Float32Array(arrayBuffer.slice(offset, offset + count * 3 * 4));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
-  // Luma AI's exported point clouds come out Z-up (the common
-  // photogrammetry/NeRF-pipeline convention), not the Y-up Three.js
-  // expects. Applied here rather than at capture/upload time so every
-  // stored point cloud — including ones already captured before this
-  // fix — renders upright instead of only new uploads going forward.
-  geometry.rotateX(-Math.PI / 2);
+  // A blanket "Luma is Z-up" rotation was tried here and guessed wrong
+  // twice in a row (still upside down after -90°, and a fresh upload came
+  // in wrong too) — there's no single fixed convention worth guessing a
+  // third time, and a wrong guess actively makes some scans worse instead
+  // of better. Left unrotated: object.html's "Set this angle as default
+  // view" is the reliable, verified way to fix a capture's orientation now.
   return geometry;
 }
