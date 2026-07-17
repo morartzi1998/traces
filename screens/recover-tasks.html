@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Recover scans</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717ah">
-<script src="../js/config.js?v=20260717ah"></script>
-<script src="../js/archive.js?v=20260717ah"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717ai">
+<script src="../js/config.js?v=20260717ai"></script>
+<script src="../js/archive.js?v=20260717ai"></script>
 <style>
   /* one-off recovery tool — not part of the normal visitor flow, so it gets
      its own minimal styling instead of the full chrome/nav CSS */
@@ -32,6 +32,14 @@
     give it a name, then click "Add selected to Archive".
   </p>
 
+  <p class="hint">
+    Ran this before the preview-image fix? Those entries got saved with no
+    thumbnail (showing the gallery's generic placeholder photo instead).
+    Clear them out first, then add the list below again.
+  </p>
+  <button id="clearBtn" type="button">Remove previously-recovered entries (no preview)</button>
+  <p id="clearResult"></p>
+
   <div id="list"></div>
   <button id="addBtn" type="button">Add selected to Archive</button>
   <p id="result"></p>
@@ -54,6 +62,20 @@
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var listEl = document.getElementById("list");
+
+    // matches entries by task id embedded in the model URL, not by title —
+    // safe even if the entry was renamed after adding it
+    document.getElementById("clearBtn").addEventListener("click", function () {
+      var removed = 0;
+      window.Archive.all().forEach(function (cap) {
+        var hasKnownTask = candidates.some(function (id) {
+          return typeof cap.model === "string" && cap.model.indexOf(id) !== -1;
+        });
+        if (hasKnownTask) { window.Archive.remove(cap.id); removed++; }
+      });
+      document.getElementById("clearResult").textContent =
+        removed ? ("Removed " + removed + " entr" + (removed === 1 ? "y" : "ies") + " — now add the list below again.") : "Nothing to remove.";
+    });
 
     candidates.forEach(function (id) {
       var row = document.createElement("div");
