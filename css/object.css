@@ -969,14 +969,18 @@
 
 .obj-white-list li.obj-white-none {
   opacity: 0.6;
+  border-top: none;
   border-bottom: none;
 }
 
-/* pushes the action button(s) to the very bottom of the panel, whatever the
-   content length above — used in every side panel (details/link/blue) */
+/* a small fixed gap before the action button(s), same as the
+   describe-capture sidebar's own .spacer — that button should follow its
+   content, not get force-pinned to the panel's bottom edge regardless of
+   how little content is above it (which read as visually disconnected on
+   a short capture with no feeling text or annotations yet) */
 .obj-panel-spacer {
-  flex: 1 1 auto;
-  min-height: 12px;
+  flex: none;
+  height: 20px;
 }
 
 .obj-white-list li.obj-white-none::before {
