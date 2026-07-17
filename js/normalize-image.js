@@ -43,3 +43,19 @@ function normalizeImageToJpeg(file) {
   });
 }
 window.normalizeImageToJpeg = normalizeImageToJpeg;
+
+// heic2any (and some browser APIs) reject with a plain {code, message}
+// object instead of a real Error — String(e) on those prints the useless
+// "[object Object]" instead of the actual reason. Pull the real text out
+// wherever it lives.
+function describeError(e) {
+  if (e == null) return "unknown error";
+  if (typeof e === "string") return e;
+  if (e.message) return String(e.message);
+  try {
+    var s = JSON.stringify(e);
+    if (s && s !== "{}") return s;
+  } catch (err) {}
+  return String(e);
+}
+window.describeError = describeError;
