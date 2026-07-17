@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717w">
-<link rel="stylesheet" href="../css/object.css?v=20260717w">
-<script src="../js/cursor.js?v=20260717w" defer></script>
-<script src="../js/grain.js?v=20260717w" defer></script>
-<script src="../js/tilt3d.js?v=20260717w" defer></script>
-<script src="../js/archive.js?v=20260717w"></script>
-<script src="../js/blobstore.js?v=20260717w"></script>
-<script src="../js/flow.js?v=20260717w" defer></script>
-<script src="../js/layout-editor.js?v=20260717w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717x">
+<link rel="stylesheet" href="../css/object.css?v=20260717x">
+<script src="../js/cursor.js?v=20260717x" defer></script>
+<script src="../js/grain.js?v=20260717x" defer></script>
+<script src="../js/tilt3d.js?v=20260717x" defer></script>
+<script src="../js/archive.js?v=20260717x"></script>
+<script src="../js/blobstore.js?v=20260717x"></script>
+<script src="../js/flow.js?v=20260717x" defer></script>
+<script src="../js/layout-editor.js?v=20260717x" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717x"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -1081,12 +1081,12 @@
         swapScan(k, catalog[k].model, catalog[k].img);
         // a capture shared to the community gets a blue-purple backdrop
         // here too, matching its card on the community gallery — either
-        // because it's genuinely community-visible, or because this
-        // specific visit just arrived from the community screen
+        // because it's genuinely community-visible, or because this whole
+        // browsing session started from the community screen (stays on
+        // through prev/next, same lifetime as browsingCommunity itself)
         document.querySelector(".obj-screen").classList.toggle(
-          "obj-screen--community", catalog[k].visibility === "community" || cameFromCommunity
+          "obj-screen--community", catalog[k].visibility === "community" || browsingCommunity
         );
-        cameFromCommunity = false;
 
         // a capture linked to another (via the connect screen) glows blue
         var conn = null;
