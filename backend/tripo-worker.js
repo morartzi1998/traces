@@ -100,6 +100,12 @@ async function callTripo(apiKey, file) {
     body: JSON.stringify({
       type: "image_to_model",
       file: { type: ext, file_token: token },
+      // left unset, Tripo silently defaults to its OLDEST model
+      // (v2.5-20250123) — confirmed by inspecting a completed task's own
+      // `input.model_version` field. geometry_quality below only takes
+      // effect on v3.0-20250812 or newer, so without this line, requesting
+      // "detailed" geometry was being silently ignored the entire time
+      model_version: "v3.0-20250812",
       // Tripo defaults to its coarsest settings if these are left out —
       // "detailed" texture and letting it size the model against the photo
       // both help on fine/textured surfaces (fur, fabric) that the
