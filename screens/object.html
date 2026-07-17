@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bm">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bm">
-<link rel="stylesheet" href="../css/object.css?v=20260717bm">
-<script src="../js/cursor.js?v=20260717bm" defer></script>
-<script src="../js/grain.js?v=20260717bm" defer></script>
-<script src="../js/tilt3d.js?v=20260717bm" defer></script>
-<script src="../js/archive.js?v=20260717bm"></script>
-<script src="../js/blobstore.js?v=20260717bm"></script>
-<script src="../js/flow.js?v=20260717bm" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bm"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bn">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bn">
+<link rel="stylesheet" href="../css/object.css?v=20260717bn">
+<script src="../js/cursor.js?v=20260717bn" defer></script>
+<script src="../js/grain.js?v=20260717bn" defer></script>
+<script src="../js/tilt3d.js?v=20260717bn" defer></script>
+<script src="../js/archive.js?v=20260717bn"></script>
+<script src="../js/blobstore.js?v=20260717bn"></script>
+<script src="../js/flow.js?v=20260717bn" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bn"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bm" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bn" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bm";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bm";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bn";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bn";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -935,7 +935,9 @@
         subEl.onclick = jumpKey
           ? function () { try { sessionStorage.setItem("traces-item", jumpKey); } catch (e) {} show(jumpKey); }
           : null;
-        document.getElementById("whiteFeeling").textContent = item.feeling || "";
+        var feelingEl = document.getElementById("whiteFeeling");
+        feelingEl.textContent = item.feeling || "no description yet";
+        feelingEl.classList.toggle("obj-white-feeling--empty", !item.feeling);
         var kindBoxes = document.querySelectorAll("#whiteKind input");
         kindBoxes[0].checked = item.kind !== "space";
         kindBoxes[1].checked = item.kind === "space";

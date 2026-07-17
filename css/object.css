@@ -916,6 +916,10 @@
   line-height: 1.55;
 }
 
+.obj-white-feeling--empty {
+  opacity: 0.6;
+}
+
 /* shown only while there's nothing yet to look at, same logic as the
    describe-capture sidebar's annotations hint — once real annotations
    exist they speak for themselves */
@@ -1031,6 +1035,11 @@
 }
 
 .obj-white-text {
+  /* absorbs the panel's own leftover height (it's forced to fill the
+     viewport, but content is often shorter) so the growth collects here
+     instead of trailing as blank space below the action buttons —
+     same fix as describe-capture's own text-area */
+  flex: 1;
   min-height: 120px;
   resize: none;
   line-height: 1.45;
