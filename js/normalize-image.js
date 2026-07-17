@@ -1,13 +1,23 @@
 /*
   traces — normalize a picked photo to a plain JPEG before it reaches Tripo.
   iPhones save photos as HEIC by default; Tripo's API rejects that outright
-  ("This image file type is not supported", code 2004) even though the
-  browser itself can usually decode and display it just fine. Re-encoding
-  through a canvas sidesteps the source format entirely — Tripo always
-  receives a plain JPEG no matter what the original file was.
+  ("This image file type is not supported", code 2004). A canvas re-encode
+  would be the obvious fix, but Chrome can only *display* HEIC (via macOS's
+  own image codecs) — it refuses to hand HEIC pixels to canvas or
+  createImageBitmap, so that path fails silently for exactly the files that
+  need it most. heic2any (vendored, WASM-based, no network calls) decodes
+  HEIC itself instead of relying on the browser's codec support; everything
+  else still goes through the plain canvas path.
 */
 function normalizeImageToJpeg(file) {
   if (file && file.type === "image/jpeg") return Promise.resolve(file);
+
+  var isHeic = /heic|heif/i.test(file.type) || /\.hei[cf]$/i.test(file.name || "");
+  if (isHeic && window.heic2any) {
+    return window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 })
+      .then(function (out) { return Array.isArray(out) ? out[0] : out; });
+  }
+
   var decode = window.createImageBitmap
     ? createImageBitmap(file).catch(decodeViaImgTag)
     : decodeViaImgTag();
@@ -15,10 +25,8 @@ function normalizeImageToJpeg(file) {
   function decodeViaImgTag() {
     return new Promise(function (resolve, reject) {
       var img = new Image();
-      var url = URL.createObjectURL(file);
-      img.onload = function () { resolve(img); };
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("could not decode image")); };
-      img.src = url;
+      img.src = URL.createObjectURL(file);
+      img.decode().then(function () { resolve(img); }, reject);
     });
   }
 
