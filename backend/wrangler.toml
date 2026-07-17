@@ -8,6 +8,6 @@ compatibility_date = "2024-11-01"
 # Needed for the "scan with your phone" hand-off (see README). Create it with:
 #   npx wrangler kv namespace create SESSIONS
 # then paste the id it prints below.
-# [[kv_namespaces]]
-# binding = "SESSIONS"
-# id = "paste-the-id-here"
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "cc90d998d35c4111a21f2d4944dbb73b"

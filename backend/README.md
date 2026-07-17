@@ -7,6 +7,8 @@ while keeping your API key secret. The static site never sees the key.
 - A free [Cloudflare](https://dash.cloudflare.com/sign-up) account
 - Node.js installed
 - Your Tripo API key from https://platform.tripo3d.ai (API Keys page)
+- (Optional, recommended) A second Tripo account/key reserved for the real
+  exhibition — see "Two Tripo accounts" below
 
 ## Deploy (about 5 minutes)
 
@@ -74,6 +76,26 @@ wrangler deploy
 
 Without this, the QR code still shows, but the desktop side will show an
 error once the phone finishes (the relay has nowhere to store the hand-off).
+
+## Two Tripo accounts: testing vs. the real exhibition
+
+Everyday testing (yours, mine, anyone trying the site before the show)
+shouldn't eat into the credits you want available on the actual exhibition
+day. Set up a second Tripo account (different email) just for that, and the
+worker switches to it automatically — no code change, no redeploy, no
+touching `js/config.js` — the moment EITHER of these happens, whichever
+comes first:
+- the everyday account runs out of credit, or
+- 14 days pass since the everyday account's first use here
+
+```bash
+# from this backend/ folder, once you have the second account's key:
+npx wrangler secret put TRIPO_API_KEY_2
+```
+
+That's it — leave `TRIPO_API_KEY` as the everyday account and it'll hand off
+to `TRIPO_API_KEY_2` by itself when the time comes. Without a second key set,
+nothing changes (it just keeps using the one key, same as today).
 
 ## Notes
 - Tripo model URLs are time-limited signed links. A capture stored in the

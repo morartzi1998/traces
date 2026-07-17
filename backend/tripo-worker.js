@@ -19,7 +19,18 @@
     GET  /session/<id>                                  -> { task_id }  (null until set)
     Requires a KV namespace bound as SESSIONS (see backend/README.md).
 
-  Deploy: see backend/README.md. Set the secret TRIPO_API_KEY in the Worker.
+  -- two Tripo accounts, automatic handoff --
+  TRIPO_API_KEY is the everyday/testing account. An optional second secret,
+  TRIPO_API_KEY_2, is reserved for the real exhibition. Every /generate call
+  uses the first key until EITHER it runs out of credit (Tripo error code
+  2010) OR PRIMARY_KEY_WINDOW_MS elapses since its first use, whichever comes
+  first — then it switches to the second key automatically, permanently, no
+  code change or redeploy needed. Which key made a given task is remembered
+  (in the same SESSIONS store) so a later /status poll queries the right
+  account even if the switch happens while a task is still in flight.
+
+  Deploy: see backend/README.md. Set the secret TRIPO_API_KEY (and, once you
+  have a second Tripo account for the exhibition, TRIPO_API_KEY_2) on the Worker.
 
   The Tripo v2 openapi shape, confirmed live against the real API:
     POST https://api.tripo3d.ai/v2/openapi/upload           (multipart "file") -> { data: { image_token } }
@@ -32,6 +43,8 @@
 const TRIPO_BASE = "https://api.tripo3d.ai/v2/openapi";
 const UPLOAD_PATH = "/upload";        // multipart image upload
 const IMAGE_TASK_PATH = "/task";
+const INSUFFICIENT_CREDIT_CODE = 2010; // Tripo's "not enough credit" error code
+const PRIMARY_KEY_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 function cors(extra = {}) {
   return {
@@ -49,6 +62,46 @@ function json(obj, status = 200) {
   });
 }
 
+// which account is "active" right now: key 1 until it's exhausted or its
+// 14-day window is up, then key 2 — permanently (never switches back).
+async function activeKeySlot(env) {
+  if (!env.TRIPO_API_KEY_2 || !env.SESSIONS) return "1";
+  let activatedAt = await env.SESSIONS.get("key1-activated-at");
+  if (!activatedAt) {
+    activatedAt = String(Date.now());
+    await env.SESSIONS.put("key1-activated-at", activatedAt);
+  }
+  const expired = Date.now() - Number(activatedAt) > PRIMARY_KEY_WINDOW_MS;
+  const exhausted = await env.SESSIONS.get("key1-exhausted");
+  return (expired || exhausted) ? "2" : "1";
+}
+
+function keyForSlot(env, slot) {
+  return slot === "2" ? env.TRIPO_API_KEY_2 : env.TRIPO_API_KEY;
+}
+
+// upload the image, then create the image-to-model task, with one account
+async function callTripo(apiKey, file) {
+  const auth = { Authorization: `Bearer ${apiKey}` };
+  const up = new FormData();
+  up.append("file", file, file.name || "capture.jpg");
+  const upRes = await fetch(TRIPO_BASE + UPLOAD_PATH, { method: "POST", headers: auth, body: up });
+  const upData = await upRes.json().catch(() => ({}));
+  const token = upData?.data?.image_token || upData?.data?.file_token || upData?.data?.token;
+  if (!token) return { error: "upload failed", raw: upData, code: upData?.code };
+
+  const ext = (file.name || "").toLowerCase().endsWith(".png") ? "png" : "jpg";
+  const taskRes = await fetch(TRIPO_BASE + IMAGE_TASK_PATH, {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "image_to_model", file: { type: ext, file_token: token } }),
+  });
+  const taskData = await taskRes.json().catch(() => ({}));
+  const taskId = taskData?.data?.task_id;
+  if (!taskId) return { error: "task creation failed", raw: taskData, code: taskData?.code };
+  return { task_id: taskId };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -57,10 +110,6 @@ export default {
       return new Response(null, { headers: cors() });
     }
 
-    const key = env.TRIPO_API_KEY;
-    if (!key) return json({ error: "TRIPO_API_KEY is not set on the worker" }, 500);
-    const auth = { Authorization: `Bearer ${key}` };
-
     try {
       // ---- 1) image -> task -------------------------------------------------
       if (url.pathname === "/generate" && request.method === "POST") {
@@ -68,41 +117,35 @@ export default {
         const file = form.get("image");
         if (!file) return json({ error: "no image provided" }, 400);
 
-        // upload the image to Tripo, get a token
-        const up = new FormData();
-        up.append("file", file, file.name || "capture.jpg");
-        const upRes = await fetch(TRIPO_BASE + UPLOAD_PATH, {
-          method: "POST",
-          headers: auth,
-          body: up,
-        });
-        const upData = await upRes.json().catch(() => ({}));
-        const token =
-          upData?.data?.image_token || upData?.data?.file_token || upData?.data?.token;
-        if (!token) return json({ error: "upload failed", raw: upData }, 502);
+        let slot = await activeKeySlot(env);
+        let apiKey = keyForSlot(env, slot);
+        if (!apiKey) return json({ error: "TRIPO_API_KEY is not set on the worker" }, 500);
 
-        const ext = (file.name || "").toLowerCase().endsWith(".png") ? "png" : "jpg";
+        let result = await callTripo(apiKey, file);
+        // the everyday key just ran dry — remember that (so we don't retry
+        // it forever) and fail over to the exhibition key immediately
+        if (result.error && result.code === INSUFFICIENT_CREDIT_CODE && slot === "1" && env.TRIPO_API_KEY_2) {
+          if (env.SESSIONS) await env.SESSIONS.put("key1-exhausted", "1");
+          slot = "2";
+          result = await callTripo(env.TRIPO_API_KEY_2, file);
+        }
+        if (result.error) return json(result, 502);
 
-        // create the image-to-model task
-        const taskRes = await fetch(TRIPO_BASE + IMAGE_TASK_PATH, {
-          method: "POST",
-          headers: { ...auth, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "image_to_model",
-            file: { type: ext, file_token: token },
-          }),
-        });
-        const taskData = await taskRes.json().catch(() => ({}));
-        const taskId = taskData?.data?.task_id;
-        if (!taskId) return json({ error: "task creation failed", raw: taskData }, 502);
-        return json({ task_id: taskId });
+        // remember which account made this task, so /status polls the right one
+        if (env.SESSIONS) {
+          await env.SESSIONS.put("task-key:" + result.task_id, slot, { expirationTtl: 86400 });
+        }
+        return json({ task_id: result.task_id });
       }
 
       // ---- 2) poll task status ---------------------------------------------
       if (url.pathname === "/status" && request.method === "GET") {
         const taskId = url.searchParams.get("task_id");
         if (!taskId) return json({ error: "task_id required" }, 400);
-        const res = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: auth });
+        let slot = "1";
+        if (env.SESSIONS) slot = (await env.SESSIONS.get("task-key:" + taskId)) || "1";
+        const apiKey = keyForSlot(env, slot);
+        const res = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: { Authorization: `Bearer ${apiKey}` } });
         const data = await res.json().catch(() => ({}));
         const d = data?.data || {};
         const out = d.output || {};
