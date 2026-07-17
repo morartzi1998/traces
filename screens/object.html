@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717ai">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717ai">
-<link rel="stylesheet" href="../css/object.css?v=20260717ai">
-<script src="../js/cursor.js?v=20260717ai" defer></script>
-<script src="../js/grain.js?v=20260717ai" defer></script>
-<script src="../js/tilt3d.js?v=20260717ai" defer></script>
-<script src="../js/archive.js?v=20260717ai"></script>
-<script src="../js/blobstore.js?v=20260717ai"></script>
-<script src="../js/flow.js?v=20260717ai" defer></script>
-<script src="../js/layout-editor.js?v=20260717ai" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ai"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717aj">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717aj">
+<link rel="stylesheet" href="../css/object.css?v=20260717aj">
+<script src="../js/cursor.js?v=20260717aj" defer></script>
+<script src="../js/grain.js?v=20260717aj" defer></script>
+<script src="../js/tilt3d.js?v=20260717aj" defer></script>
+<script src="../js/archive.js?v=20260717aj"></script>
+<script src="../js/blobstore.js?v=20260717aj"></script>
+<script src="../js/flow.js?v=20260717aj" defer></script>
+<script src="../js/layout-editor.js?v=20260717aj" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717aj"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -933,7 +933,11 @@
         var camZ = radius * Math.sin(phi) * Math.cos(theta);
         var fLen = Math.sqrt(camX * camX + camY * camY + camZ * camZ) || 1;
         var fwd = { x: -camX / fLen, y: -camY / fLen, z: -camZ / fLen };
-        var rx = fwd.y * 1 - fwd.z * 0, ry = fwd.z * 0 - fwd.x * 1, rz = fwd.x * 0 - fwd.y * 0;
+        // right = worldUp(0,1,0) x forward, simplified — this was accidentally
+        // crossing with (0,0,1) instead, which only happens to look horizontal
+        // at one specific camera elevation and drifts off-axis everywhere else,
+        // exactly the "drag feels like it fights you" symptom reported
+        var rx = fwd.z, ry = 0, rz = -fwd.x;
         var rLen = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
         var right = { x: rx / rLen, y: ry / rLen, z: rz / rLen };
         var up = {
