@@ -398,7 +398,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: clamp(320px, 26vw, 440px);
+  width: clamp(400px, 34vw, 560px);
   z-index: 5;
   background: var(--color-ink-blue) url("../assets/images/paper-texture.png") center / cover;
   background-blend-mode: overlay;
@@ -723,7 +723,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: clamp(360px, 30vw, 480px);
+  width: clamp(400px, 34vw, 560px);
   overflow-y: auto;
   z-index: 6;
   background: #f0eeea url("../assets/images/paper-texture.png") center / cover;
