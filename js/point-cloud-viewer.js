@@ -35,20 +35,27 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
 
+  geometry.computeBoundingSphere();
+  var sphere = geometry.boundingSphere && geometry.boundingSphere.radius > 0
+    ? geometry.boundingSphere
+    : new THREE.Sphere(new THREE.Vector3(), 1);
+
+  // pointSize is expressed as a fraction of the scan's own scale (its
+  // bounding-sphere radius), not an absolute world-unit size — a fixed
+  // absolute size that reads as a reasonable dot on a chair-sized object
+  // is completely imperceptible against a multi-metre room scan, and the
+  // density slider it drives would visibly do nothing on anything larger
+  // than roughly object-sized
+  var sizeScale = sphere.radius || 1;
   var hasColor = !!geometry.getAttribute("color");
   var material = new THREE.PointsMaterial({
-    size: opts.pointSize || 0.01,
+    size: (opts.pointSize || 0.01) * sizeScale,
     sizeAttenuation: true,
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,
   });
   var points = new THREE.Points(geometry, material);
   scene.add(points);
-
-  geometry.computeBoundingSphere();
-  var sphere = geometry.boundingSphere && geometry.boundingSphere.radius > 0
-    ? geometry.boundingSphere
-    : new THREE.Sphere(new THREE.Vector3(), 1);
 
   var controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(sphere.center);
@@ -116,7 +123,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   })();
 
   return {
-    setPointSize: function (size) { material.size = size; },
+    setPointSize: function (size) { material.size = size * sizeScale; },
     resize: resize,
     screenshot: function () {
       renderer.render(scene, camera);

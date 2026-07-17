@@ -129,9 +129,17 @@
               proceed.hidden = false;
               // same "comes into focus" reveal every other capture path gets —
               // this got dropped when the fake progress animation (the thing
-              // that drove it for those paths) was skipped for point clouds
+              // that drove it for those paths) was skipped for point clouds.
+              // a single rAF isn't enough here: pointsEl was just switched
+              // from hidden to visible in this same tick, so there's no
+              // guarantee the browser has actually painted the blurred
+              // starting state yet for the transition to animate away from —
+              // it can (and did) just jump straight to the end state. Two
+              // nested rAFs guarantee a real painted frame in between.
               requestAnimationFrame(function () {
-                pointsEl.style.filter = "blur(0px) saturate(1)";
+                requestAnimationFrame(function () {
+                  pointsEl.style.filter = "blur(0px) saturate(1)";
+                });
               });
               return;
             }
