@@ -941,9 +941,10 @@
   font-size: 1.5rem;
 }
 
-/* a line above the first row too, so the list is evenly bracketed */
-.obj-white-list li:first-child {
-  border-top: 2px solid var(--color-ink-blue);
+/* the .obj-white-rule right after this list already draws the section's
+   closing line — a border here too would double it up */
+.obj-white-list li:last-child {
+  border-bottom: none;
 }
 
 .obj-white-list li::before {
@@ -973,8 +974,6 @@
 
 .obj-white-list li.obj-white-none {
   opacity: 0.6;
-  border-top: none;
-  border-bottom: none;
 }
 
 /* a small fixed gap before the action button(s), same as the
