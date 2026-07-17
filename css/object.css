@@ -476,6 +476,10 @@
   min-height: 100px;
 }
 
+.obj-blue-view-text--empty {
+  opacity: 0.6;
+}
+
 .obj-blue-btn--full {
   flex: none;
   width: 100%;

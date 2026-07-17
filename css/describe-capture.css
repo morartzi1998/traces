@@ -188,7 +188,12 @@
 }
 
 .text-area {
-  height: 128px;
+  /* grows to absorb the sidebar's own leftover height (forced to fill
+     the viewport, but content is often shorter) instead of that slack
+     showing up as a gap elsewhere — a taller writing area is more
+     useful than blank space */
+  flex: 1;
+  min-height: 128px;
   resize: none;
 }
 
@@ -241,8 +246,11 @@
    buttons — matches the Figma reference, where the buttons sit close to
    the panel's actual bottom edge regardless of how tall the panel is */
 .sidebar .spacer {
-  flex: 1 1 auto;
-  min-height: 2.5vh;
+  /* the feeling/story text-area now absorbs the sidebar's leftover
+     height itself (flex:1) — this just keeps a small fixed breathing
+     gap before the actions row, not a second place for slack to pool */
+  flex: none;
+  height: 2.5vh;
 }
 
 /* ---------- Action buttons ---------- */
