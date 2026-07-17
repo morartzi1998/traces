@@ -14,8 +14,14 @@
 import * as THREE from "three";
 import { GLTFExporter } from "./vendor/three/GLTFExporter.js";
 
-var PARTICLE_SCALE = 0.6;
-var JITTER = 0.35; // fraction of cell edge to randomly offset each particle by
+// particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
+// than the ~1-edge spacing between neighbouring cells, so most particles
+// never touch their neighbours and read as floating diamonds with visible
+// gaps instead of a continuous surface. >=1.0 makes same-cell-distance
+// neighbours just touch on average; a bit above that gives reliable overlap
+// even after jitter pushes two particles apart.
+var PARTICLE_SCALE = 1.3;
+var JITTER = 0.25; // fraction of cell edge to randomly offset each particle by
 
 export function voxelize(geometry, targetCount) {
   var pos = geometry.getAttribute("position");
@@ -107,7 +113,7 @@ export function voxelize(geometry, targetCount) {
     var jx = (Math.random() - 0.5) * 2 * JITTER * edge;
     var jy = (Math.random() - 0.5) * 2 * JITTER * edge;
     var jz = (Math.random() - 0.5) * 2 * JITTER * edge;
-    var radius = baseRadius * (0.6 + Math.random() * 0.6);
+    var radius = baseRadius * (0.85 + Math.random() * 0.4);
     var base = pIdx * 6;
     for (var v = 0; v < 6; v++) {
       positions[vi]     = cx + jx + octaVerts[v][0] * radius;
