@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
-<link rel="stylesheet" href="../css/base.css?v=20260717al">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717al">
-<link rel="stylesheet" href="../css/upload.css?v=20260717al">
-<script src="../js/config.js?v=20260717al"></script>
-<script src="../js/cursor.js?v=20260717al" defer></script>
-<script src="../js/grain.js?v=20260717al" defer></script>
-<script src="../js/blobstore.js?v=20260717al"></script>
-<script src="../js/flow.js?v=20260717al" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260717al"></script>
-<script src="../js/normalize-image.js?v=20260717al"></script>
-<script src="../js/vendor/qrcode.js?v=20260717al"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717al"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717am">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717am">
+<link rel="stylesheet" href="../css/upload.css?v=20260717am">
+<script src="../js/config.js?v=20260717am"></script>
+<script src="../js/cursor.js?v=20260717am" defer></script>
+<script src="../js/grain.js?v=20260717am" defer></script>
+<script src="../js/blobstore.js?v=20260717am"></script>
+<script src="../js/flow.js?v=20260717am" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260717am"></script>
+<script src="../js/normalize-image.js?v=20260717am"></script>
+<script src="../js/vendor/qrcode.js?v=20260717am"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717am"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -41,28 +41,17 @@
     return new Promise(function (resolve, reject) {
       try {
         var geometry = new PLYLoader().parse(arrayBuffer);
-        var hasColor = !!geometry.getAttribute("color");
 
-        // no face/index data — this is a raw point cloud (the common case
-        // for a direct scan export): voxelize it into small solid cubes
-        // instead of either rendering 1px dots or guessing triangles
-        // between unrelated neighbours (that guess produces "shard" artifacts)
-        if (!geometry.index) {
-          lastRawGeometry = geometry;
-          buildVoxelGlb(geometry, targetCount || VOXEL_TARGET).then(resolve, reject);
-        } else {
-          lastRawGeometry = null;
-          geometry.computeVertexNormals();
-          var material = new THREE.MeshStandardMaterial({
-            vertexColors: hasColor,
-            color: hasColor ? 0xffffff : 0xcfcfcf,
-            roughness: 0.85,
-            metalness: 0.05,
-          });
-          var scene = new THREE.Scene();
-          scene.add(new THREE.Mesh(geometry, material));
-          exportScene(scene).then(resolve, reject);
-        }
+        // some exports named "point_cloud.ply" still carry sparse/naive face
+        // data (their own triangulation over a raw scan) — trusting that
+        // data draws exactly the long-shard artifacts this comment used to
+        // warn about, since neighbouring points that aren't really adjacent
+        // in the room get connected by a triangle anyway. Always voxelize
+        // instead: it only looks at positions/colors, so a bad or absent
+        // index makes no difference — always the point-cloud look actually
+        // asked for here, never a guess at surface connectivity.
+        lastRawGeometry = geometry;
+        buildVoxelGlb(geometry, targetCount || VOXEL_TARGET).then(resolve, reject);
       } catch (e) { reject(e); }
     });
   };
