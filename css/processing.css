@@ -50,6 +50,10 @@
   top: 0;
   width: 100%;
   height: 100%;
+  /* the "comes into focus" reveal — same feel as the other capture paths'
+     blur-clears-as-percentage-climbs animation, triggered once here since
+     there's no fake progress percentage driving it for a point cloud */
+  transition: filter 1.1s ease;
 }
 
 .proc-density {
