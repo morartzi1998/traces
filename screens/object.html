@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bt">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bt">
-<link rel="stylesheet" href="../css/object.css?v=20260717bt">
-<script src="../js/cursor.js?v=20260717bt" defer></script>
-<script src="../js/grain.js?v=20260717bt" defer></script>
-<script src="../js/tilt3d.js?v=20260717bt" defer></script>
-<script src="../js/archive.js?v=20260717bt"></script>
-<script src="../js/blobstore.js?v=20260717bt"></script>
-<script src="../js/flow.js?v=20260717bt" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bt"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bu">
+<link rel="stylesheet" href="../css/object.css?v=20260717bu">
+<script src="../js/cursor.js?v=20260717bu" defer></script>
+<script src="../js/grain.js?v=20260717bu" defer></script>
+<script src="../js/tilt3d.js?v=20260717bu" defer></script>
+<script src="../js/archive.js?v=20260717bu"></script>
+<script src="../js/blobstore.js?v=20260717bu"></script>
+<script src="../js/flow.js?v=20260717bu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bt" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bu" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bt";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bt";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bu";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -53,7 +53,7 @@
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li><button type="button" id="menuToggleView" hidden>Show in its space</button></li>
-        <li><button type="button" id="menuSetDefaultView" hidden>Set this angle as default view</button></li>
+        <li><button type="button" id="menuSetDefaultView" hidden>Set this angle as default view &amp; thumbnail</button></li>
       </ul>
     </header>
 
@@ -1560,6 +1560,20 @@
         if (!pcViewer) return;
         catalog[key].defaultView = pcViewer.getView();
         persist(key);
+        // this same angle becomes the polaroid thumbnail too — gallery.html,
+        // community.html and connect.html all read a capture's `img` straight
+        // from its Archive/Community record, so the change needs writing
+        // there, not just onto this page's own in-memory catalog
+        if (window.Archive && Archive.get(key) && window.BlobStore) {
+          var shot = pcViewer.screenshot();
+          var thumbKey = "thumb:" + key;
+          window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(shot)).then(function () {
+            var ref = "idb:" + thumbKey;
+            catalog[key].img = ref;
+            Archive.update(key, { img: ref });
+            if (window.Community && Community.get(key)) Community.update(key, { img: ref });
+          }).catch(function () {});
+        }
       });
       document.getElementById("menuUpdateCapture").addEventListener("click", function () {
         // re-scanning a real capture appends a new dated version to its
