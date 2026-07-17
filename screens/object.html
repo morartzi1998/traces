@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bj">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bj">
-<link rel="stylesheet" href="../css/object.css?v=20260717bj">
-<script src="../js/cursor.js?v=20260717bj" defer></script>
-<script src="../js/grain.js?v=20260717bj" defer></script>
-<script src="../js/tilt3d.js?v=20260717bj" defer></script>
-<script src="../js/archive.js?v=20260717bj"></script>
-<script src="../js/blobstore.js?v=20260717bj"></script>
-<script src="../js/flow.js?v=20260717bj" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bj"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bk">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bk">
+<link rel="stylesheet" href="../css/object.css?v=20260717bk">
+<script src="../js/cursor.js?v=20260717bk" defer></script>
+<script src="../js/grain.js?v=20260717bk" defer></script>
+<script src="../js/tilt3d.js?v=20260717bk" defer></script>
+<script src="../js/archive.js?v=20260717bk"></script>
+<script src="../js/blobstore.js?v=20260717bk"></script>
+<script src="../js/flow.js?v=20260717bk" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bk"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bj" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bk" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bj";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bj";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bk";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bk";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -210,6 +210,7 @@
           <textarea class="obj-blue-text" id="blueText"></textarea>
           <div class="obj-blue-actions">
             <button class="obj-blue-btn" type="button" id="blueCancel">Cancel</button>
+            <button class="obj-blue-btn" type="button" id="blueReposition" hidden>Reposition</button>
             <button class="obj-blue-btn" type="button" id="blueDelete" hidden>Delete</button>
             <button class="obj-blue-btn obj-blue-btn--solid" type="button" id="blueSave">Save annotation</button>
           </div>
@@ -413,6 +414,27 @@
 
       function exitAnnotateMode() {
         annotateMode = false;
+        stage.removeAttribute("data-crosshair");
+      }
+
+      // repositioning an existing annotation: an automatic 3D anchor can
+      // fail to reconstruct correctly (the click that first placed it may
+      // have happened under a completely different camera angle than
+      // today's default view), so the person who owns the capture needs a
+      // way to just re-pick the point by hand instead
+      var repositionMode = false;
+      var repositioningAnnotation = null;
+
+      function enterRepositionMode(annotation) {
+        repositionMode = true;
+        repositioningAnnotation = annotation;
+        blue.hidden = true;
+        stage.setAttribute("data-crosshair", "");
+      }
+
+      function exitRepositionMode() {
+        repositionMode = false;
+        repositioningAnnotation = null;
         stage.removeAttribute("data-crosshair");
       }
 
@@ -756,6 +778,26 @@
         }
       }
 
+      // a click on the stage, turned into a storable position: a flat
+      // fractional (x,y) always, plus a 3D anchor when the current capture
+      // can support one (model-viewer's own surface pick, or a point-cloud
+      // raycast) — shared by "add an annotation" and "reposition"
+      function pickSpotFromEvent(e) {
+        var r = stage.getBoundingClientRect();
+        var spot = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+        if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
+          var hit = modelViewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+          if (hit && hit.position) {
+            spot.pos = hit.position.toString();
+            spot.normal = hit.normal ? hit.normal.toString() : null;
+          }
+        } else if (pcViewer && !objPoints.hidden) {
+          var pHit = pcViewer.raycastFromScreen(e.clientX, e.clientY);
+          if (pHit) spot.ppos = vec3ToStr(pHit);
+        }
+        return spot;
+      }
+
       // annotations render as model-viewer hotspots on a 3D capture (so they
       // stay pinned to the surface as it turns), or as flat pins on a photo
       // which point in the object's history the timeline is showing
@@ -789,28 +831,33 @@
           }
           if (isPoints) {
             if (!a.ppos) convertFromPoints(a);
-            if (a.ppos) {
-              var p = document.createElement("button");
-              p.className = "obj-tag";
-              p.type = "button";
-              buildMarker(p, a.title, a.type);
-              a.__btn = p;
-              p.addEventListener("click", function (e) {
-                e.stopPropagation();
-                onAnnotationClick(a);
-              });
-              tags.appendChild(p);
-              var worldPos = strToVec3(a.ppos);
-              var reposition = function () {
-                var proj = pcViewer.project(worldPos);
-                p.style.display = proj.behind ? "none" : "";
-                p.style.left = proj.x * 100 + "%";
-                p.style.top = proj.y * 100 + "%";
-              };
-              reposition();
-              pcFrameUnsubs.push(pcViewer.onFrame(reposition));
-              return;
-            }
+            // no reliable 3D anchor for this one (the raycast never found a
+            // nearby point) — showing it at a raw flat x/y guess instead
+            // would just be the same "floating disconnected in space" bug
+            // by another name, so it's better left off the stage entirely.
+            // It's still listed (and editable/repositionable) in the white
+            // panel's annotation list.
+            if (!a.ppos) return;
+            var p = document.createElement("button");
+            p.className = "obj-tag";
+            p.type = "button";
+            buildMarker(p, a.title, a.type);
+            a.__btn = p;
+            p.addEventListener("click", function (e) {
+              e.stopPropagation();
+              onAnnotationClick(a);
+            });
+            tags.appendChild(p);
+            var worldPos = strToVec3(a.ppos);
+            var updateProjection = function () {
+              var proj = pcViewer.project(worldPos);
+              p.style.display = proj.behind ? "none" : "";
+              p.style.left = proj.x * 100 + "%";
+              p.style.top = proj.y * 100 + "%";
+            };
+            updateProjection();
+            pcFrameUnsubs.push(pcViewer.onFrame(updateProjection));
+            return;
           }
           var b = document.createElement("button");
           b.className = "obj-tag";
@@ -1061,8 +1108,8 @@
       });
 
       // plain click on the capture toggles its info panel (like clicking the
-      // title); the crosshair pick-a-point flow only runs while annotateMode
-      // or linkMode is active.
+      // title); the crosshair pick-a-point flow only runs while annotateMode,
+      // repositionMode, or linkMode is active.
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
         closeRemarkCard();
@@ -1108,20 +1155,22 @@
           }
           return;
         }
-        if (annotateMode) {
-          var r = stage.getBoundingClientRect();
-          var spot = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
-          // on a 3D capture, anchor the new pin to the picked surface point
-          if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
-            var hit = modelViewer.positionAndNormalFromPoint(e.clientX, e.clientY);
-            if (hit && hit.position) {
-              spot.pos = hit.position.toString();
-              spot.normal = hit.normal ? hit.normal.toString() : null;
-            }
-          } else if (pcViewer && !objPoints.hidden) {
-            var pHit = pcViewer.raycastFromScreen(e.clientX, e.clientY);
-            if (pHit) spot.ppos = vec3ToStr(pHit);
+        if (repositionMode) {
+          var spot = pickSpotFromEvent(e);
+          var a = repositioningAnnotation;
+          exitRepositionMode();
+          if (a) {
+            a.x = spot.x; a.y = spot.y;
+            a.pos = spot.pos || null; a.normal = spot.normal || null;
+            a.ppos = spot.ppos || null;
+            persist(key);
+            renderAnnotations();
           }
+          openBlueEdit(a);
+          return;
+        }
+        if (annotateMode) {
+          var spot = pickSpotFromEvent(e);
           exitAnnotateMode();
           openBlueEdit(null, spot);
         } else {
@@ -1355,6 +1404,7 @@
         document.getElementById("blueText").value = annotation ? annotation.text : "";
         document.getElementById("blueSave").textContent = annotation ? "Save changes" : "Save annotation";
         document.getElementById("blueDelete").hidden = !annotation;
+        document.getElementById("blueReposition").hidden = !annotation;
       }
 
       // view a saved "story" annotation: read-only, collapsible, with an Edit button
@@ -1500,6 +1550,9 @@
       document.getElementById("blueDelete").addEventListener("click", function () {
         deleteAnnotation(editingAnnotation);
         closeBlue();
+      });
+      document.getElementById("blueReposition").addEventListener("click", function () {
+        if (editingAnnotation) enterRepositionMode(editingAnnotation);
       });
       document.getElementById("remarkEdit").addEventListener("click", function () {
         var a = openRemarkAnnotation;
