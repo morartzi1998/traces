@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717bh">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717bh">
-<link rel="stylesheet" href="../css/object.css?v=20260717bh">
-<script src="../js/cursor.js?v=20260717bh" defer></script>
-<script src="../js/grain.js?v=20260717bh" defer></script>
-<script src="../js/tilt3d.js?v=20260717bh" defer></script>
-<script src="../js/archive.js?v=20260717bh"></script>
-<script src="../js/blobstore.js?v=20260717bh"></script>
-<script src="../js/flow.js?v=20260717bh" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bh"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260717bi">
+<link rel="stylesheet" href="../css/chrome.css?v=20260717bi">
+<link rel="stylesheet" href="../css/object.css?v=20260717bi">
+<script src="../js/cursor.js?v=20260717bi" defer></script>
+<script src="../js/grain.js?v=20260717bi" defer></script>
+<script src="../js/tilt3d.js?v=20260717bi" defer></script>
+<script src="../js/archive.js?v=20260717bi"></script>
+<script src="../js/blobstore.js?v=20260717bi"></script>
+<script src="../js/flow.js?v=20260717bi" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717bi"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +23,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bh" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717bi" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bh";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bh";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717bi";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717bi";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -361,7 +361,8 @@
           visibility: it.visibility || "private",
           annotations: it.annotations.map(function (a) {
             return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
-              since: a.since || 2021, pos: a.pos || null, normal: a.normal || null };
+              since: a.since || 2021, pos: a.pos || null, normal: a.normal || null,
+              ppos: a.ppos || null };
           }),
           links: (it.links || []).map(function (l) {
             return { x: l.x, y: l.y, target: l.target, title: l.title,
@@ -726,6 +727,35 @@
         }
       }
 
+      // a point cloud has no built-in anchoring (unlike model-viewer's own
+      // hotspot slots), so it's tracked by hand: a THREE.Vector3-shaped
+      // world position stored as "x y z", reprojected to screen space every
+      // frame via pcViewer.project() while the marker is showing. Kept in a
+      // separate field (ppos) from the model-viewer path's `pos`, since the
+      // two coordinate spaces are never interchangeable.
+      function vec3ToStr(v) { return v.x + " " + v.y + " " + v.z; }
+      function strToVec3(s) {
+        var p = s.trim().split(/\s+/).map(Number);
+        return { x: p[0], y: p[1], z: p[2] };
+      }
+
+      // raycast a stored fractional (x,y) into the point cloud so an older
+      // flat annotation gains a 3D anchor that tracks the cloud as it turns
+      function convertFromPoints(a) {
+        if (!pcViewer) return;
+        var rect = objPoints.getBoundingClientRect();
+        var cx = rect.left + a.x * rect.width, cy = rect.top + a.y * rect.height;
+        // the stored point may land just off the cloud (a gap between
+        // points, its silhouette edge, etc.); spiral outward to snap onto it
+        var offs = [[0, 0], [0, -14], [0, 14], [-14, 0], [14, 0], [-12, -12],
+          [12, -12], [-12, 12], [12, 12], [0, -28], [0, 28], [-26, 0], [26, 0],
+          [0, -44], [0, 44], [-42, 0], [42, 0]];
+        for (var i = 0; i < offs.length; i++) {
+          var hit = pcViewer.raycastFromScreen(cx + offs[i][0], cy + offs[i][1]);
+          if (hit) { a.ppos = vec3ToStr(hit); return; }
+        }
+      }
+
       // annotations render as model-viewer hotspots on a 3D capture (so they
       // stay pinned to the surface as it turns), or as flat pins on a photo
       // which point in the object's history the timeline is showing
@@ -734,8 +764,10 @@
       function renderAnnotations() {
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
         clearHotspots();
+        clearPcFrameSubs();
         var isModel = !!catalog[key].model && !modelViewer.hidden;
         var ready = isModel && modelViewer.loaded;
+        var isPoints = !!pcViewer && !objPoints.hidden;
         catalog[key].annotations.forEach(function (a, i) {
           // the timeline scrubs history: only show notes from the selected year back
           if ((a.since || 2021) > activeYear) return;
@@ -752,6 +784,31 @@
               a.__btn = h;
               h.addEventListener("click", function (e) { e.stopPropagation(); onAnnotationClick(a); });
               modelViewer.appendChild(h);
+              return;
+            }
+          }
+          if (isPoints) {
+            if (!a.ppos) convertFromPoints(a);
+            if (a.ppos) {
+              var p = document.createElement("button");
+              p.className = "obj-tag";
+              p.type = "button";
+              buildMarker(p, a.title, a.type);
+              a.__btn = p;
+              p.addEventListener("click", function (e) {
+                e.stopPropagation();
+                onAnnotationClick(a);
+              });
+              tags.appendChild(p);
+              var worldPos = strToVec3(a.ppos);
+              var reposition = function () {
+                var proj = pcViewer.project(worldPos);
+                p.style.display = proj.behind ? "none" : "";
+                p.style.left = proj.x * 100 + "%";
+                p.style.top = proj.y * 100 + "%";
+              };
+              reposition();
+              pcFrameUnsubs.push(pcViewer.onFrame(reposition));
               return;
             }
           }
@@ -1061,6 +1118,9 @@
               spot.pos = hit.position.toString();
               spot.normal = hit.normal ? hit.normal.toString() : null;
             }
+          } else if (pcViewer && !objPoints.hidden) {
+            var pHit = pcViewer.raycastFromScreen(e.clientX, e.clientY);
+            if (pHit) spot.ppos = vec3ToStr(pHit);
           }
           exitAnnotateMode();
           openBlueEdit(null, spot);
@@ -1072,7 +1132,17 @@
       });
 
       var pcViewer = null;
+      // per-frame reprojection callbacks for the currently-rendered point-cloud
+      // annotation markers — torn down and rebuilt every renderAnnotations()
+      // call so they never stack up across re-renders (timeline scrub, add/
+      // delete, switching captures)
+      var pcFrameUnsubs = [];
+      function clearPcFrameSubs() {
+        pcFrameUnsubs.forEach(function (u) { u(); });
+        pcFrameUnsubs = [];
+      }
       function disposePcViewer() {
+        clearPcFrameSubs();
         if (pcViewer) { pcViewer.dispose(); pcViewer = null; }
         objPoints.hidden = true;
       }
@@ -1103,6 +1173,10 @@
               if (!buf || key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry, { pointSize: 0.013 });
+              // once the cloud is ready, (re)draw annotations as 3D-anchored
+              // markers that track the camera — mirrors the modelViewer
+              // "load" listener below, for the same reason
+              if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
             }).catch(function () {});
           }
         } else if (model) {
@@ -1453,6 +1527,7 @@
               y: pendingSpot ? pendingSpot.y : 0.5,
               pos: pendingSpot ? pendingSpot.pos : null,
               normal: pendingSpot ? pendingSpot.normal : null,
+              ppos: pendingSpot ? pendingSpot.ppos : null,
               title: title,
               type: type,
               since: activeYear, // the note belongs to the year currently selected

@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bf";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260717bi";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -113,24 +113,71 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var ro = (typeof ResizeObserver !== "undefined") ? new ResizeObserver(resize) : null;
   if (ro) ro.observe(container);
 
+  // hit-testing a point cloud needs a real-world tolerance around the ray
+  // (a point is dimensionless) — scaled to the scan's own size so it works
+  // whether the camera is close up or backed off to frame the whole thing
+  var raycaster = new THREE.Raycaster();
+  raycaster.params.Points.threshold = Math.max(sphere.radius * 0.02, 0.001);
+
+  // screen point -> nearest 3D point actually on the cloud, so a new
+  // annotation anchors to real geometry instead of a flat click coordinate
+  function raycastFromScreen(clientX, clientY) {
+    var rect = container.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    var ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    var hits = raycaster.intersectObject(points);
+    return hits.length ? hits[0].point.clone() : null;
+  }
+
+  // 3D point -> its current screen position (fractional, 0..1 within the
+  // container) — called every frame so a pinned annotation marker tracks
+  // the point as the camera orbits, the same job model-viewer's own hotspot
+  // slots do natively for a glTF mesh
+  var projectVec = new THREE.Vector3();
+  function project(pos) {
+    projectVec.set(pos.x, pos.y, pos.z);
+    var view = projectVec.clone().applyMatrix4(camera.matrixWorldInverse);
+    var behind = view.z > 0; // the camera looks down -Z in its own view space
+    projectVec.project(camera);
+    return { x: (projectVec.x + 1) / 2, y: (1 - projectVec.y) / 2, behind: behind };
+  }
+
+  var frameCallbacks = [];
+  function onFrame(cb) {
+    frameCallbacks.push(cb);
+    return function unsubscribe() {
+      var i = frameCallbacks.indexOf(cb);
+      if (i !== -1) frameCallbacks.splice(i, 1);
+    };
+  }
+
   var raf = null;
   var disposed = false;
   (function frame() {
     if (disposed) return;
     controls.update();
     renderer.render(scene, camera);
+    frameCallbacks.forEach(function (cb) { cb(); });
     raf = requestAnimationFrame(frame);
   })();
 
   return {
     setPointSize: function (size) { material.size = size; },
     resize: resize,
+    raycastFromScreen: raycastFromScreen,
+    project: project,
+    onFrame: onFrame,
     screenshot: function () {
       renderer.render(scene, camera);
       return renderer.domElement.toDataURL("image/png");
     },
     dispose: function () {
       disposed = true;
+      frameCallbacks.length = 0;
       if (raf) cancelAnimationFrame(raf);
       if (ro) ro.disconnect();
       controls.dispose();
