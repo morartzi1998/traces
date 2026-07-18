@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260718ax">
-<link rel="stylesheet" href="../css/chrome.css?v=20260718ax">
-<link rel="stylesheet" href="../css/gallery.css?v=20260718ax">
-<script src="../js/cursor.js?v=20260718ax" defer></script>
-<script src="../js/grain.js?v=20260718ax" defer></script>
-<script src="../js/archive.js?v=20260718ax"></script>
-<script src="../js/blobstore.js?v=20260718ax"></script>
-<script src="../js/community-seed.js?v=20260718ax"></script>
-<script src="../js/gallery-title.js?v=20260718ax" defer></script>
-<script src="../js/flow.js?v=20260718ax" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260718bx">
+<link rel="stylesheet" href="../css/chrome.css?v=20260718bx">
+<link rel="stylesheet" href="../css/gallery.css?v=20260718bx">
+<script src="../js/cursor.js?v=20260718bx" defer></script>
+<script src="../js/grain.js?v=20260718bx" defer></script>
+<script src="../js/config.js?v=20260718bx"></script>
+<script src="../js/archive.js?v=20260718bx"></script>
+<script src="../js/blobstore.js?v=20260718bx"></script>
+<script src="../js/remote-captures.js?v=20260718bx"></script>
+<script src="../js/community-seed.js?v=20260718bx"></script>
+<script src="../js/gallery-title.js?v=20260718bx" defer></script>
+<script src="../js/flow.js?v=20260718bx" defer></script>
 </head>
 <body>
 
@@ -73,7 +75,21 @@
         });
       }
 
-      // the visitor's own captures shared to the community appear first
+      // the visitor's own captures shared to the community appear first —
+      // remote items this same browser already made locally would otherwise
+      // double up (a remote community record's id is "<capture id>-community";
+      // strip that back off to compare against this browser's own local ids)
+      var localCommunityIds = {};
+      (window.Community ? Community.all() : []).forEach(function (c) { localCommunityIds[c.id] = true; });
+      var remoteReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
+      remoteReady.then(function (list) {
+        (list || []).forEach(function (c) {
+          var localId = c.id.replace(/-community$/, "");
+          if (localCommunityIds[localId]) return;
+          grid.insertBefore(build(Object.assign({}, c, { id: localId, remote: true })), grid.firstChild);
+        });
+      });
+
       var items = (window.Community ? Community.all() : []);
       if (!items.length) return;
       function ago(ts) {
@@ -92,7 +108,7 @@
         art.innerHTML =
           '<p class="gal-meta">' + ago(c.created) + '<br><span class="gal-who"></span></p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-          '<button class="gal-delete" type="button" hidden>delete capture</button>';
+          (c.remote ? '' : '<button class="gal-delete" type="button" hidden>delete capture</button>');
         art.querySelector(".gal-who").textContent = who;
         var imgEl = art.querySelector("img");
         if (window.BlobStore) {
@@ -105,6 +121,7 @@
         var del = art.querySelector(".gal-delete");
         var timer = null, longPressed = false;
         function startPress() {
+          if (!del) return;
           longPressed = false;
           timer = setTimeout(function () {
             longPressed = true;
@@ -126,10 +143,12 @@
           } catch (er) {}
           goTo("object.html");
         });
-        del.addEventListener("click", function () {
-          Community.remove(c.id);
-          art.remove();
-        });
+        if (del) {
+          del.addEventListener("click", function () {
+            Community.remove(c.id);
+            art.remove();
+          });
+        }
         return art;
       }
       items.forEach(function (c) { grid.insertBefore(build(c), grid.firstChild); });

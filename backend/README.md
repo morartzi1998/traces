@@ -77,6 +77,46 @@ wrangler deploy
 Without this, the QR code still shows, but the desktop side will show an
 error once the phone finishes (the relay has nowhere to store the hand-off).
 
+## Turn on shared captures (available to everyone, not just your browser)
+
+Without this, anything captured through the site (Archive or Community) only
+ever lives in the browser that made it — nobody else sees it, and it
+disappears if you clear your browser data. This turns on a shared store: two
+new bindings, both on the free tier.
+
+```bash
+# from this backend/ folder
+npx wrangler kv namespace create CAPTURES
+npx wrangler r2 bucket create traces-captures
+```
+
+The KV command prints an id — paste it into `wrangler.toml`, uncommenting the
+`CAPTURES` block and filling in the id; then uncomment the `CAPTURE_FILES`
+block right below it (the R2 bucket name is fixed, no id to paste):
+
+```toml
+[[kv_namespaces]]
+binding = "CAPTURES"
+id = "the-id-it-printed"
+
+[[r2_buckets]]
+binding = "CAPTURE_FILES"
+bucket_name = "traces-captures"
+```
+
+Then redeploy:
+
+```bash
+wrangler deploy
+```
+
+Open `<your-worker-url>/debug` afterward — `hasCaptures` and
+`hasCaptureFiles` should both read `true`. This is a provisional setup: every
+capture is world-readable and world-writable through this one store for now,
+with no distinction enforced yet between "my private archive" and "the
+community" (each record just carries a `scope` field for later, so that
+separation can be added without reshaping anything already stored).
+
 ## Two Tripo accounts: testing vs. the real exhibition
 
 Everyday testing (yours, mine, anyone trying the site before the show)

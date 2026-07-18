@@ -22,6 +22,19 @@
     GET  /session/<id>                                  -> { task_id }  (null until set)
     Requires a KV namespace bound as SESSIONS (see backend/README.md).
 
+    -- shared captures: a provisional stopgap so anything captured through
+       the site is visible from any device, not just the browser that made
+       it. No per-visitor separation yet — everything is world-readable and
+       world-writable. `scope` ("community" or "archive") is carried on each
+       record now so that distinction can be enforced later without a
+       reshape. Requires a KV namespace bound as CAPTURES and an R2 bucket
+       bound as CAPTURE_FILES (see backend/README.md) --
+    POST /captures/upload   multipart form field "file" -> { fileId, url }
+    GET  /captures/file/<fileId>                        -> streams the blob back
+    POST /captures          JSON capture record          -> { id }
+    GET  /captures                                       -> { captures: [...] }
+    DELETE /captures/<id>                                -> { ok: true }
+
   -- two Tripo accounts, automatic handoff --
   TRIPO_API_KEY is the everyday/testing account. An optional second secret,
   TRIPO_API_KEY_2, is reserved for the real exhibition. Every /generate call
@@ -225,7 +238,91 @@ export default {
         }
       }
 
-      // ---- 5) diagnostics: which keys/bindings does this worker actually see? -
+      // ---- 5) shared captures — one global store, everyone reads and writes it ----
+      // A provisional stopgap while the site has no real accounts: every
+      // capture (whether marked "archive" or "community") is world-readable
+      // and world-writable through this same store — there is no per-visitor
+      // separation yet. The `scope` field on each record is carried through
+      // now specifically so that distinction can be added later (e.g. only
+      // serving "archive"-scoped records back to the device that made them)
+      // without changing the record shape or re-touching every call site.
+      //
+      //   POST /captures/upload   multipart form field "file" (binary: a
+      //                           point-cloud blob, a GLB, a thumbnail) ->
+      //                           { fileId, url }  (url is same-origin,
+      //                           streams the blob back via GET)
+      //   GET  /captures/file/<fileId>   streams the stored binary back
+      //   POST /captures         JSON body (see shape below) -> { id }
+      //   GET  /captures                  -> { captures: [...] }  (everything,
+      //                           both scopes — the client filters by scope)
+      //   DELETE /captures/<id>           -> { ok: true }
+      //
+      // A capture record:
+      //   { id, scope: "community"|"archive", title, feeling, kind,
+      //     by, country, created, img, model, points, annotations: [...] }
+      // `model`/`points`/`img` are each either an already-public URL (e.g. a
+      // Tripo /proxy link) or one of this worker's own /captures/file/<id>
+      // URLs from a prior /captures/upload call.
+      if (url.pathname === "/captures/upload" && request.method === "POST") {
+        if (!env.CAPTURE_FILES) return json({ error: "CAPTURE_FILES R2 bucket is not bound on this worker" }, 500);
+        const form = await request.formData();
+        const file = form.get("file");
+        if (!file) return json({ error: "no file provided" }, 400);
+        const fileId = crypto.randomUUID();
+        await env.CAPTURE_FILES.put(fileId, await file.arrayBuffer(), {
+          httpMetadata: { contentType: file.type || "application/octet-stream" },
+        });
+        return json({ fileId, url: `${url.origin}/captures/file/${fileId}` });
+      }
+
+      if (url.pathname.startsWith("/captures/file/") && request.method === "GET") {
+        if (!env.CAPTURE_FILES) return json({ error: "CAPTURE_FILES R2 bucket is not bound on this worker" }, 500);
+        const fileId = url.pathname.slice("/captures/file/".length);
+        const obj = await env.CAPTURE_FILES.get(fileId);
+        if (!obj) return json({ error: "not found" }, 404);
+        return new Response(obj.body, {
+          headers: cors({ "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream" }),
+        });
+      }
+
+      if (url.pathname === "/captures" && request.method === "POST") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const body = await request.json().catch(() => null);
+        if (!body || !body.title) return json({ error: "title required" }, 400);
+        const id = body.id || crypto.randomUUID();
+        const record = {
+          id,
+          scope: body.scope === "archive" ? "archive" : "community",
+          title: body.title,
+          feeling: body.feeling || "",
+          kind: body.kind || "object",
+          by: body.by || "",
+          country: body.country || "",
+          created: body.created || Date.now(),
+          img: body.img || null,
+          model: body.model || null,
+          points: body.points || null,
+          annotations: Array.isArray(body.annotations) ? body.annotations : [],
+        };
+        await env.CAPTURES.put("capture:" + id, JSON.stringify(record));
+        return json({ id });
+      }
+
+      if (url.pathname === "/captures" && request.method === "GET") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const list = await env.CAPTURES.list({ prefix: "capture:" });
+        const records = await Promise.all(list.keys.map((k) => env.CAPTURES.get(k.name, "json")));
+        return json({ captures: records.filter(Boolean) });
+      }
+
+      if (url.pathname.startsWith("/captures/") && request.method === "DELETE") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const id = url.pathname.slice("/captures/".length);
+        await env.CAPTURES.delete("capture:" + id);
+        return json({ ok: true });
+      }
+
+      // ---- 6) diagnostics: which keys/bindings does this worker actually see? -
       // never returns the secrets themselves, only whether each is set — safe
       // to open straight in a browser to sanity-check a deploy
       if (url.pathname === "/debug" && request.method === "GET") {
@@ -240,6 +337,8 @@ export default {
         slot = await activeKeySlot(env);
         return json({
           hasKey1, hasKey2, hasSessions,
+          hasCaptures: !!env.CAPTURES,
+          hasCaptureFiles: !!env.CAPTURE_FILES,
           activeSlot: slot,
           key1ActivatedAt: activatedAt ? new Date(Number(activatedAt)).toISOString() : null,
           key1Exhausted: exhausted,
