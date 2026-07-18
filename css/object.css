@@ -37,9 +37,9 @@
 /* a capture shared to the community shows blue-purple here instead of the
    default near-black — same accent as its card on the community gallery */
 .obj-screen--community {
-  background-color: #1c1440;
+  background-color: #131a45;
   background-image:
-    radial-gradient(120% 90% at 50% 42%, rgba(90, 63, 209, 0.45), transparent 70%),
+    radial-gradient(120% 90% at 50% 42%, rgba(58, 92, 224, 0.45), transparent 70%),
     radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.7), transparent),
     radial-gradient(1.5px 1.5px at 55% 15%, rgba(255, 255, 255, 0.8), transparent),
