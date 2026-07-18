@@ -85,13 +85,23 @@
             'interaction-prompt="none" shadow-intensity="0" exposure="1"></model-viewer>' +
           '<input type="text" class="name" value="">' +
           '<span class="status">loading model…</span>' +
-          '<button type="button" class="save" disabled>Save</button>';
+          '<button type="button" class="save" disabled>Save</button>' +
+          '<button type="button" class="delete" hidden>Delete — unrecoverable</button>';
         listEl.appendChild(row);
 
         var mv = row.querySelector("model-viewer");
         var nameInput = row.querySelector(".name");
         var statusEl = row.querySelector(".status");
         var saveBtn = row.querySelector(".save");
+        var deleteBtn = row.querySelector(".delete");
+        deleteBtn.addEventListener("click", function () {
+          window.Archive.remove(cap.id);
+          if (window.Community && window.Community.get(cap.id)) window.Community.remove(cap.id);
+          statusEl.textContent = "deleted";
+          row.style.opacity = "0.4";
+          saveBtn.disabled = true;
+          deleteBtn.disabled = true;
+        });
         nameInput.value = cap.title && cap.title !== "Recovered scan" ? cap.title : "";
         nameInput.placeholder = "what is this?";
 
@@ -110,6 +120,7 @@
           statusEl.textContent = "no 3D model saved for this one — can't render a preview";
           mv.remove();
           saveBtn.disabled = false; // still lets her rename it
+          deleteBtn.hidden = false;
         } else {
           var taskId = matchingTaskId(cap);
           if (taskId && api) {
@@ -121,9 +132,9 @@
                   var fresh = api + "/proxy?url=" + encodeURIComponent(d.model_url);
                   mount(fresh);
                 } else {
-                  statusEl.textContent = "Tripo no longer has this scan (status: " + (d && d.status || "unknown") + ") — can't recover a preview";
+                  statusEl.textContent = "Tripo no longer has this scan (status: " + (d && d.status || "unknown") + ") — it's gone for good, nothing left to recover";
                   mv.remove();
-                  saveBtn.disabled = false;
+                  deleteBtn.hidden = false;
                 }
               })
               .catch(function () {
