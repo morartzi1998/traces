@@ -66,17 +66,24 @@
 
   // one-time catch-up: a capture made in this browser before the shared
   // store existed (or before it was reachable) never got sent. Called after
-  // list() resolves, so it only pushes what the server doesn't have yet —
-  // fire-and-forget, same as publish().
+  // list() resolves, so it only pushes what the server doesn't have yet.
+  // One at a time, not all fired at once — a batch of these routinely
+  // includes several large raw point clouds, and launching a dozen-plus
+  // big uploads concurrently on an ordinary connection meant most of them
+  // silently lost the race (fire-and-forget swallows the failure) while
+  // only a couple of the smallest actually finished.
   function syncMissing(localList, remoteList, scope) {
     if (!api()) return;
     var remoteIds = {};
     (remoteList || []).forEach(function (c) {
       remoteIds[(c.id || "").replace(/-community$/, "")] = true;
     });
-    (localList || []).forEach(function (cap) {
-      if (!remoteIds[cap.id]) publish(cap, scope);
-    });
+    var pending = (localList || []).filter(function (cap) { return !remoteIds[cap.id]; });
+    (function next() {
+      var cap = pending.shift();
+      if (!cap) return;
+      publish(cap, scope).then(next, next);
+    })();
   }
 
   window.RemoteCaptures = { publish: publish, list: list, syncMissing: syncMissing };
