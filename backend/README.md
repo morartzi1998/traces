@@ -84,9 +84,10 @@ ever lives in the browser that made it — nobody else sees it, and it
 disappears if you clear your browser data. This turns on a shared store: one
 new KV namespace, on the free tier, no payment method needed (deliberately
 not R2 — R2 asks Cloudflare accounts to add a card even to stay within its
-free limits; KV doesn't). The tradeoff is a ~24MB cap on any single
-uploaded file (KV values top out around 25MB) — fine for thumbnails and
-furniture-scale models, too small for a large room-scale point cloud scan.
+free limits; KV doesn't). A large upload gets split into several ~24MB
+chunks and reassembled when it's fetched back, so there's no real per-file
+size limit — just KV's own free-tier storage total (1GB), which comfortably
+covers a batch of scans and furniture models.
 
 ```bash
 # from this backend/ folder

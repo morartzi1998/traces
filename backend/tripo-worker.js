@@ -30,10 +30,11 @@
        reshape. Files live in the same KV namespace as the records
        (deliberately, not R2 — R2 requires adding a payment method to a
        Cloudflare account even to stay within its free tier; KV's free tier
-       needs none), which caps any single uploaded file at ~24MB. Requires a
-       KV namespace bound as CAPTURES (see backend/README.md) --
+       needs none) — a large upload is split into several ~24MB chunks and
+       reassembled on GET, so there's no meaningful per-file size limit,
+       just KV's own free-tier storage total (1GB). Requires a KV namespace
+       bound as CAPTURES (see backend/README.md) --
     POST /captures/upload   multipart form field "file" -> { fileId, url }
-                            (413 if the file is over ~24MB)
     GET  /captures/file/<fileId>                        -> streams the blob back
     POST /captures          JSON capture record          -> { id }
     GET  /captures                                       -> { captures: [...] }
@@ -65,11 +66,12 @@ const UPLOAD_PATH = "/upload";        // multipart image upload
 const IMAGE_TASK_PATH = "/task";
 const INSUFFICIENT_CREDIT_CODE = 2010; // Tripo's "not enough credit" error code
 const PRIMARY_KEY_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
-// KV values top out around 25MB — stay a little under that rather than
-// relying on the exact boundary. Big enough for a thumbnail or a typical
-// furniture-scale GLB; a large room-scale point cloud may not fit (no R2
-// bucket backing this store — see backend/README.md for why)
-const MAX_FILE_BYTES = 24 * 1024 * 1024;
+// KV values top out around 25MB — deliberately not R2 (see backend/README.md
+// for why), so an upload larger than one KV value gets split across several
+// "file:<id>:0", "file:<id>:1", ... entries and reassembled on GET, capped
+// only by KV's own free-tier storage total (1GB), not by any single file's
+// size
+const MAX_CHUNK_BYTES = 24 * 1024 * 1024;
 
 function cors(extra = {}) {
   return {
@@ -278,23 +280,39 @@ export default {
         const file = form.get("file");
         if (!file) return json({ error: "no file provided" }, 400);
         const buf = await file.arrayBuffer();
-        if (buf.byteLength > MAX_FILE_BYTES) {
-          return json({ error: "file too large — KV values top out around 25MB, this needs to stay under " + (MAX_FILE_BYTES / 1024 / 1024) + "MB" }, 413);
-        }
         const fileId = crypto.randomUUID();
-        await env.CAPTURES.put("file:" + fileId, buf, {
-          metadata: { contentType: file.type || "application/octet-stream" },
-        });
+        const chunkCount = Math.max(1, Math.ceil(buf.byteLength / MAX_CHUNK_BYTES));
+        const puts = [];
+        for (let i = 0; i < chunkCount; i++) {
+          const start = i * MAX_CHUNK_BYTES;
+          puts.push(env.CAPTURES.put("file:" + fileId + ":" + i, buf.slice(start, start + MAX_CHUNK_BYTES)));
+        }
+        puts.push(env.CAPTURES.put("file:" + fileId + ":meta", JSON.stringify({
+          chunks: chunkCount,
+          contentType: file.type || "application/octet-stream",
+          size: buf.byteLength,
+        })));
+        await Promise.all(puts);
         return json({ fileId, url: `${url.origin}/captures/file/${fileId}` });
       }
 
       if (url.pathname.startsWith("/captures/file/") && request.method === "GET") {
         if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
         const fileId = url.pathname.slice("/captures/file/".length);
-        const { value, metadata } = await env.CAPTURES.getWithMetadata("file:" + fileId, "arrayBuffer");
-        if (!value) return json({ error: "not found" }, 404);
-        return new Response(value, {
-          headers: cors({ "Content-Type": (metadata && metadata.contentType) || "application/octet-stream" }),
+        const meta = await env.CAPTURES.get("file:" + fileId + ":meta", "json");
+        if (!meta) return json({ error: "not found" }, 404);
+        const chunks = await Promise.all(
+          Array.from({ length: meta.chunks }, (_, i) => env.CAPTURES.get("file:" + fileId + ":" + i, "arrayBuffer"))
+        );
+        if (chunks.some((c) => !c)) return json({ error: "not found" }, 404);
+        const whole = new Uint8Array(meta.size);
+        let offset = 0;
+        for (const chunk of chunks) {
+          whole.set(new Uint8Array(chunk), offset);
+          offset += chunk.byteLength;
+        }
+        return new Response(whole, {
+          headers: cors({ "Content-Type": meta.contentType || "application/octet-stream" }),
         });
       }
 
