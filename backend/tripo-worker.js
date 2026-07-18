@@ -27,9 +27,13 @@
        it. No per-visitor separation yet — everything is world-readable and
        world-writable. `scope` ("community" or "archive") is carried on each
        record now so that distinction can be enforced later without a
-       reshape. Requires a KV namespace bound as CAPTURES and an R2 bucket
-       bound as CAPTURE_FILES (see backend/README.md) --
+       reshape. Files live in the same KV namespace as the records
+       (deliberately, not R2 — R2 requires adding a payment method to a
+       Cloudflare account even to stay within its free tier; KV's free tier
+       needs none), which caps any single uploaded file at ~24MB. Requires a
+       KV namespace bound as CAPTURES (see backend/README.md) --
     POST /captures/upload   multipart form field "file" -> { fileId, url }
+                            (413 if the file is over ~24MB)
     GET  /captures/file/<fileId>                        -> streams the blob back
     POST /captures          JSON capture record          -> { id }
     GET  /captures                                       -> { captures: [...] }
@@ -61,6 +65,11 @@ const UPLOAD_PATH = "/upload";        // multipart image upload
 const IMAGE_TASK_PATH = "/task";
 const INSUFFICIENT_CREDIT_CODE = 2010; // Tripo's "not enough credit" error code
 const PRIMARY_KEY_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+// KV values top out around 25MB — stay a little under that rather than
+// relying on the exact boundary. Big enough for a thumbnail or a typical
+// furniture-scale GLB; a large room-scale point cloud may not fit (no R2
+// bucket backing this store — see backend/README.md for why)
+const MAX_FILE_BYTES = 24 * 1024 * 1024;
 
 function cors(extra = {}) {
   return {
@@ -264,24 +273,28 @@ export default {
       // Tripo /proxy link) or one of this worker's own /captures/file/<id>
       // URLs from a prior /captures/upload call.
       if (url.pathname === "/captures/upload" && request.method === "POST") {
-        if (!env.CAPTURE_FILES) return json({ error: "CAPTURE_FILES R2 bucket is not bound on this worker" }, 500);
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
         const form = await request.formData();
         const file = form.get("file");
         if (!file) return json({ error: "no file provided" }, 400);
+        const buf = await file.arrayBuffer();
+        if (buf.byteLength > MAX_FILE_BYTES) {
+          return json({ error: "file too large — KV values top out around 25MB, this needs to stay under " + (MAX_FILE_BYTES / 1024 / 1024) + "MB" }, 413);
+        }
         const fileId = crypto.randomUUID();
-        await env.CAPTURE_FILES.put(fileId, await file.arrayBuffer(), {
-          httpMetadata: { contentType: file.type || "application/octet-stream" },
+        await env.CAPTURES.put("file:" + fileId, buf, {
+          metadata: { contentType: file.type || "application/octet-stream" },
         });
         return json({ fileId, url: `${url.origin}/captures/file/${fileId}` });
       }
 
       if (url.pathname.startsWith("/captures/file/") && request.method === "GET") {
-        if (!env.CAPTURE_FILES) return json({ error: "CAPTURE_FILES R2 bucket is not bound on this worker" }, 500);
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
         const fileId = url.pathname.slice("/captures/file/".length);
-        const obj = await env.CAPTURE_FILES.get(fileId);
-        if (!obj) return json({ error: "not found" }, 404);
-        return new Response(obj.body, {
-          headers: cors({ "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream" }),
+        const { value, metadata } = await env.CAPTURES.getWithMetadata("file:" + fileId, "arrayBuffer");
+        if (!value) return json({ error: "not found" }, 404);
+        return new Response(value, {
+          headers: cors({ "Content-Type": (metadata && metadata.contentType) || "application/octet-stream" }),
         });
       }
 
@@ -338,7 +351,6 @@ export default {
         return json({
           hasKey1, hasKey2, hasSessions,
           hasCaptures: !!env.CAPTURES,
-          hasCaptureFiles: !!env.CAPTURE_FILES,
           activeSlot: slot,
           key1ActivatedAt: activatedAt ? new Date(Number(activatedAt)).toISOString() : null,
           key1Exhausted: exhausted,

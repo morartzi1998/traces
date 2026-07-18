@@ -12,18 +12,14 @@ compatibility_date = "2024-11-01"
 binding = "SESSIONS"
 id = "cc90d998d35c4111a21f2d4944dbb73b"
 
-# Needed for the shared captures store (see README). Create it with:
+# Needed for the shared captures store — both the records themselves and
+# the files attached to them (models, point clouds, thumbnails; capped at
+# ~24MB each — see backend/README.md). Deliberately KV, not R2: R2 asks for
+# a payment method on file even to stay within its free tier, KV doesn't.
+# Create it with:
 #   npx wrangler kv namespace create CAPTURES
 # then paste the id it prints below.
 # [[kv_namespaces]]
 # binding = "CAPTURES"
 # id = "paste-the-id-here"
-
-# Needed for shared capture files (models, point clouds, thumbnails).
-# Create it with:
-#   npx wrangler r2 bucket create traces-captures
-# then uncomment below.
-# [[r2_buckets]]
-# binding = "CAPTURE_FILES"
-# bucket_name = "traces-captures"
 
