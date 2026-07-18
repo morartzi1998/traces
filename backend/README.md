@@ -81,27 +81,26 @@ error once the phone finishes (the relay has nowhere to store the hand-off).
 
 Without this, anything captured through the site (Archive or Community) only
 ever lives in the browser that made it — nobody else sees it, and it
-disappears if you clear your browser data. This turns on a shared store: two
-new bindings, both on the free tier.
+disappears if you clear your browser data. This turns on a shared store: one
+new KV namespace, on the free tier, no payment method needed (deliberately
+not R2 — R2 asks Cloudflare accounts to add a card even to stay within its
+free limits; KV doesn't). A large upload gets split into several ~24MB
+chunks and reassembled when it's fetched back, so there's no real per-file
+size limit — just KV's own free-tier storage total (1GB), which comfortably
+covers a batch of scans and furniture models.
 
 ```bash
 # from this backend/ folder
 npx wrangler kv namespace create CAPTURES
-npx wrangler r2 bucket create traces-captures
 ```
 
-The KV command prints an id — paste it into `wrangler.toml`, uncommenting the
-`CAPTURES` block and filling in the id; then uncomment the `CAPTURE_FILES`
-block right below it (the R2 bucket name is fixed, no id to paste):
+This prints an id — paste it into `wrangler.toml`, uncommenting the
+`CAPTURES` block and filling in the id:
 
 ```toml
 [[kv_namespaces]]
 binding = "CAPTURES"
 id = "the-id-it-printed"
-
-[[r2_buckets]]
-binding = "CAPTURE_FILES"
-bucket_name = "traces-captures"
 ```
 
 Then redeploy:
@@ -110,12 +109,12 @@ Then redeploy:
 wrangler deploy
 ```
 
-Open `<your-worker-url>/debug` afterward — `hasCaptures` and
-`hasCaptureFiles` should both read `true`. This is a provisional setup: every
-capture is world-readable and world-writable through this one store for now,
-with no distinction enforced yet between "my private archive" and "the
-community" (each record just carries a `scope` field for later, so that
-separation can be added without reshaping anything already stored).
+Open `<your-worker-url>/debug` afterward — `hasCaptures` should read `true`.
+This is a provisional setup: every capture is world-readable and
+world-writable through this one store for now, with no distinction enforced
+yet between "my private archive" and "the community" (each record just
+carries a `scope` field for later, so that separation can be added without
+reshaping anything already stored).
 
 ## Two Tripo accounts: testing vs. the real exhibition
 
