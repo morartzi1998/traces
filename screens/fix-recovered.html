@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Fix recovered scans</title>
+<link rel="icon" type="image/png" href="../assets/images/favicon.png">
+<link rel="stylesheet" href="../css/base.css?v=20260718cz">
+<script src="../js/config.js?v=20260718cz"></script>
+<script src="../js/archive.js?v=20260718cz"></script>
+<script src="../js/blobstore.js?v=20260718cz"></script>
+<script src="../js/remote-captures.js?v=20260718cz"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260718cz"></script>
+<script type="module">
+  customElements.whenDefined("model-viewer").then(function () {
+    customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
+  });
+</script>
+<style>
+  /* one-off recovery tool — not part of the normal visitor flow, so it gets
+     its own minimal styling instead of the full chrome/nav CSS */
+  body { padding: 4vh 4vw; max-width: 900px; }
+  h1 { font-size: 1.6rem; margin-bottom: 1.5vh; }
+  p.hint { opacity: 0.7; margin-bottom: 3vh; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .row model-viewer { width: 96px; height: 96px; background: #333; flex-shrink: 0; }
+  .row input[type="text"] { flex: 1; min-width: 120px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: inherit; padding: 6px 8px; font: inherit; }
+  .row .status { font-size: 0.8rem; opacity: 0.7; min-width: 120px; }
+  .row button { padding: 8px 16px; cursor: pointer; }
+  #empty { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+  <h1>Fix recovered scans</h1>
+  <p class="hint">
+    Spin each model below to see what it actually is, give it a real name, then
+    save. This also captures a real thumbnail from the model itself, replacing
+    the broken/missing preview image.
+  </p>
+
+  <div id="list"></div>
+  <p id="empty" hidden>Nothing needs fixing right now.</p>
+
+  <script>
+    (function () {
+      var listEl = document.getElementById("list");
+      var emptyEl = document.getElementById("empty");
+      var all = window.Archive ? window.Archive.all() : [];
+      var candidates = all.filter(function (c) { return !c.img || c.title === "Recovered scan"; });
+
+      if (!candidates.length) { emptyEl.hidden = false; return; }
+
+      candidates.forEach(function (cap) {
+        var row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML =
+          '<model-viewer camera-controls disable-pan bounds="tight" ' +
+            'interaction-prompt="none" shadow-intensity="0" exposure="1"></model-viewer>' +
+          '<input type="text" class="name" value="">' +
+          '<span class="status">loading model…</span>' +
+          '<button type="button" class="save" disabled>Save</button>';
+        listEl.appendChild(row);
+
+        var mv = row.querySelector("model-viewer");
+        var nameInput = row.querySelector(".name");
+        var statusEl = row.querySelector(".status");
+        var saveBtn = row.querySelector(".save");
+        nameInput.value = cap.title && cap.title !== "Recovered scan" ? cap.title : "";
+        nameInput.placeholder = "what is this?";
+
+        if (!cap.model) {
+          statusEl.textContent = "no 3D model saved for this one — can't render a preview";
+          mv.remove();
+          saveBtn.disabled = false; // still lets her rename it
+        } else {
+          mv.src = cap.model;
+          mv.addEventListener("error", function () {
+            statusEl.textContent = "model failed to load";
+          });
+          mv.addEventListener("load", function () {
+            statusEl.textContent = "rendered — give it a name and save";
+            saveBtn.disabled = false;
+          });
+        }
+
+        saveBtn.addEventListener("click", function () {
+          saveBtn.disabled = true;
+          statusEl.textContent = "saving…";
+          var title = nameInput.value.trim() || cap.title || "untitled capture";
+
+          function finish(imgRef) {
+            var patch = { title: title };
+            if (imgRef) patch.img = imgRef;
+            window.Archive.update(cap.id, patch);
+            // this same capture may also already be shared to the community
+            // under the same id — keep that copy's name/thumbnail in sync
+            if (window.Community && window.Community.get(cap.id)) {
+              window.Community.update(cap.id, patch);
+            }
+            if (window.RemoteCaptures) {
+              var fresh = window.Archive.get(cap.id);
+              window.RemoteCaptures.publish(fresh, "archive");
+              if (window.Community && window.Community.get(cap.id)) {
+                window.RemoteCaptures.publish(fresh, "community");
+              }
+            }
+            statusEl.textContent = "saved";
+            row.style.opacity = "0.5";
+          }
+
+          if (mv.isConnected && mv.loaded) {
+            mv.toBlob({ idealAspect: true }).then(function (blob) {
+              var key = "recovered-thumb-" + cap.id;
+              return window.BlobStore.set(key, blob).then(function () { finish("idb:" + key); });
+            }).catch(function () { finish(null); });
+          } else {
+            finish(null);
+          }
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>
