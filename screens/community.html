@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260718cx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260718cx">
-<link rel="stylesheet" href="../css/gallery.css?v=20260718cx">
-<script src="../js/cursor.js?v=20260718cx" defer></script>
-<script src="../js/grain.js?v=20260718cx" defer></script>
-<script src="../js/config.js?v=20260718cx"></script>
-<script src="../js/archive.js?v=20260718cx"></script>
-<script src="../js/blobstore.js?v=20260718cx"></script>
-<script src="../js/remote-captures.js?v=20260718cx"></script>
-<script src="../js/designer-archive.js?v=20260718cx"></script>
-<script src="../js/community-seed.js?v=20260718cx"></script>
-<script src="../js/gallery-title.js?v=20260718cx" defer></script>
-<script src="../js/flow.js?v=20260718cx" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260718cy">
+<link rel="stylesheet" href="../css/chrome.css?v=20260718cy">
+<link rel="stylesheet" href="../css/gallery.css?v=20260718cy">
+<script src="../js/cursor.js?v=20260718cy" defer></script>
+<script src="../js/grain.js?v=20260718cy" defer></script>
+<script src="../js/config.js?v=20260718cy"></script>
+<script src="../js/archive.js?v=20260718cy"></script>
+<script src="../js/blobstore.js?v=20260718cy"></script>
+<script src="../js/remote-captures.js?v=20260718cy"></script>
+<script src="../js/designer-archive.js?v=20260718cy"></script>
+<script src="../js/community-seed.js?v=20260718cy"></script>
+<script src="../js/gallery-title.js?v=20260718cy" defer></script>
+<script src="../js/flow.js?v=20260718cy" defer></script>
 </head>
 <body>
 
@@ -113,6 +113,11 @@
           if (localCommunityIds[localId]) return;
           grid.insertBefore(build(Object.assign({}, c, { id: localId, remote: true })), grid.firstChild);
         });
+        // anything shared to the community from this browser before the
+        // shared store was reachable never made it there — send it now
+        if (window.RemoteCaptures) {
+          RemoteCaptures.syncMissing(window.Community ? Community.all() : [], list, "community");
+        }
       });
 
       var items = (window.Community ? Community.all() : []);

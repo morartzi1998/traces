@@ -64,5 +64,20 @@
       .catch(function () { return []; });
   }
 
-  window.RemoteCaptures = { publish: publish, list: list };
+  // one-time catch-up: a capture made in this browser before the shared
+  // store existed (or before it was reachable) never got sent. Called after
+  // list() resolves, so it only pushes what the server doesn't have yet —
+  // fire-and-forget, same as publish().
+  function syncMissing(localList, remoteList, scope) {
+    if (!api()) return;
+    var remoteIds = {};
+    (remoteList || []).forEach(function (c) {
+      remoteIds[(c.id || "").replace(/-community$/, "")] = true;
+    });
+    (localList || []).forEach(function (cap) {
+      if (!remoteIds[cap.id]) publish(cap, scope);
+    });
+  }
+
+  window.RemoteCaptures = { publish: publish, list: list, syncMissing: syncMissing };
 })();
