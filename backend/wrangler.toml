@@ -16,10 +16,7 @@ id = "cc90d998d35c4111a21f2d4944dbb73b"
 # the files attached to them (models, point clouds, thumbnails; capped at
 # ~24MB each — see backend/README.md). Deliberately KV, not R2: R2 asks for
 # a payment method on file even to stay within its free tier, KV doesn't.
-# Create it with:
-#   npx wrangler kv namespace create CAPTURES
-# then paste the id it prints below.
-# [[kv_namespaces]]
-# binding = "CAPTURES"
-# id = "paste-the-id-here"
+[[kv_namespaces]]
+binding = "CAPTURES"
+id = "1d3ff60f4f974b379e127b44e63046a1"
 
