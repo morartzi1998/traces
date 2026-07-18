@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717ex">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717ex">
-<link rel="stylesheet" href="../css/gallery.css?v=20260717ex">
-<script src="../js/cursor.js?v=20260717ex" defer></script>
-<script src="../js/grain.js?v=20260717ex" defer></script>
-<script src="../js/archive.js?v=20260717ex"></script>
-<script src="../js/blobstore.js?v=20260717ex"></script>
-<script src="../js/gallery-title.js?v=20260717ex" defer></script>
-<script src="../js/flow.js?v=20260717ex" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260718ax">
+<link rel="stylesheet" href="../css/chrome.css?v=20260718ax">
+<link rel="stylesheet" href="../css/gallery.css?v=20260718ax">
+<script src="../js/cursor.js?v=20260718ax" defer></script>
+<script src="../js/grain.js?v=20260718ax" defer></script>
+<script src="../js/archive.js?v=20260718ax"></script>
+<script src="../js/blobstore.js?v=20260718ax"></script>
+<script src="../js/community-seed.js?v=20260718ax"></script>
+<script src="../js/gallery-title.js?v=20260718ax" defer></script>
+<script src="../js/flow.js?v=20260718ax" defer></script>
 </head>
 <body>
 
@@ -29,73 +30,7 @@
       <label class="gal-filter"><input type="checkbox" value="space"> space</label>
     </div>
 
-    <main class="gal-grid">
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">2 days ago<br>lea's capture from usa</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('chandelier')">
-          <img src="../assets/images/photo-chandelier.png" alt="Old living room lamp">
-          <span class="gal-caption">old living room lamp</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">16 days ago<br>dhhh5's capture from france</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('couch')">
-          <img src="../assets/images/photo-couch.png" alt="Father's couch">
-          <span class="gal-caption">father's couch</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">27 days ago<br>lexi's capture from spain</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('teddy')">
-          <img src="../assets/images/photo-teddy.png" alt="Childhood teddy bear">
-          <span class="gal-caption">childhood teddy</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">39 days ago<br>neo's capture from poland</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('souvenirs')">
-          <img src="../assets/images/photo-souvenirs.png" alt="Souvenirs from Europe">
-          <span class="gal-caption">souvenirs from europe</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">55 days ago<br>xxl's capture from mexico</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('bed')">
-          <img src="../assets/images/photo-bed.png" alt="20 year old bed">
-          <span class="gal-caption">20 year old bed</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">164 days ago<br>mishl's capture from israel</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('cabinet')">
-          <img src="../assets/images/photo-cabinet.png" alt="Souvenirs storage cabinet">
-          <span class="gal-caption">souvenirs storage</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">a year ago<br>sweetcherry's capture from usa</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('curtain')">
-          <img src="../assets/images/photo-curtain.png" alt="Favorite corner with curtains">
-          <span class="gal-caption">favorite corner</span>
-        </button>
-      </article>
-
-      <article class="gal-item" data-kind="object">
-        <p class="gal-meta">a year ago<br>dada's capture from israel</p>
-        <button class="gal-card" type="button" onclick="openCommunityObject('table')">
-          <img src="../assets/images/photo-table.png" alt="Old table">
-          <span class="gal-caption">old table</span>
-        </button>
-      </article>
-
-    </main>
+    <main class="gal-grid" id="galGrid"></main>
 
     <footer class="nav-bottom">
       <span class="nav-link nav-current nav-corner nav-corner--bl">Community</span>
@@ -114,10 +49,33 @@
     };
 
     (function () {
+      var grid = document.getElementById("galGrid");
+      if (!grid) return;
+
+      // the fixed community showcase (seeded from community/manifest.json)
+      // renders first — same "always there" role designer-archive.js plays
+      // for gallery.html — then the visitor's own shared captures are
+      // inserted before them, so those appear first in the grid
+      if (window.communitySeedReady) {
+        window.communitySeedReady.then(function (list) {
+          (list || []).forEach(function (d) {
+            var art = document.createElement("article");
+            art.className = "gal-item";
+            art.dataset.kind = d.kind || "object";
+            art.innerHTML =
+              '<p class="gal-meta">' + d.meta + '<br>' + d.by + '\'s capture from ' + d.country + '</p>' +
+              '<button class="gal-card" type="button" onclick="openCommunityObject(\'' + d.key + '\')">' +
+                '<img src="' + d.img + '" alt="">' +
+                '<span class="gal-caption">' + d.title + '</span>' +
+              '</button>';
+            grid.appendChild(art);
+          });
+        });
+      }
+
       // the visitor's own captures shared to the community appear first
-      var grid = document.querySelector(".gal-grid");
       var items = (window.Community ? Community.all() : []);
-      if (!grid || !items.length) return;
+      if (!items.length) return;
       function ago(ts) {
         var d = Math.floor((Date.now() - (ts || Date.now())) / 86400000);
         if (d <= 0) return "today";

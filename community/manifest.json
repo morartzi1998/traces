@@ -1,0 +1,44 @@
+[
+  {
+    "key": "communityAntiqueCabinet",
+    "title": "antique cabinet",
+    "img": "../community/images/antique-cabinet.png",
+    "model": "../community/models/antique-cabinet.glb",
+    "kind": "object",
+    "by": "mara",
+    "country": "portugal",
+    "meta": "5 days ago",
+    "feeling": "found this at a flea market outside porto and could not leave without it - the smell of old wood still gets me every time i open it.",
+    "annotations": [
+      { "x": 0.4, "y": 0.55, "title": "carved doors", "type": "story", "since": 2022, "text": "the carving on the doors took the restorer three weeks - said it was some of the finest joinery he'd seen from that era." }
+    ]
+  },
+  {
+    "key": "communityAntiqueSideTable",
+    "title": "antique side table",
+    "img": "../community/images/antique-side-table.png",
+    "model": "../community/models/antique-side-table.glb",
+    "kind": "object",
+    "by": "joans",
+    "country": "germany",
+    "meta": "11 days ago",
+    "feeling": "my great-grandfather built this table by hand - it's outlived three house moves and two countries.",
+    "annotations": [
+      { "x": 0.5, "y": 0.6, "title": "water ring", "type": "remark", "since": 2020, "text": "there's a faint water ring on the corner from a glass someone left there in the 80s. we never sanded it out on purpose." }
+    ]
+  },
+  {
+    "key": "communityPatternedRug",
+    "title": "patterned rug",
+    "img": "../community/images/patterned-rug.png",
+    "model": "../community/models/patterned-rug.glb",
+    "kind": "object",
+    "by": "amel",
+    "country": "morocco",
+    "meta": "19 days ago",
+    "feeling": "my mother wove this one herself the winter before i was born. it's been under every dining table i've ever owned.",
+    "annotations": [
+      { "x": 0.5, "y": 0.5, "title": "faded corner", "type": "story", "since": 2019, "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan." }
+    ]
+  }
+]

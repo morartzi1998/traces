@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260717ex">
-<link rel="stylesheet" href="../css/chrome.css?v=20260717ex">
-<link rel="stylesheet" href="../css/object.css?v=20260717ex">
-<script src="../js/cursor.js?v=20260717ex" defer></script>
-<script src="../js/grain.js?v=20260717ex" defer></script>
-<script src="../js/tilt3d.js?v=20260717ex" defer></script>
-<script src="../js/archive.js?v=20260717ex"></script>
-<script src="../js/blobstore.js?v=20260717ex"></script>
-<script src="../js/flow.js?v=20260717ex" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260717ex"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260718ax">
+<link rel="stylesheet" href="../css/chrome.css?v=20260718ax">
+<link rel="stylesheet" href="../css/object.css?v=20260718ax">
+<script src="../js/cursor.js?v=20260718ax" defer></script>
+<script src="../js/grain.js?v=20260718ax" defer></script>
+<script src="../js/tilt3d.js?v=20260718ax" defer></script>
+<script src="../js/archive.js?v=20260718ax"></script>
+<script src="../js/blobstore.js?v=20260718ax"></script>
+<script src="../js/community-seed.js?v=20260718ax"></script>
+<script src="../js/flow.js?v=20260718ax" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260718ax"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -23,11 +24,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260717ex" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260718ax" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260717ex";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260717ex";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260718ax";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260718ax";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -281,6 +282,19 @@
           connected: "my old living room", connectedKey: "room", annotations: [] },
       };
 
+      // the community showcase (real scans someone else shared) is fetched
+      // from community/manifest.json rather than hardcoded here, so adding
+      // a new one is just: drop the files, add a manifest entry, push
+      function mergeCommunitySeedIntoCatalog(list) {
+        (list || []).forEach(function (d) {
+          if (catalog[d.key]) return;
+          catalog[d.key] = {
+            kind: d.kind || "object", title: d.title, img: d.img, model: d.model,
+            feeling: d.feeling || "", annotations: d.annotations || [], links: [],
+          };
+        });
+      }
+
       // every item can host link markers (points that jump to a connected
       // capture — spaces typically hold these, but any item may)
       Object.keys(catalog).forEach(function (k) { catalog[k].links = catalog[k].links || []; });
@@ -394,7 +408,12 @@
       var menu = document.getElementById("objMenu");
       var key = "chandelier";
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
-      if (!catalog[key]) key = "chandelier";
+      // NOTE: catalog[key] isn't validated here — a community-showcase key
+      // doesn't exist in catalog until mergeCommunitySeedIntoCatalog runs in
+      // boot(), which happens after an async fetch. Validating this early
+      // would wrongly fall back to "chandelier" before that merge ever gets
+      // a chance to run. The real "does this key exist" check happens in
+      // boot(), right before show(key).
 
       // the fixed showcase items carry no visibility flag of their own, so
       // arriving here via a community.html link (openCommunityObject) marks
@@ -412,11 +431,10 @@
       // so arrow-browsing stays within that set until a fresh page load says
       // otherwise (e.g. arriving here some other way)
       var browsingCommunity = cameFromCommunity;
-      var communityOrder = (function () {
-        var real = window.Community ? Community.all().map(function (c) { return c.id; }) : [];
-        var fixed = ["chandelier", "couch", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table"];
-        return real.concat(fixed);
-      })();
+      // the fixed part of this order (the community showcase) is only known
+      // once community/manifest.json resolves — appended in boot(), same
+      // gate as mergeCommunitySeedIntoCatalog
+      var communityOrder = window.Community ? Community.all().map(function (c) { return c.id; }) : [];
       var pendingSpot = null;
       var editingAnnotation = null; // the saved annotation currently open in edit mode, if any
       var annotateMode = false; // true only between "Add an annotations" and the point-picking click
@@ -1711,7 +1729,17 @@
 
       function boot() {
         initTilt3D(stage, photo);
-        show(key);
+        if (window.communitySeedReady) {
+          window.communitySeedReady.then(function (list) {
+            mergeCommunitySeedIntoCatalog(list);
+            communityOrder = communityOrder.concat((list || []).map(function (d) { return d.key; }));
+            if (!catalog[key]) key = "chandelier";
+            show(key);
+          });
+        } else {
+          if (!catalog[key]) key = "chandelier";
+          show(key);
+        }
       }
       if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", boot);
