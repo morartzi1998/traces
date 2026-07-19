@@ -19,11 +19,19 @@
     var filters = document.querySelector(".gal-filters");
     var first = document.querySelector(".gal-grid .gal-item");
     var screenEl = document.querySelector(".gal-screen");
+    var titleText = document.querySelector(".gal-title");
+    var addCapture = document.querySelector(".gal-add");
     if (!first || !screenEl) return;
     var cs = getComputedStyle(screenEl);
     var contentLeft = screenEl.getBoundingClientRect().left + parseFloat(cs.paddingLeft);
     alignToFirst(title, contentLeft, first);
     alignToFirst(filters, contentLeft, first);
+
+    /* Keep the fixed CTA on the exact same top axis as the archive heading,
+       even when responsive type or viewport height changes. */
+    if (addCapture && titleText) {
+      addCapture.style.top = Math.round(titleText.getBoundingClientRect().top) + "px";
+    }
   }
   window.alignGalleryTitle = align;
   window.addEventListener("load", align);

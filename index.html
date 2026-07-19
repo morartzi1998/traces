@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260719g">
-<link rel="stylesheet" href="css/chrome.css?v=20260719g">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260719g">
-<link rel="stylesheet" href="css/loading.css?v=20260719g">
+<link rel="stylesheet" href="css/base.css?v=20260719h">
+<link rel="stylesheet" href="css/chrome.css?v=20260719h">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260719h">
+<link rel="stylesheet" href="css/loading.css?v=20260719h">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,9 +20,9 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260719g" defer></script>
-<script src="js/grain.js?v=20260719g" defer></script>
-<script src="js/flow.js?v=20260719g" defer></script>
+<script src="js/cursor.js?v=20260719h" defer></script>
+<script src="js/grain.js?v=20260719h" defer></script>
+<script src="js/flow.js?v=20260719h" defer></script>
 </head>
 <body>
 
@@ -98,23 +98,23 @@
       <div class="polaroid-stack">
         <div class="scan-meta">
           <div>[5 days ago]</div>
-          <div>[alexss's scan]</div>
+          <div>[mishel's scan]</div>
         </div>
 
         <div class="polaroid polaroid-third" role="button" tabindex="0"
-             onclick="openObject('teddy', locationPrefix() + 'object.html')">
+             onclick="selectWelcomePolaroid(this, 'teddy')">
           <img src="assets/images/photo-teddy.png" alt="Childhood teddy bear">
           <div class="polaroid-caption caption-third">childhood teddy</div>
         </div>
 
         <div class="polaroid polaroid-back" role="button" tabindex="0"
-             onclick="openObject('souvenirs', locationPrefix() + 'object.html')">
+             onclick="selectWelcomePolaroid(this, 'souvenirs')">
           <img src="assets/images/photo-souvenirs.png" alt="Souvenirs from Europe, blue and white china plates">
           <div class="polaroid-caption caption-back">souvenirs from europe</div>
         </div>
 
         <div class="polaroid polaroid-front" role="button" tabindex="0"
-             onclick="openObject('chandelier', locationPrefix() + 'object.html')">
+             onclick="selectWelcomePolaroid(this, 'chandelier')">
           <img src="assets/images/photo-chandelier.png" alt="Old living room lamp, a brass chandelier">
           <div class="polaroid-caption caption-front">old living room lamp</div>
         </div>
@@ -137,6 +137,28 @@
     </nav>
 
   </div>
+
+  <script>
+    // the first tap on a background polaroid just brings it to the front of
+    // the stack (so its own caption/photo become the focus) — only a second
+    // tap on that same card (now on top, or already the default front one)
+    // actually opens it, so browsing the stack doesn't require leaving it
+    function selectWelcomePolaroid(card, key) {
+      var stack = card.closest('.polaroid-stack');
+      var active = stack.querySelector('.polaroid.is-active');
+      var isDefaultFront = card.classList.contains('polaroid-front') && !active;
+
+      if (card.classList.contains('is-active') || isDefaultFront) {
+        openObject(key, locationPrefix() + 'object.html');
+        return;
+      }
+
+      stack.querySelectorAll('.polaroid').forEach(function (item) {
+        item.classList.remove('is-active');
+      });
+      card.classList.add('is-active');
+    }
+  </script>
 
 </body>
 </html>

@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719g">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719g">
-<script src="../js/cursor.js?v=20260719g" defer></script>
-<script src="../js/grain.js?v=20260719g" defer></script>
-<script src="../js/config.js?v=20260719g"></script>
-<script src="../js/archive.js?v=20260719g"></script>
-<script src="../js/blobstore.js?v=20260719g"></script>
-<script src="../js/remote-captures.js?v=20260719g"></script>
-<script src="../js/designer-archive.js?v=20260719g"></script>
-<script src="../js/gallery-title.js?v=20260719g" defer></script>
-<script src="../js/flow.js?v=20260719g" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719h">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719h">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719h">
+<script src="../js/cursor.js?v=20260719h" defer></script>
+<script src="../js/grain.js?v=20260719h" defer></script>
+<script src="../js/config.js?v=20260719h"></script>
+<script src="../js/archive.js?v=20260719h"></script>
+<script src="../js/blobstore.js?v=20260719h"></script>
+<script src="../js/remote-captures.js?v=20260719h"></script>
+<script src="../js/designer-archive.js?v=20260719h"></script>
+<script src="../js/gallery-title.js?v=20260719h" defer></script>
+<script src="../js/flow.js?v=20260719h" defer></script>
 </head>
 <body>
 
@@ -78,6 +78,14 @@
       var screenEl = document.querySelector(".gal-screen");
       var manageBackdrop = document.getElementById("galManageBackdrop");
 
+      // the Hidden tab is only reachable while management mode is open —
+      // it isn't a permanent fixture cluttering the corner, it's part of
+      // the same deliberate "editing" moment as a long-press reveal
+      var hiddenTotal = 0;
+      function updateHiddenTabVisibility() {
+        hiddenTab.hidden = !(hiddenTotal && screenEl.classList.contains("gal-screen--manage"));
+      }
+
       // long-press management mode: dims the rest of the archive while one
       // polaroid's hide/delete controls are open, so they read as a deliberate
       // action instead of getting lost among the rest of the grid
@@ -86,6 +94,7 @@
         grid.querySelectorAll(".gal-item--selected").forEach(function (a) { a.classList.remove("gal-item--selected"); });
         screenEl.classList.remove("gal-screen--manage");
         manageBackdrop.hidden = true;
+        updateHiddenTabVisibility();
       }
       manageBackdrop.addEventListener("click", exitManageMode);
 
@@ -198,6 +207,7 @@
             art.classList.add("gal-item--selected");
             screenEl.classList.add("gal-screen--manage");
             manageBackdrop.hidden = false;
+            updateHiddenTabVisibility();
           }, 480);
         }
         function endPress() { clearTimeout(timer); }
@@ -342,13 +352,14 @@
       hiddenBackdrop.addEventListener("click", closeHiddenPanel);
       hiddenClose.addEventListener("click", closeHiddenPanel);
 
-      function addHiddenRow(title, img, onRestore) {
+      function addHiddenRow(title, img, onRestore, onDelete) {
         var row = document.createElement("div");
         row.className = "gal-hidden-row";
         row.innerHTML =
           '<img alt="">' +
           '<span class="gal-hidden-row-title"></span>' +
-          '<button class="gal-hidden-restore" type="button">restore</button>';
+          '<button class="gal-hidden-restore" type="button">restore</button>' +
+          (onDelete ? '<button class="gal-hidden-restore gal-hidden-delete" type="button">delete</button>' : '');
         var imgEl = row.querySelector("img");
         if (window.BlobStore) {
           window.BlobStore.url(img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
@@ -357,6 +368,7 @@
         }
         row.querySelector(".gal-hidden-row-title").textContent = title || "untitled capture";
         row.querySelector(".gal-hidden-restore").addEventListener("click", onRestore);
+        if (onDelete) row.querySelector(".gal-hidden-delete").addEventListener("click", onDelete);
         hiddenList.appendChild(row);
       }
 
@@ -368,7 +380,8 @@
           .filter(function (d) { return hiddenKeys.indexOf(d.key) !== -1; });
         var total = hiddenReal.length + hiddenShowcase.length;
 
-        hiddenTab.hidden = !total;
+        hiddenTotal = total;
+        updateHiddenTabVisibility();
         if (!total) closeHiddenPanel();
         hiddenCountEl.textContent = total;
         hiddenList.innerHTML = "";
@@ -379,6 +392,9 @@
         hiddenReal.forEach(function (c) {
           addHiddenRow(c.title, c.img, function () {
             Archive.update(c.id, { hidden: false });
+            render();
+          }, function () {
+            Archive.remove(c.id);
             render();
           });
         });

@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719g">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719g">
-<script src="../js/cursor.js?v=20260719g" defer></script>
-<script src="../js/grain.js?v=20260719g" defer></script>
-<script src="../js/config.js?v=20260719g"></script>
-<script src="../js/archive.js?v=20260719g"></script>
-<script src="../js/blobstore.js?v=20260719g"></script>
-<script src="../js/remote-captures.js?v=20260719g"></script>
-<script src="../js/designer-archive.js?v=20260719g"></script>
-<script src="../js/community-seed.js?v=20260719g"></script>
-<script src="../js/gallery-title.js?v=20260719g" defer></script>
-<script src="../js/flow.js?v=20260719g" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719h">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719h">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719h">
+<script src="../js/cursor.js?v=20260719h" defer></script>
+<script src="../js/grain.js?v=20260719h" defer></script>
+<script src="../js/config.js?v=20260719h"></script>
+<script src="../js/archive.js?v=20260719h"></script>
+<script src="../js/blobstore.js?v=20260719h"></script>
+<script src="../js/remote-captures.js?v=20260719h"></script>
+<script src="../js/designer-archive.js?v=20260719h"></script>
+<script src="../js/community-seed.js?v=20260719h"></script>
+<script src="../js/gallery-title.js?v=20260719h" defer></script>
+<script src="../js/flow.js?v=20260719h" defer></script>
 </head>
 <body>
 
@@ -27,6 +27,11 @@
       <a class="logo gal-logo nav-corner nav-corner--tl" href="../index.html">traces</a>
       <button class="nav-link nav-corner nav-corner--tr" type="button" onclick="goTo('gallery.html')">Archive</button>
     </header>
+
+    <div class="gal-title-block">
+      <p class="gal-updated">everything the community holds, together</p>
+      <h1 class="gal-title">community</h1>
+    </div>
 
     <div class="gal-filters" id="galFilters">
       <label class="gal-filter"><input type="checkbox" value="object"> object</label>
@@ -182,6 +187,7 @@
         return art;
       }
       items.forEach(function (c) { grid.insertBefore(build(c), grid.firstChild); });
+      if (window.alignGalleryTitle) window.alignGalleryTitle();
       document.addEventListener("click", function (e) {
         if (!e.target.closest(".gal-item")) {
           grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
