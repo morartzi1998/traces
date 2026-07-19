@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719p">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719p">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719p">
-<script src="../js/cursor.js?v=20260719p" defer></script>
-<script src="../js/grain.js?v=20260719p" defer></script>
-<script src="../js/owner.js?v=20260719p"></script>
-<script src="../js/config.js?v=20260719p"></script>
-<script src="../js/archive.js?v=20260719p"></script>
-<script src="../js/blobstore.js?v=20260719p"></script>
-<script src="../js/remote-captures.js?v=20260719p"></script>
-<script src="../js/designer-archive.js?v=20260719p"></script>
-<script src="../js/gallery-title.js?v=20260719p" defer></script>
-<script src="../js/flow.js?v=20260719p" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719q">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719q">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719q">
+<script src="../js/cursor.js?v=20260719q" defer></script>
+<script src="../js/grain.js?v=20260719q" defer></script>
+<script src="../js/owner.js?v=20260719q"></script>
+<script src="../js/config.js?v=20260719q"></script>
+<script src="../js/archive.js?v=20260719q"></script>
+<script src="../js/blobstore.js?v=20260719q"></script>
+<script src="../js/remote-captures.js?v=20260719q"></script>
+<script src="../js/designer-archive.js?v=20260719q"></script>
+<script src="../js/gallery-title.js?v=20260719q" defer></script>
+<script src="../js/flow.js?v=20260719q" defer></script>
 </head>
 <body>
 
@@ -297,10 +297,10 @@
             remove: function () { if (window.Archive) Archive.remove(c.id); },
           }));
         });
-        // someone else's capture, only visible through the shared worker
-        // store — hiding it here only affects this browser (the same
-        // key-based mechanism as the fixed showcases), it does not delete
-        // the shared record
+        // one of Mor's own captures synced from another of her devices
+        // (remoteOnly only exists at all on owner devices — see isOwner
+        // above) — "hide" only affects this browser, "delete" removes the
+        // actual shared record so it stops showing up anywhere at all
         remoteOnly.forEach(function (c) {
           var idx = ("0" + (total - pos)).slice(-2);
           pos++;
@@ -308,6 +308,10 @@
             id: c.id, title: c.title, img: c.img, kind: c.kind,
             idx: idx, metaText: ago(c.created),
             hide: function () { hideDesignerItem(c.id); },
+            remove: function () {
+              var api = (window.TRACES_API || "").replace(/\/$/, "");
+              if (api) fetch(api + "/captures/" + c.id, { method: "DELETE" }).catch(function () {});
+            },
           }));
         });
         showcase.forEach(function (d) {
