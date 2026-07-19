@@ -5,30 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719k">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260719k">
-<script src="../js/cursor.js?v=20260719k" defer></script>
-<script src="../js/grain.js?v=20260719k" defer></script>
-<script src="../js/tilt3d.js?v=20260719k" defer></script>
-<script src="../js/annotations.js?v=20260719k" defer></script>
-<script src="../js/owner.js?v=20260719k"></script>
-<script src="../js/config.js?v=20260719k"></script>
-<script src="../js/archive.js?v=20260719k"></script>
-<script src="../js/blobstore.js?v=20260719k"></script>
-<script src="../js/remote-captures.js?v=20260719k"></script>
-<script src="../js/flow.js?v=20260719k" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719k"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719l">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260719l">
+<script src="../js/cursor.js?v=20260719l" defer></script>
+<script src="../js/grain.js?v=20260719l" defer></script>
+<script src="../js/tilt3d.js?v=20260719l" defer></script>
+<script src="../js/annotations.js?v=20260719l" defer></script>
+<script src="../js/owner.js?v=20260719l"></script>
+<script src="../js/config.js?v=20260719l"></script>
+<script src="../js/archive.js?v=20260719l"></script>
+<script src="../js/blobstore.js?v=20260719l"></script>
+<script src="../js/remote-captures.js?v=20260719l"></script>
+<script src="../js/flow.js?v=20260719l" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719l"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719k" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719l" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719k";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719k";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719l";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719l";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -364,12 +364,21 @@
           cap.img = refs.img; cap.model = refs.model; cap.points = pointsRef; cap.versions = [v0];
           // the community copy reuses the very same IndexedDB blobs by reference
           if (alsoCommunity && window.Community) Community.add(Object.assign({}, cap));
+          var isOwner = window.isOwnerDevice && window.isOwnerDevice();
           // provisional stopgap so this capture is visible from any device,
           // not just this browser — best-effort, doesn't block navigation
           if (window.RemoteCaptures) {
-            if (window.isOwnerDevice && window.isOwnerDevice()) RemoteCaptures.publish(cap, "archive");
+            // Mor's own archive stays "sterile": something she sends straight
+            // to the community never also occupies her private showcase. A
+            // visitor's own archive isn't affected — their capture stays in
+            // both places, exactly like sharing normally works for them (and
+            // visitors never publish to the private "archive" scope at all).
+            if (isOwner && !alsoCommunity) RemoteCaptures.publish(cap, "archive");
             if (alsoCommunity) RemoteCaptures.publish(cap, "community");
           }
+          // retract the scratch Archive record used above (for the id and
+          // blob moves) now that Community already holds its own copy
+          if (isOwner && alsoCommunity && window.Archive) Archive.remove(cap.id);
           clearSession(cap.id);
           goTo("gallery.html");
         }, function () { clearSession(cap.id); goTo("gallery.html"); });
