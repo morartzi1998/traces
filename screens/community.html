@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719m">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719m">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719m">
-<script src="../js/cursor.js?v=20260719m" defer></script>
-<script src="../js/grain.js?v=20260719m" defer></script>
-<script src="../js/owner.js?v=20260719m"></script>
-<script src="../js/config.js?v=20260719m"></script>
-<script src="../js/archive.js?v=20260719m"></script>
-<script src="../js/blobstore.js?v=20260719m"></script>
-<script src="../js/remote-captures.js?v=20260719m"></script>
-<script src="../js/designer-archive.js?v=20260719m"></script>
-<script src="../js/community-seed.js?v=20260719m"></script>
-<script src="../js/gallery-title.js?v=20260719m" defer></script>
-<script src="../js/flow.js?v=20260719m" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719n">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719n">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719n">
+<script src="../js/cursor.js?v=20260719n" defer></script>
+<script src="../js/grain.js?v=20260719n" defer></script>
+<script src="../js/owner.js?v=20260719n"></script>
+<script src="../js/config.js?v=20260719n"></script>
+<script src="../js/archive.js?v=20260719n"></script>
+<script src="../js/blobstore.js?v=20260719n"></script>
+<script src="../js/remote-captures.js?v=20260719n"></script>
+<script src="../js/designer-archive.js?v=20260719n"></script>
+<script src="../js/community-seed.js?v=20260719n"></script>
+<script src="../js/gallery-title.js?v=20260719n" defer></script>
+<script src="../js/flow.js?v=20260719n" defer></script>
 </head>
 <body>
 
@@ -81,30 +81,9 @@
         });
       }
 
-      // everything in "your archive" (the designer's own showcase) belongs
-      // in the community too — the community is meant to hold at least
-      // everything the archive does, even before real cross-visitor
-      // sharing exists. Same hidden-key mechanism gallery.html's hide/
-      // restore panel already uses, so hiding one of these anywhere is
-      // consistent everywhere
-      (function () {
-        var hidden;
-        try { hidden = JSON.parse(localStorage.getItem("traces-archive-hidden")) || []; } catch (e) { hidden = []; }
-        (window.DESIGNER_ARCHIVE || [])
-          .filter(function (d) { return hidden.indexOf(d.key) === -1; })
-          .forEach(function (d) {
-            var art = document.createElement("article");
-            art.className = "gal-item";
-            art.dataset.kind = d.kind || "object";
-            art.innerHTML =
-              '<p class="gal-meta">' + d.meta + '<br>from your archive</p>' +
-              '<button class="gal-card" type="button" onclick="openCommunityObject(\'' + d.key + '\')">' +
-                '<img src="' + d.img + '" alt="">' +
-                '<span class="gal-caption">' + d.title + '</span>' +
-              '</button>';
-            grid.appendChild(art);
-          });
-      })();
+      // the designer's own built-in showcase (chandelier, couch, etc.) stays
+      // in "my archive"/"your archive" only — the community is meant to hold
+      // real shared captures, not a copy of that catalog too.
 
       // the visitor's own captures shared to the community appear first —
       // remote items this same browser already made locally would otherwise
