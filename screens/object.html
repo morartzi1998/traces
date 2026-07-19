@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720k">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720k">
-<link rel="stylesheet" href="../css/object.css?v=20260720k">
-<script src="../js/cursor.js?v=20260720k" defer></script>
-<script src="../js/grain.js?v=20260720k" defer></script>
-<script src="../js/tilt3d.js?v=20260720k" defer></script>
-<script src="../js/owner.js?v=20260720k"></script>
-<script src="../js/config.js?v=20260720k"></script>
-<script src="../js/archive.js?v=20260720k"></script>
-<script src="../js/blobstore.js?v=20260720k"></script>
-<script src="../js/remote-captures.js?v=20260720k"></script>
-<script src="../js/community-seed.js?v=20260720k"></script>
-<script src="../js/flow.js?v=20260720k" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720k"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720l">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720l">
+<link rel="stylesheet" href="../css/object.css?v=20260720l">
+<script src="../js/cursor.js?v=20260720l" defer></script>
+<script src="../js/grain.js?v=20260720l" defer></script>
+<script src="../js/tilt3d.js?v=20260720l" defer></script>
+<script src="../js/owner.js?v=20260720l"></script>
+<script src="../js/config.js?v=20260720l"></script>
+<script src="../js/archive.js?v=20260720l"></script>
+<script src="../js/blobstore.js?v=20260720l"></script>
+<script src="../js/remote-captures.js?v=20260720l"></script>
+<script src="../js/community-seed.js?v=20260720l"></script>
+<script src="../js/flow.js?v=20260720l" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720l"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720k" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720l" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720k";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720k";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720l";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720l";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -53,11 +53,11 @@
       </div>
       <ul class="obj-menu" id="objMenu" hidden>
         <li><button type="button" id="menuUpdateCapture">Update capture</button></li>
-        <li><button type="button" id="menuAddAnnotation">Add an annotations</button></li>
+        <li><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
-        <li><button type="button" id="menuToggleView" hidden>Show in its space</button></li>
-        <li><button type="button" id="menuSetDefaultView" hidden>Set this angle as default view &amp; thumbnail</button></li>
+        <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
+        <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
       </ul>
     </header>
 
@@ -278,6 +278,13 @@
 
   <script>
     (function () {
+      // decided once, before any tap could fake it - see .obj-year-tip in
+      // object.css for why this can't just be a live "(hover: hover)" media query
+      if (!(window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches)) {
+        document.body.classList.add("no-hover-tip");
+      }
+    })();
+    (function () {
       var order = ["chandelier", "room", "couch", "plant", "teddy", "souvenirs", "bed", "cabinet", "curtain", "table", "television"];
       var catalog = {
         room: { kind: "space", title: "My old living room", img: "../assets/images/photo-room.png",
@@ -361,39 +368,51 @@
       // ----- the visitor's own saved captures (archive + community) join the
       // catalog so they open in the object view just like the designer's items -----
       (function mergeCaptures() {
-        var lists = [];
-        if (window.Archive) lists.push(Archive.all());
-        if (window.Community) lists.push(Community.all());
-        lists.forEach(function (list) {
-          list.forEach(function (c) {
-            if (catalog[c.id]) return;
-            catalog[c.id] = {
-              kind: c.kind || "object",
-              title: c.title || "untitled capture",
-              img: c.img || "../assets/images/photo-room.png",
-              model: c.model || null,
-              points: c.points || null,
-              connected: c.connected || "",
-              connectedKey: c.connectedKey || null,
-              feeling: c.feeling || "",
-              visibility: (window.Community && Community.get(c.id)) ? "community" : "private",
-              annotations: Array.isArray(c.annotations) ? c.annotations : [],
-              links: [],
-              // a re-scan appends a dated version; a fresh capture has just one.
-              // title falls back to the capture's current title when a
-              // version predates per-version title snapshots.
-              versions: (Array.isArray(c.versions) && c.versions.length)
-                ? c.versions.map(function (v) {
-                    return { year: new Date(v.created || Date.now()).getFullYear(),
-                      created: v.created, model: v.model, img: v.img, points: v.points,
-                      title: v.title || c.title };
-                  })
-                : [{ year: new Date(c.created || Date.now()).getFullYear(),
-                     created: c.created, model: c.model, img: c.img, points: c.points, title: c.title }]
-            };
-            order.push(c.id);
-          });
-        });
+        function addToCatalog(c) {
+          if (catalog[c.id]) return;
+          catalog[c.id] = {
+            kind: c.kind || "object",
+            title: c.title || "untitled capture",
+            img: c.img || "../assets/images/photo-room.png",
+            model: c.model || null,
+            points: c.points || null,
+            connected: c.connected || "",
+            connectedKey: c.connectedKey || null,
+            feeling: c.feeling || "",
+            visibility: (window.Community && Community.get(c.id)) ? "community" : "private",
+            annotations: Array.isArray(c.annotations) ? c.annotations : [],
+            links: [],
+            // a re-scan appends a dated version; a fresh capture has just one.
+            // title falls back to the capture's current title when a
+            // version predates per-version title snapshots.
+            versions: (Array.isArray(c.versions) && c.versions.length)
+              ? c.versions.map(function (v) {
+                  return { year: new Date(v.created || Date.now()).getFullYear(),
+                    created: v.created, model: v.model, img: v.img, points: v.points,
+                    title: v.title || c.title };
+                })
+              : [{ year: new Date(c.created || Date.now()).getFullYear(),
+                   created: c.created, model: c.model, img: c.img, points: c.points, title: c.title }]
+          };
+        }
+        // only real archive items belong in "order" (the archive's own
+        // prev/next sequence) - a community-only (sterile) item that's
+        // never in Archive still needs to open correctly when reached
+        // directly (e.g. from community.html), so it still joins the
+        // catalog below, just not this navigation sequence. A dual-
+        // presence item (in both stores) is already added to order by the
+        // Archive pass, so addToCatalog's own guard skips it here.
+        (function () {
+          if (window.Archive) {
+            Archive.all().forEach(function (c) {
+              addToCatalog(c);
+              order.push(c.id);
+            });
+          }
+          if (window.Community) {
+            Community.all().forEach(function (c) { addToCatalog(c); });
+          }
+        })();
       })();
 
       // the timeline shows one dot per dated scan version. Only the chandelier
@@ -767,6 +786,11 @@
       // (object / space / visual collage) once that third mode exists
       var SPACE_VIEW_ACTIVE = false;
       var menuToggleView = document.getElementById("menuToggleView");
+      // hiding just the button left its <li> (and that li's own bottom
+      // border) still taking up space in the menu, reading as a doubled/
+      // thicker divider between the two menu items around it - hide the
+      // whole row instead
+      var menuToggleViewRow = menuToggleView.closest("li");
 
       function hasSpaceView(k) {
         return !!(catalog[k].connectedKey && catalog[catalog[k].connectedKey]);
@@ -774,7 +798,7 @@
 
       function refreshViewToggle() {
         var has = hasSpaceView(key);
-        menuToggleView.hidden = !has;
+        menuToggleViewRow.hidden = !has;
         menuToggleView.textContent = SPACE_VIEW_ACTIVE ? "Show this object alone" : "Show in its space";
       }
 
@@ -1777,17 +1801,30 @@
       }
 
       var menuSetDefaultView = document.getElementById("menuSetDefaultView");
+      var menuSetDefaultViewRow = menuSetDefaultView.closest("li");
       document.getElementById("objMenuBtn").addEventListener("click", function () {
-        menu.hidden = !menu.hidden;
+        var opening = menu.hidden;
+        if (opening) {
+          menu.hidden = false;
+        } else {
+          // collapse down to a line instead of just vanishing - [hidden]
+          // is display:none, which would skip the transition entirely, so
+          // it only gets applied once the shrink animation finishes
+          menu.classList.add("obj-menu--closing");
+          setTimeout(function () {
+            menu.hidden = true;
+            menu.classList.remove("obj-menu--closing");
+          }, 200);
+        }
         // the open menu sits over the history timeline — hide it while open,
         // and only restore it when this capture actually has a history to show
-        objTimeline.hidden = menu.hidden ? !timelineHasHistory() : true;
+        objTimeline.hidden = opening ? true : !timelineHasHistory();
         // meaningful on any live 3D capture — a raw scan's own coordinate
         // frame is arbitrary, and even a modeled object may not open on its
         // best side, so there's a real angle worth saving in both cases
         var onLiveModel = catalog[key].model && !modelViewer.hidden && modelViewer.loaded;
         var onLivePoints = pcViewer && !objPoints.hidden;
-        menuSetDefaultView.hidden = !(onLiveModel || onLivePoints);
+        menuSetDefaultViewRow.hidden = !(onLiveModel || onLivePoints);
       });
       // writes a freshly-captured thumbnail back to the Archive/Community
       // record — gallery.html, community.html and connect.html all read a

@@ -95,6 +95,15 @@
   line-height: 1;
   cursor: pointer;
   padding: 2px;
+  outline: none;
+}
+
+/* a deliberate, quiet focus ring instead of the browser's own default
+   rectangle, which read as a stray box sitting around the icon for no
+   apparent reason - only shown for keyboard focus, not a mouse click */
+.obj-menu-btn:focus-visible {
+  outline: 1px solid var(--color-cream);
+  outline-offset: 3px;
 }
 
 .obj-title {
@@ -108,16 +117,20 @@
   list-style: none;
   margin-top: 14px;
   width: min(360px, 60vw);
+  transform-origin: top;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* closing collapses the menu down to a thin line rather than just
+   vanishing - class is added right before hiding, removed once the
+   collapse finishes (see the objMenuBtn click handler) */
+.obj-menu--closing {
+  transform: scaleY(0);
+  opacity: 0;
 }
 
 .obj-menu li {
-  border-bottom: 2px solid rgba(240, 238, 234, 0.5);
-}
-
-/* Adding a note belongs to the capture-update group, so it does not close
-   with another divider before the following creation tools. */
-.obj-menu li:nth-child(2) {
-  border-bottom: none;
+  border-bottom: 1px solid rgba(240, 238, 234, 0.5);
 }
 
 .obj-menu button {
@@ -133,12 +146,6 @@
   text-transform: uppercase;
   padding: 10px 2px;
   cursor: pointer;
-}
-
-.obj-menu li:first-child button {
-  color: var(--color-ink-blue);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .obj-menu button:hover {
@@ -217,18 +224,29 @@
   z-index: 6;
 }
 
-.obj-year:hover .obj-year-tip,
-.obj-year:focus-visible .obj-year-tip {
+/* the tip only ever shows on a real mouse hover (or keyboard focus on a
+   device that has one). Gating this on the live "(hover: hover)" media
+   query alone isn't enough - touch browsers synthesize a compatibility
+   mouse hover right after a tap, which can flip that media query true for
+   a moment too, leaving the tip (and the next one tapped) stuck open at
+   once on phones. body.no-hover-tip is set once at load from a one-time
+   read of that same query, before any tap could ever fool it, and never
+   changes again - see the boot() script. */
+body:not(.no-hover-tip) .obj-year:hover .obj-year-tip,
+body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   opacity: 1;
 }
 
-.obj-year > span {
+/* the year label only - excludes .obj-year-tip, which is also a direct
+   child <span> of .obj-year but has its own opacity (hidden until
+   hovered) that this would otherwise outrank and override */
+.obj-year > span:not(.obj-year-tip) {
   font-size: 0.85rem;
   letter-spacing: 0.06em;
   opacity: 0.7;
 }
 
-.obj-year--active > span {
+.obj-year--active > span:not(.obj-year-tip) {
   opacity: 1;
 }
 

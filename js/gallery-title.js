@@ -37,4 +37,18 @@
   window.addEventListener("load", align);
   window.addEventListener("resize", align);
   if (document.readyState !== "loading") align();
+
+  // the grid fills in over several async steps (local items render
+  // instantly, remote/showcase items trail in later) - rather than trust
+  // every one of those call sites to remember to re-align afterwards,
+  // watch the grid directly so a layout shift is always caught
+  var grid = document.querySelector(".gal-grid");
+  if (grid && window.MutationObserver) {
+    var pending = false;
+    new MutationObserver(function () {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(function () { pending = false; align(); });
+    }).observe(grid, { childList: true });
+  }
 })();
