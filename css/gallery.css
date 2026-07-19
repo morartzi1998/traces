@@ -297,6 +297,31 @@
   text-overflow: ellipsis;
 }
 
+/* owner-only line under each card confirming whether this capture actually
+   reached the shared server (so it's visible on Mor's other devices too),
+   or is still sitting on this device alone */
+.gal-sync-status {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--color-cream);
+  opacity: 0.55;
+  margin: 6px 2px 0;
+}
+
+.gal-sync-status--local-only {
+  color: #e0b34d;
+  opacity: 0.85;
+}
+
+.gal-sync-status--uploading {
+  color: var(--color-caption-blue);
+  opacity: 0.9;
+}
+
+.gal-sync-status--synced {
+  opacity: 0.55;
+}
+
 /* Hidden captures are reachable only inside long-press management mode. The
    vertical tab echoes the supplied reference without permanently covering
    the About link or the archive itself. */

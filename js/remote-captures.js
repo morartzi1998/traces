@@ -14,29 +14,71 @@
 
   // an idb: ref only means anything in this browser — upload the actual
   // bytes so the worker can hand back a real, fetchable URL. A ref that's
-  // already a plain URL (e.g. a Tripo /proxy link) needs no upload at all.
-  function resolveRef(ref) {
-    if (!ref) return Promise.resolve(null);
-    if (ref.indexOf("idb:") !== 0) return Promise.resolve(ref);
-    if (!(window.BlobStore && api())) return Promise.resolve(null);
+  // already a plain URL (e.g. a Tripo /proxy link) needs no upload at all
+  // (and is already "done" as far as onProgress is concerned).
+  function resolveRef(ref, onProgress) {
+    if (!ref) { if (onProgress) onProgress(1); return Promise.resolve(null); }
+    if (ref.indexOf("idb:") !== 0) { if (onProgress) onProgress(1); return Promise.resolve(ref); }
+    if (!(window.BlobStore && api())) { if (onProgress) onProgress(1); return Promise.resolve(null); }
     return window.BlobStore.get(ref.slice(4)).then(function (blob) {
-      if (!blob) return null;
-      var form = new FormData();
-      form.append("file", blob, "file");
-      return fetch(api() + "/captures/upload", { method: "POST", body: form })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) { return d ? d.url : null; })
-        .catch(function () { return null; });
-    }).catch(function () { return null; });
+      if (!blob) { if (onProgress) onProgress(1); return null; }
+      // XHR (not fetch) so upload progress is actually observable - the
+      // model file alone can be tens of MB, and a flat "saving..." with no
+      // sense of how far along it is reads the same whether it's about to
+      // finish or has silently stalled
+      return new Promise(function (resolve) {
+        var form = new FormData();
+        form.append("file", blob, "file");
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", api() + "/captures/upload");
+        if (onProgress) {
+          xhr.upload.addEventListener("progress", function (e) {
+            if (e.lengthComputable) onProgress(e.loaded / e.total);
+          });
+        }
+        xhr.onload = function () {
+          if (onProgress) onProgress(1);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText).url); } catch (e) { resolve(null); }
+          } else {
+            resolve(null);
+          }
+        };
+        xhr.onerror = function () { if (onProgress) onProgress(1); resolve(null); };
+        xhr.send(form);
+      });
+    }).catch(function () { if (onProgress) onProgress(1); return null; });
   }
 
   // pushes one capture under the given scope ("archive" or "community").
   // Fire-and-forget from the caller's point of view — never throws, never
-  // blocks the local save that already happened.
-  function publish(cap, scope) {
+  // blocks the local save that already happened. onProgress (optional),
+  // if given, is called repeatedly with a 0..1 fraction across all three
+  // possible blob uploads combined.
+  function publish(cap, scope, onProgress) {
     if (!api()) return Promise.resolve(null);
-    return Promise.all([resolveRef(cap.img), resolveRef(cap.model), resolveRef(cap.points)])
+    var stage = [0, 0, 0];
+    function report() {
+      if (!onProgress) return;
+      onProgress((stage[0] + stage[1] + stage[2]) / 3);
+    }
+    // a ref that started as "idb:" genuinely needed its bytes uploaded -
+    // if that upload comes back empty, the record would land on the server
+    // with a broken/missing file. Treat that as the whole publish failing
+    // rather than reporting success just because the metadata write alone
+    // went through.
+    var neededUpload = [
+      !!(cap.img && cap.img.indexOf("idb:") === 0),
+      !!(cap.model && cap.model.indexOf("idb:") === 0),
+      !!(cap.points && cap.points.indexOf("idb:") === 0),
+    ];
+    return Promise.all([
+      resolveRef(cap.img, function (p) { stage[0] = p; report(); }),
+      resolveRef(cap.model, function (p) { stage[1] = p; report(); }),
+      resolveRef(cap.points, function (p) { stage[2] = p; report(); }),
+    ])
       .then(function (refs) {
+        if (neededUpload.some(function (was, i) { return was && !refs[i]; })) return null;
         var record = {
           id: scope === "community" ? cap.id + "-community" : cap.id,
           scope: scope,
@@ -72,7 +114,10 @@
   // big uploads concurrently on an ordinary connection meant most of them
   // silently lost the race (fire-and-forget swallows the failure) while
   // only a couple of the smallest actually finished.
-  function syncMissing(localList, remoteList, scope) {
+  // onItem (optional): called as (capId, fraction, done, success) - fraction
+  // climbs 0..1 while that capture's blobs upload, then a final call with
+  // done=true reports whether it actually made it (success) or not.
+  function syncMissing(localList, remoteList, scope, onItem) {
     if (!api()) return;
     var remoteIds = {};
     (remoteList || []).forEach(function (c) {
@@ -82,7 +127,14 @@
     (function next() {
       var cap = pending.shift();
       if (!cap) return;
-      publish(cap, scope).then(next, next);
+      publish(cap, scope, onItem ? function (p) { onItem(cap.id, p, false); } : null)
+        .then(function (result) {
+          if (onItem) onItem(cap.id, 1, true, !!result);
+          next();
+        }, function () {
+          if (onItem) onItem(cap.id, 1, true, false);
+          next();
+        });
     })();
   }
 
