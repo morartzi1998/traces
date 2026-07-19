@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Fix recovered scans</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260718cz">
-<script src="../js/config.js?v=20260718cz"></script>
-<script src="../js/archive.js?v=20260718cz"></script>
-<script src="../js/blobstore.js?v=20260718cz"></script>
-<script src="../js/remote-captures.js?v=20260718cz"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260718cz"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719a">
+<script src="../js/config.js?v=20260719a"></script>
+<script src="../js/archive.js?v=20260719a"></script>
+<script src="../js/blobstore.js?v=20260719a"></script>
+<script src="../js/remote-captures.js?v=20260719a"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719a"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -46,6 +46,32 @@
     (function () {
       var listEl = document.getElementById("list");
       var emptyEl = document.getElementById("empty");
+      var api = (window.TRACES_API || "").replace(/\/$/, "");
+
+      // Tripo's model links are time-limited signed URLs (see backend/README.md)
+      // — the ones saved on these entries when they were first recovered have
+      // very likely expired by now. Re-request a fresh link from Tripo before
+      // trying to render, instead of trusting whatever's already stored.
+      // Same known-task-id list the original one-time recovery tool used —
+      // matching by substring against the stored (now-expired) model URL, the
+      // same trick that tool's own "clear" button already relies on.
+      var knownTaskIds = [
+        "81a91149-25ba-4c40-b283-dc6263bb926b",
+        "ca803dba-af94-4052-9e22-d741650e8882",
+        "008eea4c-46bd-4927-9ad0-89d0078ec789",
+        "9d1ffa88-e885-459c-8ebc-e08ea382dda5",
+        "862e8371-f60e-480a-9187-7779922e3e11",
+        "0920e102-2856-4ae6-b220-5549c679dff6",
+        "0c29e0f1-5956-4c6f-a6b1-5bc989ccfd56",
+        "2c84a516-2c84-43f4-8837-ede548128efb",
+        "2cbfbf14-3112-4293-a7d2-9debaa31c454",
+        "86d30623-78d9-493a-a259-56fabdadf8df"
+      ];
+      function matchingTaskId(cap) {
+        if (typeof cap.model !== "string") return null;
+        return knownTaskIds.filter(function (id) { return cap.model.indexOf(id) !== -1; })[0] || null;
+      }
+
       var all = window.Archive ? window.Archive.all() : [];
       var candidates = all.filter(function (c) { return !c.img || c.title === "Recovered scan"; });
 
@@ -59,22 +85,28 @@
             'interaction-prompt="none" shadow-intensity="0" exposure="1"></model-viewer>' +
           '<input type="text" class="name" value="">' +
           '<span class="status">loading model…</span>' +
-          '<button type="button" class="save" disabled>Save</button>';
+          '<button type="button" class="save" disabled>Save</button>' +
+          '<button type="button" class="delete" hidden>Delete — unrecoverable</button>';
         listEl.appendChild(row);
 
         var mv = row.querySelector("model-viewer");
         var nameInput = row.querySelector(".name");
         var statusEl = row.querySelector(".status");
         var saveBtn = row.querySelector(".save");
+        var deleteBtn = row.querySelector(".delete");
+        deleteBtn.addEventListener("click", function () {
+          window.Archive.remove(cap.id);
+          if (window.Community && window.Community.get(cap.id)) window.Community.remove(cap.id);
+          statusEl.textContent = "deleted";
+          row.style.opacity = "0.4";
+          saveBtn.disabled = true;
+          deleteBtn.disabled = true;
+        });
         nameInput.value = cap.title && cap.title !== "Recovered scan" ? cap.title : "";
         nameInput.placeholder = "what is this?";
 
-        if (!cap.model) {
-          statusEl.textContent = "no 3D model saved for this one — can't render a preview";
-          mv.remove();
-          saveBtn.disabled = false; // still lets her rename it
-        } else {
-          mv.src = cap.model;
+        function mount(url) {
+          mv.src = url;
           mv.addEventListener("error", function () {
             statusEl.textContent = "model failed to load";
           });
@@ -82,6 +114,36 @@
             statusEl.textContent = "rendered — give it a name and save";
             saveBtn.disabled = false;
           });
+        }
+
+        if (!cap.model) {
+          statusEl.textContent = "no 3D model saved for this one — can't render a preview";
+          mv.remove();
+          saveBtn.disabled = false; // still lets her rename it
+          deleteBtn.hidden = false;
+        } else {
+          var taskId = matchingTaskId(cap);
+          if (taskId && api) {
+            statusEl.textContent = "asking Tripo for a fresh link…";
+            fetch(api + "/status?task_id=" + encodeURIComponent(taskId))
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                if (d && d.status === "success" && d.model_url) {
+                  var fresh = api + "/proxy?url=" + encodeURIComponent(d.model_url);
+                  mount(fresh);
+                } else {
+                  statusEl.textContent = "Tripo no longer has this scan (status: " + (d && d.status || "unknown") + ") — it's gone for good, nothing left to recover";
+                  mv.remove();
+                  deleteBtn.hidden = false;
+                }
+              })
+              .catch(function () {
+                statusEl.textContent = "couldn't reach Tripo for a fresh link — using the saved one";
+                mount(cap.model);
+              });
+          } else {
+            mount(cap.model);
+          }
         }
 
         saveBtn.addEventListener("click", function () {
@@ -92,6 +154,10 @@
           function finish(imgRef) {
             var patch = { title: title };
             if (imgRef) patch.img = imgRef;
+            // mv.src now holds whatever actually rendered — if a fresh Tripo
+            // link was fetched above, persist that so the record stops
+            // pointing at the dead one that was stored before
+            if (mv.isConnected && mv.src && mv.src !== cap.model) patch.model = mv.src;
             window.Archive.update(cap.id, patch);
             // this same capture may also already be shared to the community
             // under the same id — keep that copy's name/thumbnail in sync
