@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720d">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720d">
-<link rel="stylesheet" href="../css/object.css?v=20260720d">
-<script src="../js/cursor.js?v=20260720d" defer></script>
-<script src="../js/grain.js?v=20260720d" defer></script>
-<script src="../js/tilt3d.js?v=20260720d" defer></script>
-<script src="../js/owner.js?v=20260720d"></script>
-<script src="../js/config.js?v=20260720d"></script>
-<script src="../js/archive.js?v=20260720d"></script>
-<script src="../js/blobstore.js?v=20260720d"></script>
-<script src="../js/remote-captures.js?v=20260720d"></script>
-<script src="../js/community-seed.js?v=20260720d"></script>
-<script src="../js/flow.js?v=20260720d" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720d"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720e">
+<link rel="stylesheet" href="../css/object.css?v=20260720e">
+<script src="../js/cursor.js?v=20260720e" defer></script>
+<script src="../js/grain.js?v=20260720e" defer></script>
+<script src="../js/tilt3d.js?v=20260720e" defer></script>
+<script src="../js/owner.js?v=20260720e"></script>
+<script src="../js/config.js?v=20260720e"></script>
+<script src="../js/archive.js?v=20260720e"></script>
+<script src="../js/blobstore.js?v=20260720e"></script>
+<script src="../js/remote-captures.js?v=20260720e"></script>
+<script src="../js/community-seed.js?v=20260720e"></script>
+<script src="../js/flow.js?v=20260720e" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720e"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720d" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720e" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720d";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720d";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720e";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720e";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -1843,14 +1843,29 @@
         if (link) enterLinkMoveMode(link);
       });
 
+      // a stalled/unreachable network leaves fetch() neither resolved nor
+      // rejected - RemoteCaptures.list() already swallows outright failures,
+      // but nothing protects against it just hanging, which would leave this
+      // whole page stuck on its static placeholder markup forever. Falling
+      // back after a few seconds means a slow connection still opens the
+      // capture (using whatever's available locally) instead of stalling.
+      function withTimeout(promise, ms, fallback) {
+        return new Promise(function (resolve) {
+          var done = false;
+          function finish(v) { if (!done) { done = true; resolve(v); } }
+          promise.then(finish, function () { finish(fallback); });
+          setTimeout(function () { finish(fallback); }, ms);
+        });
+      }
+
       function boot() {
         initTilt3D(stage, photo);
-        var seedReady = window.communitySeedReady || Promise.resolve([]);
+        var seedReady = withTimeout(window.communitySeedReady || Promise.resolve([]), 7000, []);
         // the shared "archive" scope is Mor's own private cross-device pool
         // (see js/flow.js) — only her own devices merge it in here too
         var remoteArchiveReady = (window.RemoteCaptures && window.isOwnerDevice && window.isOwnerDevice())
-          ? RemoteCaptures.list("archive") : Promise.resolve([]);
-        var remoteCommunityReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
+          ? withTimeout(RemoteCaptures.list("archive"), 7000, []) : Promise.resolve([]);
+        var remoteCommunityReady = window.RemoteCaptures ? withTimeout(RemoteCaptures.list("community"), 7000, []) : Promise.resolve([]);
         Promise.all([seedReady, remoteArchiveReady, remoteCommunityReady]).then(function (results) {
           var seedList = results[0], remoteList = results[1].concat(results[2]);
           mergeCommunitySeedIntoCatalog(seedList);
