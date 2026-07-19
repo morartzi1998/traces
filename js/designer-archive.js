@@ -7,7 +7,6 @@
 */
 window.DESIGNER_ARCHIVE = [
   { key: "chandelier", title: "old living room lamp",  img: "../assets/images/photo-chandelier.png", meta: "2 days ago" },
-  { key: "room",       title: "my living room",        img: "../assets/images/photo-room.png",       meta: "13 days ago", kind: "space" },
   { key: "couch",      title: "father's couch",        img: "../assets/images/photo-couch.png",      meta: "16 days ago" },
   { key: "plant",      title: "mom's gifted plent",    img: "../assets/images/photo-orchid.png",     meta: "20 days ago" },
   { key: "teddy",      title: "childhood teddy",        img: "../assets/images/photo-teddy.png",      meta: "27 days ago" },
