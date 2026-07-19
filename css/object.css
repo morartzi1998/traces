@@ -91,11 +91,12 @@
   background: none;
   border: none;
   color: var(--color-cream);
-  font-size: 1.5rem;
-  line-height: 1;
   cursor: pointer;
-  padding: 2px;
+  padding: 8px 2px;
   outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 /* a deliberate, quiet focus ring instead of the browser's own default
@@ -104,6 +105,26 @@
 .obj-menu-btn:focus-visible {
   outline: 1px solid var(--color-cream);
   outline-offset: 3px;
+}
+
+/* three real bars instead of a static "☰" glyph, so opening the menu can
+   actually collapse them into a single line rather than just swapping one
+   frozen character for another */
+.obj-menu-btn-bar {
+  width: 22px;
+  height: 2px;
+  background: var(--color-cream);
+  transition: transform 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+}
+
+.obj-menu-btn[aria-expanded="true"] .obj-menu-btn-bar:first-child {
+  transform: translateY(7px);
+  opacity: 0;
+}
+
+.obj-menu-btn[aria-expanded="true"] .obj-menu-btn-bar:last-child {
+  transform: translateY(-7px);
+  opacity: 0;
 }
 
 .obj-title {
@@ -235,6 +256,14 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end; /* cubes, line and chevron all align on the right */
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* while the menu sits open over it - fades out instead of an abrupt
+   hide/show swap (see the objMenuBtn click handler in object.html) */
+.obj-timeline--faded {
+  opacity: 0;
 }
 
 .obj-years {

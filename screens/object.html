@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720n">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720n">
-<link rel="stylesheet" href="../css/object.css?v=20260720n">
-<script src="../js/cursor.js?v=20260720n" defer></script>
-<script src="../js/grain.js?v=20260720n" defer></script>
-<script src="../js/tilt3d.js?v=20260720n" defer></script>
-<script src="../js/owner.js?v=20260720n"></script>
-<script src="../js/config.js?v=20260720n"></script>
-<script src="../js/archive.js?v=20260720n"></script>
-<script src="../js/blobstore.js?v=20260720n"></script>
-<script src="../js/remote-captures.js?v=20260720n"></script>
-<script src="../js/community-seed.js?v=20260720n"></script>
-<script src="../js/flow.js?v=20260720n" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720n"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720o">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720o">
+<link rel="stylesheet" href="../css/object.css?v=20260720o">
+<script src="../js/cursor.js?v=20260720o" defer></script>
+<script src="../js/grain.js?v=20260720o" defer></script>
+<script src="../js/tilt3d.js?v=20260720o" defer></script>
+<script src="../js/owner.js?v=20260720o"></script>
+<script src="../js/config.js?v=20260720o"></script>
+<script src="../js/archive.js?v=20260720o"></script>
+<script src="../js/blobstore.js?v=20260720o"></script>
+<script src="../js/remote-captures.js?v=20260720o"></script>
+<script src="../js/community-seed.js?v=20260720o"></script>
+<script src="../js/flow.js?v=20260720o" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720o"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720n" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720o" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720n";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720n";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720o";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720o";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -48,7 +48,11 @@
     <header class="obj-head">
       <p class="obj-updated" id="objUpdated">[updated 15 days ago]</p>
       <div class="obj-title-row">
-        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions">&#9776;</button>
+        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions" aria-expanded="false">
+          <span class="obj-menu-btn-bar"></span>
+          <span class="obj-menu-btn-bar"></span>
+          <span class="obj-menu-btn-bar"></span>
+        </button>
         <h1 class="obj-title" id="objTitle">Old living room lamp</h1>
       </div>
       <ul class="obj-menu" id="objMenu" hidden>
@@ -1826,8 +1830,10 @@
         });
         return best;
       }
-      document.getElementById("objMenuBtn").addEventListener("click", function () {
+      var objMenuBtn = document.getElementById("objMenuBtn");
+      objMenuBtn.addEventListener("click", function () {
         var opening = menu.hidden;
+        objMenuBtn.setAttribute("aria-expanded", opening ? "true" : "false");
         if (opening) {
           menu.hidden = false;
         } else {
@@ -1840,9 +1846,27 @@
             menu.classList.remove("obj-menu--closing");
           }, 200);
         }
-        // the open menu sits over the history timeline — hide it while open,
-        // and only restore it when this capture actually has a history to show
-        objTimeline.hidden = opening ? true : !timelineHasHistory();
+        // the open menu sits over the history timeline — cross-fade it out
+        // while open (a hard hide/show read as an abrupt swap instead of
+        // one screen settling into the other), restoring it only once this
+        // capture's history is actually worth showing again
+        if (opening) {
+          objTimeline.classList.add("obj-timeline--faded");
+          // [hidden] is display:none, which would cancel the opacity
+          // transition outright instead of letting it play - only actually
+          // hide it once the fade-out has had time to finish
+          setTimeout(function () { objTimeline.hidden = true; }, 200);
+        } else if (timelineHasHistory()) {
+          objTimeline.hidden = false;
+          // force layout so the very next class removal actually
+          // transitions from "just made visible" instead of skipping
+          // straight to the end state
+          void objTimeline.offsetWidth;
+          objTimeline.classList.remove("obj-timeline--faded");
+        } else {
+          objTimeline.hidden = true;
+          objTimeline.classList.remove("obj-timeline--faded");
+        }
         // meaningful on any live 3D capture — a raw scan's own coordinate
         // frame is arbitrary, and even a modeled object may not open on its
         // best side, so there's a real angle worth saving in both cases
