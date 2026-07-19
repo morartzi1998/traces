@@ -25,3 +25,18 @@
 window.isOwnerDevice = function () {
   try { return localStorage.getItem("traces-owner-device") === "1"; } catch (e) { return false; }
 };
+
+// a tiny, easy-to-spot way to confirm (without opening dev tools) whether
+// THIS particular browser is currently flagged as one of Mor's own devices
+// - only ever shown when true, so a regular visitor never sees it at all
+if (window.isOwnerDevice()) {
+  document.addEventListener("DOMContentLoaded", function () {
+    var badge = document.createElement("div");
+    badge.textContent = "מכשיר שלי מחובר";
+    badge.style.cssText =
+      "position:fixed;bottom:6px;left:6px;z-index:99999;" +
+      "font-size:10px;opacity:0.4;color:#fff;" +
+      "font-family:sans-serif;pointer-events:none;";
+    document.body.appendChild(badge);
+  });
+}
