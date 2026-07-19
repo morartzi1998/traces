@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260720m";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260720n";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -36,9 +36,70 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
 
   geometry.computeBoundingSphere();
-  var sphere = geometry.boundingSphere && geometry.boundingSphere.radius > 0
+  var rawSphere = geometry.boundingSphere && geometry.boundingSphere.radius > 0
     ? geometry.boundingSphere
     : new THREE.Sphere(new THREE.Vector3(), 1);
+
+  // a raw phone scan commonly carries a handful of stray/noise points far
+  // from the real surface (background clutter, reflections) - a bounding
+  // sphere is defined entirely by its most extreme point, so even one of
+  // those drags both its center (the orbit pivot - reads as "rotating
+  // around the wrong point") and its radius (which the camera's near/far
+  // planes and zoom limits all scale from - an inflated radius reads as
+  // "can't get close", i.e. restricted movement) badly off the actual
+  // object. The mean position of every point is far less swayed by a small
+  // minority of outliers, and a radius trimmed to how far points actually
+  // spread *around that mean* (capped at the raw sphere as a safety
+  // ceiling, in case the cloud has no real outliers at all) stays
+  // representative of the real object either way.
+  var sphere = (function () {
+    var pos = geometry.getAttribute("position");
+    var count = pos.count;
+    if (!count) return rawSphere;
+
+    function meanAndStd(filter) {
+      var cx = 0, cy = 0, cz = 0, n = 0;
+      for (var i = 0; i < count; i++) {
+        if (filter && !filter(i)) continue;
+        cx += pos.getX(i); cy += pos.getY(i); cz += pos.getZ(i); n++;
+      }
+      if (!n) return null;
+      cx /= n; cy /= n; cz /= n;
+      var sumSq = 0;
+      for (var j = 0; j < count; j++) {
+        if (filter && !filter(j)) continue;
+        var dx = pos.getX(j) - cx, dy = pos.getY(j) - cy, dz = pos.getZ(j) - cz;
+        sumSq += dx * dx + dy * dy + dz * dz;
+      }
+      return { center: new THREE.Vector3(cx, cy, cz), std: Math.sqrt(sumSq / n), count: n };
+    }
+
+    // first pass over every point, including any stray outliers - just
+    // enough to know roughly where they sit so the second pass can
+    // exclude them outright
+    var first = meanAndStd(null);
+    var cutoff = first.std * 3;
+    var fx = first.center.x, fy = first.center.y, fz = first.center.z;
+    function withinCutoff(i) {
+      var dx = pos.getX(i) - fx, dy = pos.getY(i) - fy, dz = pos.getZ(i) - fz;
+      return (dx * dx + dy * dy + dz * dz) <= cutoff * cutoff;
+    }
+    // second pass, actually excluding whatever sat beyond that first
+    // rough cutoff - a real minority of far-flung noise points otherwise
+    // still dominates a single-pass std (squaring distance weights them
+    // enormously even though they're a tiny fraction of the total count)
+    var refined = cutoff > 0 ? meanAndStd(withinCutoff) : first;
+    var center = (refined && refined.count > count * 0.5) ? refined.center : first.center;
+    var std = (refined && refined.count > count * 0.5) ? refined.std : first.std;
+    var trimmed = std * 2.5;
+    // only step in when there's a real sign of outlier bloat (the trimmed
+    // spread is well under the raw extent) - for an already well-formed
+    // cloud this leaves the plain bounding sphere untouched rather than
+    // risking a framing regression on the vast majority of scans that
+    // never had this problem to begin with
+    var radius = (trimmed > 0 && trimmed < rawSphere.radius * 0.6) ? trimmed : rawSphere.radius;
+    return new THREE.Sphere(center, radius || 1);
+  })();
 
   // pointSize is a plain absolute world-unit size, not scaled by the scan's
   // bounding-sphere radius: the camera itself already backs off

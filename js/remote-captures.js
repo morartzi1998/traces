@@ -31,6 +31,11 @@
         form.append("file", blob, "file");
         var xhr = new XMLHttpRequest();
         xhr.open("POST", api() + "/captures/upload");
+        // without this, a genuinely stalled connection (weak signal, a
+        // proxy that silently drops the request mid-flight) never fires
+        // onload/onerror at all - the sync-status badge was left showing
+        // "uploading… X%" forever with no way to ever resolve as failed
+        xhr.timeout = 60000;
         if (onProgress) {
           xhr.upload.addEventListener("progress", function (e) {
             if (e.lengthComputable) onProgress(e.loaded / e.total);
@@ -45,6 +50,7 @@
           }
         };
         xhr.onerror = function () { if (onProgress) onProgress(1); resolve(null); };
+        xhr.ontimeout = function () { if (onProgress) onProgress(1); resolve(null); };
         xhr.send(form);
       });
     }).catch(function () { if (onProgress) onProgress(1); return null; });
