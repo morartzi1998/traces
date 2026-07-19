@@ -51,7 +51,10 @@
 .onb-actions {
   display: flex;
   gap: 40px;
-  margin-top: 18px;
+  /* Match the upload screen's full vertical footprint: the extra viewport
+     breath before the final actions lets this shorter form share the same
+     visual top and bottom boundaries as the three-option capture stack. */
+  margin-top: calc(18px + 5vh);
 }
 
 .onb-btn {

@@ -77,14 +77,24 @@
 
 .load-polaroid figcaption {
   position: absolute;
-  bottom: 5px;
+  bottom: 0;
   left: 8px;
   right: 8px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   font-family: var(--font-caption);
   font-size: clamp(0.55rem, 0.8vw, 0.85rem);
   color: var(--color-caption-blue);
   white-space: nowrap;
   overflow: hidden;
+  line-height: 1;
+}
+
+.load-polaroid:nth-child(2) figcaption,
+.load-polaroid:nth-child(4) figcaption {
+  transform: translateY(-2px);
 }
 
 .load-status {

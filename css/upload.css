@@ -37,9 +37,11 @@
   padding: 24px 0 22px;
 }
 
-/* even breathing room between the two collapsed options */
+/* Each row already owns equal vertical padding. Adding another viewport-based
+   margin between later rows made the gaps grow progressively and broke the
+   rhythm visible in the three-option stack. */
 .up-option + .up-option {
-  margin-top: 3.2vh;
+  margin-top: 0;
 }
 
 .up-option-head {

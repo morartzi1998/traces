@@ -209,8 +209,14 @@
 .annotations-empty {
   text-align: left;
   text-transform: lowercase;
-  padding: 12px 0;
+  padding: 14px 0;
   opacity: 0.7;
+}
+
+/* Tiny optical adjustment: let the empty-state bracket sit just below its
+   instruction, with a touch more air around the message itself. */
+#annotationsEmptyRuleTop {
+  margin-top: 4px;
 }
 
 .annotation-row {
@@ -219,6 +225,10 @@
   gap: 12px;
   padding: 12px 0;
   border-bottom: 2px solid var(--color-ink-blue);
+}
+
+#annotationList:has(.annotation-row) {
+  border-top: 2px solid var(--color-ink-blue);
 }
 
 .annotation-row::before {

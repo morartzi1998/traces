@@ -121,6 +121,10 @@ body {
   background: var(--color-bg);
   color: var(--color-cream);
   font-family: var(--font-display);
+  /* Vito's built-in second uppercase J/W design, used consistently anywhere
+     in the interface that renders through the display family. Fonts without
+     this OpenType set simply ignore it. */
+  font-feature-settings: "ss01" 1;
   overflow-x: hidden;
   /* stop a stray horizontal scroll / trackpad swipe from triggering the
      browser's back-navigation gesture */
