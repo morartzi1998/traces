@@ -210,7 +210,10 @@
   cursor: default;
 }
 
-.gal-screen--manage .gal-item--selected {
+/* every card (not just the checked ones) needs to sit above the dimming
+   backdrop during management mode, or a tap meant to check/uncheck a
+   second card just hits the backdrop instead and exits the mode */
+.gal-screen--manage .gal-item {
   z-index: 20;
 }
 
@@ -221,22 +224,6 @@
 .gal-screen--manage .gal-item--selected .gal-card {
   transform: none;
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.72);
-}
-
-.gal-screen--manage .gal-item--selected .gal-item-actions {
-  margin-top: 10px;
-}
-
-.gal-screen--manage .gal-item--selected .gal-hide,
-.gal-screen--manage .gal-item--selected .gal-delete {
-  color: #ffffff;
-  text-decoration-color: #ffffff;
-}
-
-.gal-screen--manage .gal-item--selected .gal-hide:hover,
-.gal-screen--manage .gal-item--selected .gal-delete:hover {
-  color: var(--color-ink-blue);
-  text-decoration-color: var(--color-ink-blue);
 }
 
 .gal-delete,
@@ -335,6 +322,64 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 39;
+}
+
+/* multi-select bulk bar — sits above the dimmed backdrop, same corner
+   the "Hidden (N)" tab uses when it isn't showing */
+.gal-bulk-bar {
+  position: fixed;
+  right: 0;
+  bottom: 4vh;
+  z-index: 30;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: #ffffff;
+  background: var(--color-ink-blue);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gal-bulk-act {
+  font-family: inherit;
+  font-size: inherit;
+  color: #ffffff;
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.gal-bulk-act:hover {
+  opacity: 0.8;
+}
+
+/* a checked selection square shown on each card while management mode is
+   active — same square-checkbox language as the object/space filters above
+   the grid, just placed on the card itself */
+.gal-item-select {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.gal-screen--manage .gal-item-select {
+  display: block;
+}
+
+.gal-item--selected .gal-item-select {
+  background: var(--color-ink-blue);
+  border-color: var(--color-ink-blue);
 }
 
 /* same paper-card design language as object.html's white details panel —
