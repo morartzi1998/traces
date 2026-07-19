@@ -5,19 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719j">
-<link rel="stylesheet" href="../css/object.css?v=20260719j">
-<script src="../js/cursor.js?v=20260719j" defer></script>
-<script src="../js/grain.js?v=20260719j" defer></script>
-<script src="../js/tilt3d.js?v=20260719j" defer></script>
-<script src="../js/config.js?v=20260719j"></script>
-<script src="../js/archive.js?v=20260719j"></script>
-<script src="../js/blobstore.js?v=20260719j"></script>
-<script src="../js/remote-captures.js?v=20260719j"></script>
-<script src="../js/community-seed.js?v=20260719j"></script>
-<script src="../js/flow.js?v=20260719j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719k">
+<link rel="stylesheet" href="../css/object.css?v=20260719k">
+<script src="../js/cursor.js?v=20260719k" defer></script>
+<script src="../js/grain.js?v=20260719k" defer></script>
+<script src="../js/tilt3d.js?v=20260719k" defer></script>
+<script src="../js/owner.js?v=20260719k"></script>
+<script src="../js/config.js?v=20260719k"></script>
+<script src="../js/archive.js?v=20260719k"></script>
+<script src="../js/blobstore.js?v=20260719k"></script>
+<script src="../js/remote-captures.js?v=20260719k"></script>
+<script src="../js/community-seed.js?v=20260719k"></script>
+<script src="../js/flow.js?v=20260719k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719k"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -26,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719j" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719k" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719j";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719j";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719k";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719k";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -1803,7 +1804,10 @@
       function boot() {
         initTilt3D(stage, photo);
         var seedReady = window.communitySeedReady || Promise.resolve([]);
-        var remoteArchiveReady = window.RemoteCaptures ? RemoteCaptures.list("archive") : Promise.resolve([]);
+        // the shared "archive" scope is Mor's own private cross-device pool
+        // (see js/flow.js) — only her own devices merge it in here too
+        var remoteArchiveReady = (window.RemoteCaptures && window.isOwnerDevice && window.isOwnerDevice())
+          ? RemoteCaptures.list("archive") : Promise.resolve([]);
         var remoteCommunityReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
         Promise.all([seedReady, remoteArchiveReady, remoteCommunityReady]).then(function (results) {
           var seedList = results[0], remoteList = results[1].concat(results[2]);

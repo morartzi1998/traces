@@ -5,29 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719j">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260719j">
-<script src="../js/cursor.js?v=20260719j" defer></script>
-<script src="../js/grain.js?v=20260719j" defer></script>
-<script src="../js/tilt3d.js?v=20260719j" defer></script>
-<script src="../js/annotations.js?v=20260719j" defer></script>
-<script src="../js/config.js?v=20260719j"></script>
-<script src="../js/archive.js?v=20260719j"></script>
-<script src="../js/blobstore.js?v=20260719j"></script>
-<script src="../js/remote-captures.js?v=20260719j"></script>
-<script src="../js/flow.js?v=20260719j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719k">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260719k">
+<script src="../js/cursor.js?v=20260719k" defer></script>
+<script src="../js/grain.js?v=20260719k" defer></script>
+<script src="../js/tilt3d.js?v=20260719k" defer></script>
+<script src="../js/annotations.js?v=20260719k" defer></script>
+<script src="../js/owner.js?v=20260719k"></script>
+<script src="../js/config.js?v=20260719k"></script>
+<script src="../js/archive.js?v=20260719k"></script>
+<script src="../js/blobstore.js?v=20260719k"></script>
+<script src="../js/remote-captures.js?v=20260719k"></script>
+<script src="../js/flow.js?v=20260719k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719k"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719j" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719k" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719j";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719j";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719k";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719k";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -330,7 +331,9 @@
               if (isCommunity) Community.update(updateTarget, patch);
               if (window.RemoteCaptures) {
                 var updated = Object.assign({}, existing, patch, { id: updateTarget });
-                RemoteCaptures.publish(updated, "archive");
+                // the shared "archive" scope is Mor's own private cross-device
+                // pool (see js/flow.js) — only her own devices publish there
+                if (window.isOwnerDevice && window.isOwnerDevice()) RemoteCaptures.publish(updated, "archive");
                 if (isCommunity) RemoteCaptures.publish(updated, "community");
               }
               clearSession(updateTarget);
@@ -364,7 +367,7 @@
           // provisional stopgap so this capture is visible from any device,
           // not just this browser — best-effort, doesn't block navigation
           if (window.RemoteCaptures) {
-            RemoteCaptures.publish(cap, "archive");
+            if (window.isOwnerDevice && window.isOwnerDevice()) RemoteCaptures.publish(cap, "archive");
             if (alsoCommunity) RemoteCaptures.publish(cap, "community");
           }
           clearSession(cap.id);
