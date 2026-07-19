@@ -326,7 +326,18 @@
             id: c.id, title: c.title, img: c.img, kind: c.kind,
             idx: idx, metaText: ago(c.created),
             hide: function () { Archive.update(c.id, { hidden: true }); },
-            remove: function () { if (window.Archive) Archive.remove(c.id); },
+            remove: function () {
+              if (window.Archive) Archive.remove(c.id);
+              // this local record may already be sitting on the shared
+              // server too (published from here or synced from another
+              // device) - without also deleting it there, it would come
+              // right back on the next load as a "remoteOnly" card, and
+              // any other device would still show it untouched
+              if (window.isOwnerDevice && window.isOwnerDevice()) {
+                var api = (window.TRACES_API || "").replace(/\/$/, "");
+                if (api) fetch(api + "/captures/" + c.id, { method: "DELETE" }).catch(function () {});
+              }
+            },
           }));
         });
         // one of Mor's own captures synced from another of her devices

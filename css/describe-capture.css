@@ -39,18 +39,16 @@
 }
 
 .capture-canvas .capture-model {
-  width: 78vw;
-  height: 92vh;
-  max-width: 78%;
+  width: 100%;
+  height: 100%;
   --poster-color: transparent;
 }
 
 /* a raw point cloud renders through a live three.js canvas instead of
    model-viewer (which has no notion of point size) */
 .capture-canvas .capture-points {
-  width: 78vw;
-  height: 92vh;
-  max-width: 78%;
+  width: 100%;
+  height: 100%;
 }
 
 /* Annotation markers placed by clicking the capture */
