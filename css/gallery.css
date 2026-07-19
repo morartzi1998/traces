@@ -29,7 +29,11 @@
 .gal-add {
   position: fixed;
   top: 20vh;
-  left: 85vw; /* on the black just past the teddy's right edge */
+  /* anchored to the right edge (like the nav-corner links above it)
+     instead of a content-relative left:85vw - that worked out fine on a
+     genuinely wide screen, but at in-between viewport widths (not quite
+     mobile, not quite ultra-wide) it ran right into the "Archive" link */
+  right: 2.8vw;
   z-index: 25;
   font-family: var(--font-display);
   /* Same display scale as the archive title; the navigation label above is
@@ -177,11 +181,9 @@
 @media (max-width: 720px) {
   .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-  /* the fixed "add new capture" link is placed via left:85vw, meant for the
-     wide desktop layout — on a narrow screen that pushes it straight off
-     the right edge, so it switches to a right-anchored, wrapping label */
+  /* on a narrow screen, the plain nowrap label from the base rule runs too
+     wide - wrap it and shrink it down instead */
   .gal-add {
-    left: auto;
     right: 4vw;
     top: 17.5vh;
     max-width: 42vw;
