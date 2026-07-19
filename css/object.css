@@ -185,6 +185,7 @@
 }
 
 .obj-year {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -194,6 +195,31 @@
   cursor: pointer;
   color: var(--color-cream);
   font-family: inherit;
+}
+
+/* replaces the native title-attribute tooltip - matches the annotation
+   label styling used elsewhere instead of the browser's own plain box */
+.obj-year-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: var(--color-ink-blue);
+  font-family: var(--font-caption);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 6px 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 6;
+}
+
+.obj-year:hover .obj-year-tip,
+.obj-year:focus-visible .obj-year-tip {
+  opacity: 1;
 }
 
 .obj-year > span {
@@ -220,16 +246,19 @@
   outline: 1px solid var(--color-cream);
 }
 
-/* long-press marks a version pending deletion - a struck-through label and
-   a red dot read as a clear "about to delete" warning; tapping anywhere
-   else cancels it back to normal without deleting anything */
-.obj-year--pending-delete > span {
-  text-decoration: line-through;
-  opacity: 1;
-}
-
-.obj-year--pending-delete .obj-dot {
-  background: #d3453c;
+/* long-press marks a version pending deletion - a blue line through the
+   cube itself reads as "struck out"; tapping anywhere else cancels it
+   back to normal without deleting anything */
+.obj-year--pending-delete .obj-dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -1px;
+  right: -1px;
+  height: 2px;
+  background: var(--color-ink-blue);
+  transform: translateY(-50%);
+  z-index: 2;
 }
 
 /* ---------- Arrows ---------- */
@@ -1278,5 +1307,17 @@
 
   .obj-timeline {
     left: 5vw;
+    /* a fixed 5.5rem gap per dot (fine on desktop) ran the timeline past
+       the prev/next arrows and off the bottom of the screen the moment a
+       capture had more than 2-3 versions. Capped to stop with some room
+       before the prev/next arrows (which sit at top: 60%), scrolling
+       instead of growing indefinitely for captures with many versions. */
+    max-height: calc(47vh - 8rem);
+    overflow-y: auto;
+    overflow-x: visible;
+  }
+
+  .obj-years {
+    gap: 1.6rem;
   }
 }
