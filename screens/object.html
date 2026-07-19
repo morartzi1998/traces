@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719t">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719t">
-<link rel="stylesheet" href="../css/object.css?v=20260719t">
-<script src="../js/cursor.js?v=20260719t" defer></script>
-<script src="../js/grain.js?v=20260719t" defer></script>
-<script src="../js/tilt3d.js?v=20260719t" defer></script>
-<script src="../js/owner.js?v=20260719t"></script>
-<script src="../js/config.js?v=20260719t"></script>
-<script src="../js/archive.js?v=20260719t"></script>
-<script src="../js/blobstore.js?v=20260719t"></script>
-<script src="../js/remote-captures.js?v=20260719t"></script>
-<script src="../js/community-seed.js?v=20260719t"></script>
-<script src="../js/flow.js?v=20260719t" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719t"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719u">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719u">
+<link rel="stylesheet" href="../css/object.css?v=20260719u">
+<script src="../js/cursor.js?v=20260719u" defer></script>
+<script src="../js/grain.js?v=20260719u" defer></script>
+<script src="../js/tilt3d.js?v=20260719u" defer></script>
+<script src="../js/owner.js?v=20260719u"></script>
+<script src="../js/config.js?v=20260719u"></script>
+<script src="../js/archive.js?v=20260719u"></script>
+<script src="../js/blobstore.js?v=20260719u"></script>
+<script src="../js/remote-captures.js?v=20260719u"></script>
+<script src="../js/community-seed.js?v=20260719u"></script>
+<script src="../js/flow.js?v=20260719u" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719u"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719t" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719u" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719t";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719t";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719u";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719u";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -1536,9 +1536,25 @@
         document.getElementById("objTitle").textContent = item.title;
         fillWhite(item);
       });
-      document.getElementById("whiteUpdateScan").addEventListener("click", function () {
+      // re-scanning a real capture (from either "Update capture" in the menu
+      // or "Update scan" in the white panel) should go through an actual new
+      // scan, same as making one from scratch — not straight to the text
+      // form with no fresh photo/model — and land on describe-capture.html
+      // already knowing which capture it's extending, so that page appends
+      // a new dated version to the existing timeline instead of creating a
+      // separate duplicate capture. Only a real Archive/Community record
+      // (not the designer's fixed showcase) can be extended this way.
+      function startUpdateFlow() {
+        try {
+          if ((window.Archive && Archive.get(key)) || (window.Community && Community.get(key))) {
+            sessionStorage.setItem("traces-update-target", key);
+          } else {
+            sessionStorage.removeItem("traces-update-target");
+          }
+        } catch (e) {}
         goTo("upload.html");
-      });
+      }
+      document.getElementById("whiteUpdateScan").addEventListener("click", startUpdateFlow);
 
       var blueHead = document.querySelector(".obj-blue-head");
       var blueClose = document.getElementById("blueClose");
@@ -1733,18 +1749,8 @@
         }
       });
       document.getElementById("menuUpdateCapture").addEventListener("click", function () {
-        // re-scanning a real capture appends a new dated version to its
-        // timeline instead of creating a separate capture. Only the visitor's
-        // own captures live in the archive; a showcase item just goes through
-        // the normal (new-capture) flow.
-        try {
-          if (window.Archive && Archive.get(key)) {
-            sessionStorage.setItem("traces-update-target", key);
-          } else {
-            sessionStorage.removeItem("traces-update-target");
-          }
-        } catch (e) {}
-        goTo("describe-capture.html");
+        menu.hidden = true;
+        startUpdateFlow();
       });
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
