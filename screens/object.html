@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720f">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720f">
-<link rel="stylesheet" href="../css/object.css?v=20260720f">
-<script src="../js/cursor.js?v=20260720f" defer></script>
-<script src="../js/grain.js?v=20260720f" defer></script>
-<script src="../js/tilt3d.js?v=20260720f" defer></script>
-<script src="../js/owner.js?v=20260720f"></script>
-<script src="../js/config.js?v=20260720f"></script>
-<script src="../js/archive.js?v=20260720f"></script>
-<script src="../js/blobstore.js?v=20260720f"></script>
-<script src="../js/remote-captures.js?v=20260720f"></script>
-<script src="../js/community-seed.js?v=20260720f"></script>
-<script src="../js/flow.js?v=20260720f" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720f"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720g">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720g">
+<link rel="stylesheet" href="../css/object.css?v=20260720g">
+<script src="../js/cursor.js?v=20260720g" defer></script>
+<script src="../js/grain.js?v=20260720g" defer></script>
+<script src="../js/tilt3d.js?v=20260720g" defer></script>
+<script src="../js/owner.js?v=20260720g"></script>
+<script src="../js/config.js?v=20260720g"></script>
+<script src="../js/archive.js?v=20260720g"></script>
+<script src="../js/blobstore.js?v=20260720g"></script>
+<script src="../js/remote-captures.js?v=20260720g"></script>
+<script src="../js/community-seed.js?v=20260720g"></script>
+<script src="../js/flow.js?v=20260720g" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720g"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720f" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720g" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720f";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720f";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720g";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720g";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -379,14 +379,17 @@
               visibility: (window.Community && Community.get(c.id)) ? "community" : "private",
               annotations: Array.isArray(c.annotations) ? c.annotations : [],
               links: [],
-              // a re-scan appends a dated version; a fresh capture has just one
+              // a re-scan appends a dated version; a fresh capture has just one.
+              // title falls back to the capture's current title when a
+              // version predates per-version title snapshots.
               versions: (Array.isArray(c.versions) && c.versions.length)
                 ? c.versions.map(function (v) {
                     return { year: new Date(v.created || Date.now()).getFullYear(),
-                      created: v.created, model: v.model, img: v.img, points: v.points };
+                      created: v.created, model: v.model, img: v.img, points: v.points,
+                      title: v.title || c.title };
                   })
                 : [{ year: new Date(c.created || Date.now()).getFullYear(),
-                     created: c.created, model: c.model, img: c.img, points: c.points }]
+                     created: c.created, model: c.model, img: c.img, points: c.points, title: c.title }]
             };
             order.push(c.id);
           });
@@ -402,6 +405,10 @@
         if (!catalog[k].versions) {
           catalog[k].versions = [{ year: 2026, model: catalog[k].model, img: catalog[k].img, points: catalog[k].points }];
         }
+        // the curated chandelier history and any other version predating
+        // per-version titles has no title of its own - fall back to the
+        // capture's current title rather than showing nothing on hover
+        catalog[k].versions.forEach(function (v) { if (!v.title) v.title = catalog[k].title; });
       });
 
       // ----- persistence: edits, annotations and connections survive reloads -----
@@ -1651,10 +1658,36 @@
       function timelineHasHistory() {
         return ((catalog[key] && catalog[key].versions) || []).length >= 2;
       }
+      // long-press a version to mark it pending deletion (struck-through
+      // label, red dot); a plain tap on that same marked version confirms
+      // the delete, a tap anywhere else cancels the marking untouched
+      var pendingDeleteBtn = null;
+      function clearPendingDelete() {
+        if (pendingDeleteBtn) pendingDeleteBtn.classList.remove("obj-year--pending-delete");
+        pendingDeleteBtn = null;
+      }
+      document.addEventListener("click", function (e) {
+        if (pendingDeleteBtn && e.target !== pendingDeleteBtn && !pendingDeleteBtn.contains(e.target)) {
+          clearPendingDelete();
+        }
+      });
+
+      function deleteVersion(k, i) {
+        var versions = (catalog[k].versions || []).slice();
+        versions.splice(i, 1);
+        catalog[k].versions = versions;
+        clearPendingDelete();
+        if (window.Archive && Archive.get(k)) Archive.update(k, { versions: versions });
+        if (window.Community && Community.get(k)) Community.update(k, { versions: versions });
+        renderTimeline(k);
+        if (versions.length) selectVersion(k, versions.length - 1);
+      }
+
       function renderTimeline(k) {
         var versions = catalog[k].versions || [];
         var yearsWrap = objTimeline.querySelector(".obj-years");
         yearsWrap.innerHTML = "";
+        clearPendingDelete();
         if (versions.length < 2) { objTimeline.hidden = true; return; }
         objTimeline.hidden = false;
         // default to the latest version
@@ -1666,8 +1699,30 @@
           btn.type = "button";
           btn.dataset.year = v.year;
           btn.dataset.index = i;
+          btn.title = v.title || catalog[k].title;
           btn.innerHTML = "<span>" + v.year + "</span><i class=\"obj-dot\"></i>";
-          btn.addEventListener("click", function () { selectVersion(k, i); });
+
+          var timer = null, longPressed = false;
+          function startPress() {
+            longPressed = false;
+            timer = setTimeout(function () {
+              longPressed = true;
+              if (pendingDeleteBtn && pendingDeleteBtn !== btn) pendingDeleteBtn.classList.remove("obj-year--pending-delete");
+              pendingDeleteBtn = btn;
+              btn.classList.add("obj-year--pending-delete");
+            }, 480);
+          }
+          function endPress() { clearTimeout(timer); }
+          btn.addEventListener("mousedown", startPress);
+          btn.addEventListener("touchstart", startPress, { passive: true });
+          btn.addEventListener("mouseup", endPress);
+          btn.addEventListener("mouseleave", endPress);
+          btn.addEventListener("touchend", endPress);
+          btn.addEventListener("click", function () {
+            if (longPressed) { longPressed = false; return; } // the long-press itself already marked it
+            if (pendingDeleteBtn === btn) { deleteVersion(k, i); return; }
+            selectVersion(k, i);
+          });
           yearsWrap.appendChild(btn);
         });
       }

@@ -220,6 +220,18 @@
   outline: 1px solid var(--color-cream);
 }
 
+/* long-press marks a version pending deletion - a struck-through label and
+   a red dot read as a clear "about to delete" warning; tapping anywhere
+   else cancels it back to normal without deleting anything */
+.obj-year--pending-delete > span {
+  text-decoration: line-through;
+  opacity: 1;
+}
+
+.obj-year--pending-delete .obj-dot {
+  background: #d3453c;
+}
+
 /* ---------- Arrows ---------- */
 
 /* chevron arrows (❮ ❯) */

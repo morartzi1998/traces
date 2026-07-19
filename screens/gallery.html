@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720f">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720f">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720f">
-<script src="../js/cursor.js?v=20260720f" defer></script>
-<script src="../js/grain.js?v=20260720f" defer></script>
-<script src="../js/owner.js?v=20260720f"></script>
-<script src="../js/config.js?v=20260720f"></script>
-<script src="../js/archive.js?v=20260720f"></script>
-<script src="../js/blobstore.js?v=20260720f"></script>
-<script src="../js/remote-captures.js?v=20260720f"></script>
-<script src="../js/designer-archive.js?v=20260720f"></script>
-<script src="../js/gallery-title.js?v=20260720f" defer></script>
-<script src="../js/flow.js?v=20260720f" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720g">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720g">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720g">
+<script src="../js/cursor.js?v=20260720g" defer></script>
+<script src="../js/grain.js?v=20260720g" defer></script>
+<script src="../js/owner.js?v=20260720g"></script>
+<script src="../js/config.js?v=20260720g"></script>
+<script src="../js/archive.js?v=20260720g"></script>
+<script src="../js/blobstore.js?v=20260720g"></script>
+<script src="../js/remote-captures.js?v=20260720g"></script>
+<script src="../js/designer-archive.js?v=20260720g"></script>
+<script src="../js/gallery-title.js?v=20260720g" defer></script>
+<script src="../js/flow.js?v=20260720g" defer></script>
 </head>
 <body>
 
@@ -321,15 +321,16 @@
         // is meant to look exactly like Mor's own public archive
         // (archive-mine.html): her real captures first, newest first, then
         // the fixed demo catalog filling out the rest. Once you've added
-        // your first real capture, the archive is genuinely yours: the
-        // sample pieces step aside rather than sitting mixed in with what
-        // you actually made.
-        var showcase = allItems.length ? [] : (
-          showcaseRealItems
+        // the fixed demo catalog stays reachable/manageable regardless of
+        // whether you've captured anything of your own - Mor's real public
+        // archive (showcaseRealItems), on the other hand, is specifically
+        // the "here's what my archive looks like" placeholder for someone
+        // who hasn't started yet, so that part still steps aside once your
+        // own archive is genuinely yours.
+        var showcase = (allItems.length ? [] : showcaseRealItems
             .filter(function (c) { return hiddenDesigner.indexOf(c.id) === -1; })
             .map(function (c) { return { key: c.id, title: c.title, img: c.img, meta: ago(c.created), kind: c.kind }; })
-            .concat(mapShowcase(window.DESIGNER_ARCHIVE))
-        );
+          ).concat(mapShowcase(window.DESIGNER_ARCHIVE));
 
         grid.innerHTML = "";
         empty.hidden = true;
