@@ -34,8 +34,11 @@
         // without this, a genuinely stalled connection (weak signal, a
         // proxy that silently drops the request mid-flight) never fires
         // onload/onerror at all - the sync-status badge was left showing
-        // "uploading… X%" forever with no way to ever resolve as failed
-        xhr.timeout = 60000;
+        // "uploading… X%" forever with no way to ever resolve as failed.
+        // Scaled to the file's own size (with a floor) - a flat 60s was
+        // cutting off large real scans that were genuinely still
+        // uploading on a normal connection, not actually stuck.
+        xhr.timeout = Math.max(60000, blob.size / (256 * 1024) * 1000);
         if (onProgress) {
           xhr.upload.addEventListener("progress", function (e) {
             if (e.lengthComputable) onProgress(e.loaded / e.total);
