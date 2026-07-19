@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719o">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719o">
-<script src="../js/cursor.js?v=20260719o" defer></script>
-<script src="../js/grain.js?v=20260719o" defer></script>
-<script src="../js/owner.js?v=20260719o"></script>
-<script src="../js/config.js?v=20260719o"></script>
-<script src="../js/archive.js?v=20260719o"></script>
-<script src="../js/blobstore.js?v=20260719o"></script>
-<script src="../js/remote-captures.js?v=20260719o"></script>
-<script src="../js/designer-archive.js?v=20260719o"></script>
-<script src="../js/community-seed.js?v=20260719o"></script>
-<script src="../js/gallery-title.js?v=20260719o" defer></script>
-<script src="../js/flow.js?v=20260719o" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719p">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719p">
+<script src="../js/cursor.js?v=20260719p" defer></script>
+<script src="../js/grain.js?v=20260719p" defer></script>
+<script src="../js/owner.js?v=20260719p"></script>
+<script src="../js/config.js?v=20260719p"></script>
+<script src="../js/archive.js?v=20260719p"></script>
+<script src="../js/blobstore.js?v=20260719p"></script>
+<script src="../js/remote-captures.js?v=20260719p"></script>
+<script src="../js/designer-archive.js?v=20260719p"></script>
+<script src="../js/community-seed.js?v=20260719p"></script>
+<script src="../js/gallery-title.js?v=20260719p" defer></script>
+<script src="../js/flow.js?v=20260719p" defer></script>
 </head>
 <body>
 
@@ -89,6 +89,12 @@
       // remote items this same browser already made locally would otherwise
       // double up (a remote community record's id is "<capture id>-community";
       // strip that back off to compare against this browser's own local ids)
+      // only Mor's own devices get a delete control on a remote item (see
+      // js/owner.js) — declared up here, before the early return below, so
+      // it's still set even when this browser's own local Community is empty
+      // (the common case: build()/isOwner are needed by the remote-merge
+      // callback further down regardless of what's found locally)
+      var isOwner = window.isOwnerDevice && window.isOwnerDevice();
       var localCommunityIds = {};
       (window.Community ? Community.all() : []).forEach(function (c) { localCommunityIds[c.id] = true; });
       var remoteReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
@@ -120,10 +126,13 @@
         art.className = "gal-item";
         art.dataset.kind = c.kind || "object";
         var who = (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : "");
+        // a remote item (someone else's device, or Mor's own past share)
+        // only gets a delete control for Mor herself — a random visitor
+        // shouldn't be able to remove another person's shared capture
         art.innerHTML =
           '<p class="gal-meta">' + ago(c.created) + '<br><span class="gal-who"></span></p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-          (c.remote ? '' : '<button class="gal-delete" type="button" hidden>delete capture</button>');
+          (!c.remote || isOwner ? '<button class="gal-delete" type="button" hidden>delete capture</button>' : '');
         art.querySelector(".gal-who").textContent = who;
         var imgEl = art.querySelector("img");
         if (window.BlobStore) {
@@ -160,7 +169,15 @@
         });
         if (del) {
           del.addEventListener("click", function () {
-            Community.remove(c.id);
+            if (c.remote) {
+              // a remote item lives only in the shared worker store, under
+              // its own "<id>-community" record id — never in this browser's
+              // local Community list, so there's nothing local to remove
+              var api = (window.TRACES_API || "").replace(/\/$/, "");
+              if (api) fetch(api + "/captures/" + c.id + "-community", { method: "DELETE" }).catch(function () {});
+            } else {
+              Community.remove(c.id);
+            }
             art.remove();
           });
         }
