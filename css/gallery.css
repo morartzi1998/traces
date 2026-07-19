@@ -324,34 +324,12 @@
   z-index: 39;
 }
 
-/* a checked selection square shown on each card while management mode is
-   active — same square-checkbox language as the object/space filters above
-   the grid, just placed on the card itself */
-.gal-item-select {
-  display: none;
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-  width: 20px;
-  height: 20px;
-  box-sizing: border-box;
-  border: 2px solid #ffffff;
-  background: rgba(0, 0, 0, 0.35);
-  /* purely a visual indicator - it sits on top of the card, so without
-     this a tap aimed right at the square (the obvious thing to tap) hits
-     this plain div instead of the .gal-card button underneath and does
-     nothing at all */
-  pointer-events: none;
-}
-
-.gal-screen--manage .gal-item-select {
-  display: block;
-}
-
-.gal-item--selected .gal-item-select {
-  background: var(--color-ink-blue);
-  border-color: var(--color-ink-blue);
+/* no checkbox squares - marked vs. unmarked reads the same way the
+   original single-select design did: everything not currently marked
+   recedes into shadow, the marked card(s) stay at full brightness */
+.gal-screen--manage .gal-item:not(.gal-item--selected) {
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
 }
 
 /* same paper-card design language as object.html's white details panel —
