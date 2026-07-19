@@ -419,6 +419,32 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   justify-content: center;
 }
 
+/* a real capture's photo/model/points can take real time to fetch - an
+   empty stage until it lands read as broken rather than "still loading".
+   Soft blurred bars instead of a spinner, in the same quiet language as
+   the rest of the interface (see object.html's swapScan). */
+.obj-stage--loading::before {
+  content: "";
+  position: absolute;
+  inset: 18% 22%;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(240, 238, 234, 0.09) 22%, transparent 22%) 0 0 / 100% 34px,
+    linear-gradient(rgba(240, 238, 234, 0.09) 22%, transparent 22%) 0 46px / 72% 34px,
+    linear-gradient(rgba(240, 238, 234, 0.09) 22%, transparent 22%) 0 92px / 85% 34px;
+  filter: blur(6px);
+  animation: obj-stage-loading-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes obj-stage-loading-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obj-stage--loading::before { animation: none; }
+}
+
 /* holding Space swaps the drag gesture from orbit to pan, for a better
    viewing angle instead of just spinning around a fixed point */
 .obj-stage--pan-ready, .obj-stage--pan-ready model-viewer {
@@ -1276,10 +1302,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 }
 
 /* the .obj-white-rule right after this list already draws the section's
-   closing line — a border here too would double it up */
+   closing line — a border here too would double it up. Padding stays the
+   same 14px as every other row (it was 8px, which left the gap before
+   this closing line visibly tighter than every gap above it). */
 .obj-white-list li:last-child {
   border-bottom: none;
-  padding-bottom: 8px;
 }
 
 .obj-white-list li::before {

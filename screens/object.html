@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720q">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720q">
-<link rel="stylesheet" href="../css/object.css?v=20260720q">
-<script src="../js/cursor.js?v=20260720q" defer></script>
-<script src="../js/grain.js?v=20260720q" defer></script>
-<script src="../js/tilt3d.js?v=20260720q" defer></script>
-<script src="../js/owner.js?v=20260720q"></script>
-<script src="../js/config.js?v=20260720q"></script>
-<script src="../js/archive.js?v=20260720q"></script>
-<script src="../js/blobstore.js?v=20260720q"></script>
-<script src="../js/remote-captures.js?v=20260720q"></script>
-<script src="../js/community-seed.js?v=20260720q"></script>
-<script src="../js/flow.js?v=20260720q" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720q"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720r">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720r">
+<link rel="stylesheet" href="../css/object.css?v=20260720r">
+<script src="../js/cursor.js?v=20260720r" defer></script>
+<script src="../js/grain.js?v=20260720r" defer></script>
+<script src="../js/tilt3d.js?v=20260720r" defer></script>
+<script src="../js/owner.js?v=20260720r"></script>
+<script src="../js/config.js?v=20260720r"></script>
+<script src="../js/archive.js?v=20260720r"></script>
+<script src="../js/blobstore.js?v=20260720r"></script>
+<script src="../js/remote-captures.js?v=20260720r"></script>
+<script src="../js/community-seed.js?v=20260720r"></script>
+<script src="../js/flow.js?v=20260720r" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720r"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720q" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720r" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720q";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720q";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720r";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720r";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -67,6 +67,15 @@
           <input type="range" id="menuPointSizeSlider" min="1" max="5" value="3" step="1">
           <span id="menuPointSizeLabel">balanced</span>
         </li>
+        <li hidden class="obj-menu-density" id="menuTiltXRow">
+          <label for="menuTiltXSlider">tilt (forward/back)</label>
+          <input type="range" id="menuTiltXSlider" min="-45" max="45" value="0" step="1">
+        </li>
+        <li hidden class="obj-menu-density" id="menuTiltZRow">
+          <label for="menuTiltZSlider">tilt (side to side)</label>
+          <input type="range" id="menuTiltZSlider" min="-45" max="45" value="0" step="1">
+        </li>
+        <li hidden><button type="button" id="menuSaveTilt">Save this as upright</button></li>
       </ul>
     </header>
 
@@ -386,6 +395,7 @@
             model: c.model || null,
             points: c.points || null,
             pointSize: c.pointSize || null,
+            tilt: c.tilt || null,
             connected: c.connected || "",
             connectedKey: c.connectedKey || null,
             feeling: c.feeling || "",
@@ -1144,6 +1154,13 @@
       var modelViewer = document.getElementById("objModel");
       var objPoints = document.getElementById("objPoints");
 
+      modelViewer.addEventListener("load", function () {
+        stage.classList.remove("obj-stage--loading");
+      });
+      modelViewer.addEventListener("error", function () {
+        stage.classList.remove("obj-stage--loading");
+      });
+
       // the marker's screen position moves every frame while the model
       // orbits; keep the open remark card glued to it instead of the stale
       // spot it was opened at
@@ -1369,6 +1386,10 @@
       // user has already navigated to a different capture.
       function swapScan(k, model, img, points) {
         disposePcViewer();
+        // fetching a real capture's photo/model/points can take real time -
+        // an empty stage until it lands read as broken rather than loading.
+        // Cleared as soon as each branch below actually has something to show.
+        stage.classList.add("obj-stage--loading");
         if (points) {
           // a raw point cloud gets real per-point rendering instead of a
           // voxelized-mesh GLB — glTF/model-viewer has no notion of point
@@ -1390,18 +1411,27 @@
             : fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
           if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
             pointsBlob.then(function (blob) {
-              if (!blob || key !== k) return;
+              // a fetch that simply resolved false/empty (a 404, a missing
+              // idb blob) isn't a thrown error - it never reached .catch(),
+              // which used to leave the loading placeholder stuck forever
+              if (!blob) { if (key === k) stage.classList.remove("obj-stage--loading"); return null; }
+              if (key !== k) return null;
               return blob.arrayBuffer();
             }).then(function (buf) {
-              if (!buf || key !== k) return;
+              if (!buf) { if (key === k) stage.classList.remove("obj-stage--loading"); return; }
+              if (key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: catalog[k].pointSize || 0.013, initialView: catalog[k].defaultView || null });
+                { pointSize: catalog[k].pointSize || 0.013, initialView: catalog[k].defaultView || null,
+                  tilt: catalog[k].tilt || null });
+              stage.classList.remove("obj-stage--loading");
               // once the cloud is ready, (re)draw annotations as 3D-anchored
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
               if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
-            }).catch(function () {});
+            }).catch(function () { if (key === k) stage.classList.remove("obj-stage--loading"); });
+          } else {
+            stage.classList.remove("obj-stage--loading");
           }
         } else if (model) {
           stage.dataset.mode = "model";
@@ -1428,10 +1458,13 @@
           // a real capture's thumbnail may be an idb: reference now
           if (window.BlobStore) {
             window.BlobStore.url(img).then(function (u) {
-              if (key === k) photo.src = u || "";
+              if (key !== k) return;
+              photo.src = u || "";
+              stage.classList.remove("obj-stage--loading");
             });
           } else {
             photo.src = img;
+            stage.classList.remove("obj-stage--loading");
           }
           photo.alt = catalog[k].title;
         }
@@ -1879,6 +1912,14 @@
           menuPointSizeSlider.value = idx + 1;
           menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
         }
+        menuTiltXRow.hidden = !onLivePoints;
+        menuTiltZRow.hidden = !onLivePoints;
+        menuSaveTiltRow.hidden = !onLivePoints;
+        if (onLivePoints) {
+          var savedTilt = catalog[key].tilt || { x: 0, z: 0 };
+          menuTiltXSlider.value = Math.round((savedTilt.x || 0) * 180 / Math.PI);
+          menuTiltZSlider.value = Math.round((savedTilt.z || 0) * 180 / Math.PI);
+        }
       });
       function savePointSize(size) {
         catalog[key].pointSize = size;
@@ -1901,6 +1942,44 @@
       menuPointSizeSlider.addEventListener("change", function () {
         var idx = parseInt(menuPointSizeSlider.value, 10) - 1;
         savePointSize(POINT_SIZE_LEVELS[idx]);
+      });
+
+      // straightening a raw scan that came in at a diagonal: orbiting alone
+      // only changes where the camera stands to look at it, never the
+      // tilt itself, since the whole cloud rotates around a fixed up-axis
+      // regardless of viewing angle - these two sliders actually rotate the
+      // cloud in place (see point-cloud-viewer.js's pivot), and only the
+      // explicit save below persists it, so nudging around to find the
+      // right angle doesn't write anything until it's confirmed
+      var menuTiltXSlider = document.getElementById("menuTiltXSlider");
+      var menuTiltZSlider = document.getElementById("menuTiltZSlider");
+      var menuTiltXRow = menuTiltXSlider.closest("li");
+      var menuTiltZRow = menuTiltZSlider.closest("li");
+      var menuSaveTilt = document.getElementById("menuSaveTilt");
+      var menuSaveTiltRow = menuSaveTilt.closest("li");
+      function applyTiltFromSliders() {
+        if (!pcViewer) return;
+        var x = parseFloat(menuTiltXSlider.value) * Math.PI / 180;
+        var z = parseFloat(menuTiltZSlider.value) * Math.PI / 180;
+        pcViewer.setTilt(x, z);
+      }
+      menuTiltXSlider.addEventListener("input", applyTiltFromSliders);
+      menuTiltZSlider.addEventListener("input", applyTiltFromSliders);
+      menuSaveTilt.addEventListener("click", function () {
+        if (!pcViewer) return;
+        var tilt = pcViewer.getTilt();
+        catalog[key].tilt = tilt;
+        var inArchive = window.Archive && Archive.get(key);
+        var inCommunity = window.Community && Community.get(key);
+        if (inArchive) Archive.update(key, { tilt: tilt });
+        if (inCommunity) Community.update(key, { tilt: tilt });
+        if (window.RemoteCaptures && (inArchive || inCommunity)) {
+          var isOwner = window.isOwnerDevice && window.isOwnerDevice();
+          if (inArchive && isOwner) RemoteCaptures.publish(Archive.get(key), "archive");
+          if (inCommunity) RemoteCaptures.publish(Community.get(key), "community");
+        }
+        menuSaveTilt.textContent = "Saved";
+        setTimeout(function () { menuSaveTilt.textContent = "Save this as upright"; }, 1500);
       });
       // writes a freshly-captured thumbnail back to the Archive/Community
       // record — gallery.html, community.html and connect.html all read a

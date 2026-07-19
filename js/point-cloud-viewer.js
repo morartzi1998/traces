@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260720q";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260720r";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -116,7 +116,20 @@ export function mountPointCloudViewer(container, geometry, opts) {
     color: hasColor ? 0xffffff : 0xcccccc,
   });
   var points = new THREE.Points(geometry, material);
-  scene.add(points);
+  // a raw phone scan's own coordinate frame can come in at any tilt - there's
+  // no single rotation that fixes every scan (see the note above
+  // deserializeGeometry in voxelize-shared.js), so instead of guessing, this
+  // pivot lets object.html's own "straighten" control rotate the cloud
+  // in place around its real center and save whatever angle actually looks
+  // upright. Orbiting an already-tilted cloud never fixed the tilt itself -
+  // only where you were standing to look at it - which is why "set this
+  // angle as default view" alone couldn't solve it.
+  var pivot = new THREE.Group();
+  pivot.position.copy(sphere.center);
+  points.position.copy(sphere.center).negate();
+  pivot.add(points);
+  scene.add(pivot);
+  if (opts.tilt) pivot.rotation.set(opts.tilt.x || 0, 0, opts.tilt.z || 0);
 
   var controls = new OrbitControls(camera, renderer.domElement);
   // the orbit always pivots around the scan's own actual center — a saved
@@ -244,6 +257,10 @@ export function mountPointCloudViewer(container, geometry, opts) {
 
   return {
     setPointSize: function (size) { material.size = size; },
+    // rotates the cloud in place around its own center (not the camera) -
+    // x is a forward/back tilt, z is a side-to-side lean
+    setTilt: function (x, z) { pivot.rotation.set(x, 0, z); },
+    getTilt: function () { return { x: pivot.rotation.x, z: pivot.rotation.z }; },
     resize: resize,
     raycastFromScreen: raycastFromScreen,
     project: project,
