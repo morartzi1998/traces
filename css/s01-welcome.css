@@ -51,6 +51,19 @@
   width: 78%;
 }
 
+/* the auto-rotating carousel swaps a slot's photo/caption underneath it
+   periodically - a brief fade instead of the image just snapping to a
+   different capture out of nowhere (see index.html's rotate()) */
+.polaroid img,
+.polaroid-caption {
+  transition: opacity 0.22s ease;
+}
+
+.polaroid--swap img,
+.polaroid--swap .polaroid-caption {
+  opacity: 0;
+}
+
 .polaroid img {
   display: block;
   width: 100%;

@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260720p">
-<link rel="stylesheet" href="css/chrome.css?v=20260720p">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260720p">
-<link rel="stylesheet" href="css/loading.css?v=20260720p">
+<link rel="stylesheet" href="css/base.css?v=20260720q">
+<link rel="stylesheet" href="css/chrome.css?v=20260720q">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260720q">
+<link rel="stylesheet" href="css/loading.css?v=20260720q">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,10 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260720p" defer></script>
-<script src="js/grain.js?v=20260720p" defer></script>
-<script src="js/owner.js?v=20260720p"></script>
-<script src="js/flow.js?v=20260720p" defer></script>
+<script src="js/cursor.js?v=20260720q" defer></script>
+<script src="js/grain.js?v=20260720q" defer></script>
+<script src="js/owner.js?v=20260720q"></script>
+<script src="js/flow.js?v=20260720q" defer></script>
 </head>
 <body>
 
@@ -96,26 +96,23 @@
 
     <main class="main">
 
-      <div class="polaroid-stack">
+      <div class="polaroid-stack" id="heroStack">
         <div class="scan-meta">
           <div>[5 days ago]</div>
           <div>[mishel's scan]</div>
         </div>
 
-        <div class="polaroid polaroid-third" role="button" tabindex="0"
-             onclick="selectWelcomePolaroid(this, 'teddy')">
+        <div class="polaroid polaroid-third" role="button" tabindex="0" data-key="teddy">
           <img src="assets/images/photo-teddy.png" alt="Childhood teddy bear">
           <div class="polaroid-caption caption-third">childhood teddy</div>
         </div>
 
-        <div class="polaroid polaroid-back" role="button" tabindex="0"
-             onclick="selectWelcomePolaroid(this, 'souvenirs')">
+        <div class="polaroid polaroid-back" role="button" tabindex="0" data-key="souvenirs">
           <img src="assets/images/photo-souvenirs.png" alt="Souvenirs from Europe, blue and white china plates">
           <div class="polaroid-caption caption-back">souvenirs from europe</div>
         </div>
 
-        <div class="polaroid polaroid-front" role="button" tabindex="0"
-             onclick="selectWelcomePolaroid(this, 'chandelier')">
+        <div class="polaroid polaroid-front" role="button" tabindex="0" data-key="chandelier">
           <img src="assets/images/photo-chandelier.png" alt="Old living room lamp, a brass chandelier">
           <div class="polaroid-caption caption-front">old living room lamp</div>
         </div>
@@ -140,25 +137,99 @@
   </div>
 
   <script>
-    // the first tap on a background polaroid just brings it to the front of
-    // the stack (so its own caption/photo become the focus) — only a second
-    // tap on that same card (now on top, or already the default front one)
-    // actually opens it, so browsing the stack doesn't require leaving it
-    function selectWelcomePolaroid(card, key) {
-      var stack = card.closest('.polaroid-stack');
-      var active = stack.querySelector('.polaroid.is-active');
-      var isDefaultFront = card.classList.contains('polaroid-front') && !active;
+    // the front/back/third polaroid slots keep their fixed CSS positions -
+    // rotation just swaps which capture's photo/caption each slot is
+    // currently showing, conveyor-style (front's content moves back, back's
+    // moves to third, third gets whatever the next capture in line is)
+    var HERO_ITEMS = [
+      { key: "chandelier", img: "assets/images/photo-chandelier.png", title: "old living room lamp" },
+      { key: "souvenirs",  img: "assets/images/photo-souvenirs.png",  title: "souvenirs from europe" },
+      { key: "teddy",      img: "assets/images/photo-teddy.png",      title: "childhood teddy" },
+      { key: "couch",      img: "assets/images/photo-couch.png",      title: "father's couch" },
+      { key: "plant",      img: "assets/images/photo-orchid.png",     title: "mom's gifted plant" },
+      { key: "bed",        img: "assets/images/photo-bed.png",        title: "20 year old bed" },
+    ];
 
-      if (card.classList.contains('is-active') || isDefaultFront) {
-        openObject(key, locationPrefix() + 'object.html');
-        return;
+    (function () {
+      var stack = document.getElementById("heroStack");
+      var slots = [
+        stack.querySelector(".polaroid-front"),
+        stack.querySelector(".polaroid-back"),
+        stack.querySelector(".polaroid-third"),
+      ];
+      var shown = [0, 1, 2]; // HERO_ITEMS index currently held by each slot
+      var nextUp = 3;
+      var paused = false;
+      var timer = null;
+
+      function applyContent(el, item) {
+        var img = el.querySelector("img");
+        img.src = item.img;
+        img.alt = item.title;
+        el.querySelector(".polaroid-caption").textContent = item.title;
+        el.dataset.key = item.key;
       }
 
-      stack.querySelectorAll('.polaroid').forEach(function (item) {
-        item.classList.remove('is-active');
+      function rotate() {
+        if (paused) return;
+        shown[0] = shown[1];
+        shown[1] = shown[2];
+        shown[2] = nextUp % HERO_ITEMS.length;
+        nextUp++;
+        // a brief fade rather than a hard swap, since the content changes
+        // out from under whatever the visitor was just looking at
+        slots.forEach(function (el, i) {
+          el.classList.add("polaroid--swap");
+          setTimeout(function () {
+            applyContent(el, HERO_ITEMS[shown[i]]);
+            el.classList.remove("polaroid--swap");
+          }, 220);
+        });
+      }
+
+      function restartTimer() {
+        clearInterval(timer);
+        timer = setInterval(rotate, 4500);
+      }
+      restartTimer();
+
+      // pause while a visitor is actually looking at the stack, so the
+      // caption they're mid-reading doesn't change under the cursor
+      stack.addEventListener("mouseenter", function () { paused = true; });
+      stack.addEventListener("mouseleave", function () { paused = false; });
+      stack.addEventListener("focusin", function () { paused = true; });
+      stack.addEventListener("focusout", function () { paused = false; });
+
+      // the first tap on a background polaroid just brings it to the front
+      // of the stack (so its own caption/photo become the focus) — only a
+      // second tap on that same card (now on top, or already the default
+      // front one) actually opens it, so browsing doesn't require leaving
+      function selectWelcomePolaroid(card) {
+        var key = card.dataset.key;
+        var active = stack.querySelector(".polaroid.is-active");
+        var isDefaultFront = card.classList.contains("polaroid-front") && !active;
+
+        if (card.classList.contains("is-active") || isDefaultFront) {
+          openObject(key, locationPrefix() + "object.html");
+          return;
+        }
+
+        stack.querySelectorAll(".polaroid").forEach(function (item) {
+          item.classList.remove("is-active");
+        });
+        card.classList.add("is-active");
+        // a deliberate manual pick, not the auto-advance - give it a full
+        // fresh interval before rotation resumes
+        restartTimer();
+      }
+
+      slots.forEach(function (el) {
+        el.addEventListener("click", function () { selectWelcomePolaroid(el); });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectWelcomePolaroid(el); }
+        });
       });
-      card.classList.add('is-active');
-    }
+    })();
   </script>
 
 </body>

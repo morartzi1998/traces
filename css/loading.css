@@ -103,3 +103,44 @@
   color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
+
+/* the fanned single-row hand-of-cards layout above only ever worked on a
+   wide screen — on a phone the row is wider than the viewport itself, so
+   the outer cards were just clipped off both edges. Below this width,
+   switch to a loose scatter that actually fits: each card absolutely
+   positioned (percent-based, so it scales with the container) instead of
+   sitting in a row, sized down, and given more breathing room to float in. */
+@media (max-width: 640px) {
+  .load-screen {
+    gap: 6vh;
+    padding: 6vw;
+  }
+
+  .load-strip {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    height: 52vh;
+    max-height: 420px;
+  }
+
+  .load-polaroid {
+    position: absolute;
+    width: 34vw;
+    max-width: 130px;
+    margin-left: 0;
+  }
+
+  .load-polaroid:nth-child(1) { top: 2%;  left: 4%;  }
+  .load-polaroid:nth-child(2) { top: 30%; left: 44%; }
+  .load-polaroid:nth-child(3) { top: 4%;  left: 58%; }
+  .load-polaroid:nth-child(4) { top: 44%; left: 6%;  }
+  .load-polaroid:nth-child(5) { top: 60%; left: 46%; }
+  .load-polaroid:nth-child(6) { top: 24%; left: 20%; }
+  .load-polaroid:nth-child(7) { top: 68%; left: 4%;  }
+
+  .load-polaroid:nth-child(2) figcaption,
+  .load-polaroid:nth-child(4) figcaption {
+    transform: none;
+  }
+}
