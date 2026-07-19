@@ -40,5 +40,65 @@
     "annotations": [
       { "x": 0.5, "y": 0.5, "title": "faded corner", "type": "story", "since": 2019, "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan." }
     ]
+  },
+  {
+    "key": "communityAntiqueBookcase",
+    "title": "antique bookcase",
+    "img": "../community/images/antique-bookcase.png",
+    "model": "../community/models/antique-bookcase.glb",
+    "kind": "object",
+    "by": "renn",
+    "country": "sweden",
+    "meta": "6 days ago",
+    "feeling": "inherited from my grandfather's study - every shelf still smells faintly of pipe tobacco.",
+    "annotations": []
+  },
+  {
+    "key": "communityBearShapedWickerBed",
+    "title": "bear-shaped wicker bed",
+    "img": "../community/images/bear-shaped-wicker-bed.png",
+    "model": "../community/models/bear-shaped-wicker-bed.glb",
+    "kind": "object",
+    "by": "yuki",
+    "country": "japan",
+    "meta": "9 days ago",
+    "feeling": "handwoven for our first cat - she outgrew it in a year but refuses to sleep anywhere else.",
+    "annotations": []
+  },
+  {
+    "key": "communityComputerDesk",
+    "title": "computer desk",
+    "img": "../community/images/computer-desk.png",
+    "model": "../community/models/computer-desk.glb",
+    "kind": "object",
+    "by": "theo",
+    "country": "greece",
+    "meta": "3 days ago",
+    "feeling": "built this the summer i got my first computer - still has the same wobble in the left leg.",
+    "annotations": []
+  },
+  {
+    "key": "communityHangingPodChair",
+    "title": "hanging pod chair",
+    "img": "../community/images/hanging-pod-chair.png",
+    "model": "../community/models/hanging-pod-chair.glb",
+    "kind": "object",
+    "by": "lior",
+    "country": "israel",
+    "meta": "2 days ago",
+    "feeling": "reads every book i own in this chair now - the whole porch was rearranged around it.",
+    "annotations": []
+  },
+  {
+    "key": "communityHighChair",
+    "title": "high chair",
+    "img": "../community/images/high-chair.png",
+    "model": "../community/models/high-chair.glb",
+    "kind": "object",
+    "by": "sara",
+    "country": "denmark",
+    "meta": "1 day ago",
+    "feeling": "all three of my kids ate their first solid food in this exact chair.",
+    "annotations": []
   }
 ]
