@@ -77,9 +77,47 @@
   white-space: nowrap;
 }
 
+/* a plain square thumb on a thin line - same language as the object
+   timeline's version dots (a solid blue square with a pale outline)
+   instead of the browser's own round native slider handle */
 .proc-density input[type="range"] {
   width: 180px;
-  accent-color: #ffffff;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.proc-density input[type="range"]::-webkit-slider-runnable-track {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.proc-density input[type="range"]::-moz-range-track {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.7);
+  border: none;
+}
+
+.proc-density input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--color-ink-blue);
+  outline: 1px solid #ffffff;
+  margin-top: -7px;
+  cursor: pointer;
+}
+
+.proc-density input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--color-ink-blue);
+  outline: 1px solid #ffffff;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
 }
 
 .proc-density-label {

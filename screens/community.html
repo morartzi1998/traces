@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720j">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720j">
-<script src="../js/cursor.js?v=20260720j" defer></script>
-<script src="../js/grain.js?v=20260720j" defer></script>
-<script src="../js/owner.js?v=20260720j"></script>
-<script src="../js/config.js?v=20260720j"></script>
-<script src="../js/archive.js?v=20260720j"></script>
-<script src="../js/blobstore.js?v=20260720j"></script>
-<script src="../js/remote-captures.js?v=20260720j"></script>
-<script src="../js/designer-archive.js?v=20260720j"></script>
-<script src="../js/community-seed.js?v=20260720j"></script>
-<script src="../js/gallery-title.js?v=20260720j" defer></script>
-<script src="../js/flow.js?v=20260720j" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720k">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720k">
+<script src="../js/cursor.js?v=20260720k" defer></script>
+<script src="../js/grain.js?v=20260720k" defer></script>
+<script src="../js/owner.js?v=20260720k"></script>
+<script src="../js/config.js?v=20260720k"></script>
+<script src="../js/archive.js?v=20260720k"></script>
+<script src="../js/blobstore.js?v=20260720k"></script>
+<script src="../js/remote-captures.js?v=20260720k"></script>
+<script src="../js/designer-archive.js?v=20260720k"></script>
+<script src="../js/community-seed.js?v=20260720k"></script>
+<script src="../js/gallery-title.js?v=20260720k" defer></script>
+<script src="../js/flow.js?v=20260720k" defer></script>
 </head>
 <body>
 
@@ -46,6 +46,11 @@
       <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
 
+    <!-- long-press management mode: dims everything behind the selected
+         polaroid(s) and their hide/delete controls - same pattern as
+         gallery.html's archive -->
+    <div class="gal-manage-backdrop" id="galManageBackdrop" hidden></div>
+
   </div>
 
   <script>
@@ -60,59 +65,56 @@
     (function () {
       var grid = document.getElementById("galGrid");
       if (!grid) return;
+      var screenEl = document.querySelector(".gal-screen");
+      var manageBackdrop = document.getElementById("galManageBackdrop");
 
-      // the fixed community showcase (seeded from community/manifest.json)
-      // renders first — then the visitor's own shared captures are
-      // inserted before them, so those appear first in the grid
-      if (window.communitySeedReady) {
-        window.communitySeedReady.then(function (list) {
-          (list || []).forEach(function (d) {
-            var art = document.createElement("article");
-            art.className = "gal-item";
-            art.dataset.kind = d.kind || "object";
-            art.innerHTML =
-              '<p class="gal-meta">' + d.meta + '<br>' + d.by + '\'s capture from ' + d.country + '</p>' +
-              '<button class="gal-card" type="button" onclick="openCommunityObject(\'' + d.key + '\')">' +
-                '<img src="' + d.img + '" alt="">' +
-                '<span class="gal-caption">' + d.title + '</span>' +
-              '</button>';
-            grid.appendChild(art);
-          });
-        });
+      // same long-press + shift-click multi-select as gallery.html: only
+      // one hide/delete row is ever on screen, living under whichever card
+      // was marked most recently, acting on every currently marked card
+      var activeActionsRow = null;
+      function showActionsUnder(art) {
+        if (activeActionsRow) activeActionsRow.hidden = true;
+        activeActionsRow = art.querySelector(".gal-item-actions");
+        activeActionsRow.hidden = false;
       }
-
-      // the designer's own built-in showcase (chandelier, couch, etc.) stays
-      // in "my archive"/"your archive" only — the community is meant to hold
-      // real shared captures, not a copy of that catalog too.
-
-      // the visitor's own captures shared to the community appear first —
-      // remote items this same browser already made locally would otherwise
-      // double up (a remote community record's id is "<capture id>-community";
-      // strip that back off to compare against this browser's own local ids)
-      // only Mor's own devices get a delete control on a remote item (see
-      // js/owner.js) — declared up here, before the early return below, so
-      // it's still set even when this browser's own local Community is empty
-      // (the common case: build()/isOwner are needed by the remote-merge
-      // callback further down regardless of what's found locally)
-      var isOwner = window.isOwnerDevice && window.isOwnerDevice();
-      var localCommunityIds = {};
-      (window.Community ? Community.all() : []).forEach(function (c) { localCommunityIds[c.id] = true; });
-      var remoteReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
-      remoteReady.then(function (list) {
-        (list || []).forEach(function (c) {
-          var localId = c.id.replace(/-community$/, "");
-          if (localCommunityIds[localId]) return;
-          grid.insertBefore(build(Object.assign({}, c, { id: localId, remote: true })), grid.firstChild);
-        });
-        // anything shared to the community from this browser before the
-        // shared store was reachable never made it there — send it now
-        if (window.RemoteCaptures) {
-          RemoteCaptures.syncMissing(window.Community ? Community.all() : [], list, "community");
-        }
+      function hideActiveActionsRow() {
+        if (activeActionsRow) activeActionsRow.hidden = true;
+        activeActionsRow = null;
+      }
+      function exitManageMode() {
+        grid.querySelectorAll(".gal-item--selected").forEach(function (a) { a.classList.remove("gal-item--selected"); });
+        hideActiveActionsRow();
+        screenEl.classList.remove("gal-screen--manage");
+        manageBackdrop.hidden = true;
+      }
+      manageBackdrop.addEventListener("click", exitManageMode);
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".gal-item")) exitManageMode();
       });
 
-      var items = (window.Community ? Community.all() : []);
-      if (!items.length) return;
+      // hiding a community piece (whether the fixed showcase or a real
+      // shared capture) is a personal declutter for a regular visitor -
+      // purely local. For Mor (owner device), it's curation: it also goes
+      // to the same shared "hidden showcase" list used by her own archive
+      // showcase in gallery.html, so it disappears for every visitor.
+      var HIDDEN_KEY = "traces-community-hidden";
+      var globalHiddenKeys = [];
+      function hiddenKeys() {
+        var local;
+        try { local = JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        return local.concat(globalHiddenKeys.filter(function (k) { return local.indexOf(k) === -1; }));
+      }
+      function hideItem(key) {
+        var local;
+        try { local = JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        if (local.indexOf(key) === -1) local.push(key);
+        try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(local)); } catch (e) {}
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          if (globalHiddenKeys.indexOf(key) === -1) globalHiddenKeys.push(key);
+          RemoteCaptures.hideShowcaseGlobally(key);
+        }
+      }
+
       function ago(ts) {
         var d = Math.floor((Date.now() - (ts || Date.now())) / 86400000);
         if (d <= 0) return "today";
@@ -121,39 +123,59 @@
         var m = Math.floor(d / 30);
         return m === 1 ? "a month ago" : m + " months ago";
       }
-      function build(c) {
+
+      // one polaroid card shared by the fixed showcase, the visitor's own
+      // shared captures, and other people's shared captures - they only
+      // differ in their metadata line and in whether "remove" is offered
+      // at all (see buildEntry below)
+      function buildCard(entry) {
         var art = document.createElement("article");
         art.className = "gal-item";
-        art.dataset.kind = c.kind || "object";
-        var who = (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : "");
-        // a remote item (someone else's device, or Mor's own past share)
-        // only gets a delete control for Mor herself — a random visitor
-        // shouldn't be able to remove another person's shared capture
+        art.dataset.kind = entry.kind || "object";
+        art.dataset.hideKey = entry.id;
         art.innerHTML =
-          '<p class="gal-meta">' + ago(c.created) + '<br><span class="gal-who"></span></p>' +
+          '<p class="gal-meta">' + entry.metaText + '<br><span class="gal-who"></span></p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-          (!c.remote || isOwner ? '<button class="gal-delete" type="button" hidden>delete capture</button>' : '');
-        art.querySelector(".gal-who").textContent = who;
+          '<div class="gal-item-actions" hidden>' +
+            '<button class="gal-hide" type="button">hide</button>' +
+            (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
+          '</div>';
+        art.querySelector(".gal-who").textContent = entry.who;
         var imgEl = art.querySelector("img");
         if (window.BlobStore) {
-          window.BlobStore.url(c.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+          window.BlobStore.url(entry.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
         } else {
-          imgEl.src = c.img || "../assets/images/photo-room.png";
+          imgEl.src = entry.img || "../assets/images/photo-room.png";
         }
-        art.querySelector(".gal-caption").textContent = c.title || "untitled capture";
+        art.querySelector(".gal-caption").textContent = entry.title || "untitled capture";
+        art.__hide = entry.hide;
+        art.__remove = entry.remove;
+
         var card = art.querySelector(".gal-card");
-        var del = art.querySelector(".gal-delete");
         var timer = null, longPressed = false;
+
+        function toggleMarked() {
+          var nowSelected = art.classList.toggle("gal-item--selected");
+          if (nowSelected) {
+            showActionsUnder(art);
+          } else if (activeActionsRow === art.querySelector(".gal-item-actions")) {
+            var stillMarked = grid.querySelector(".gal-item--selected");
+            if (stillMarked) showActionsUnder(stillMarked); else hideActiveActionsRow();
+          }
+        }
+
         function startPress() {
-          if (!del) return;
           longPressed = false;
           timer = setTimeout(function () {
             longPressed = true;
-            grid.querySelectorAll(".gal-delete").forEach(function (b) { if (b !== del) b.hidden = true; });
-            del.hidden = false;
+            art.classList.add("gal-item--selected");
+            screenEl.classList.add("gal-screen--manage");
+            manageBackdrop.hidden = false;
+            showActionsUnder(art);
           }, 480);
         }
         function endPress() { clearTimeout(timer); }
+
         card.addEventListener("mousedown", startPress);
         card.addEventListener("touchstart", startPress, { passive: true });
         card.addEventListener("mouseup", endPress);
@@ -161,14 +183,50 @@
         card.addEventListener("touchend", endPress);
         card.addEventListener("click", function (e) {
           if (longPressed) { e.preventDefault(); return; }
+          if (e.shiftKey) { toggleMarked(); return; }
           try {
-            sessionStorage.setItem("traces-item", c.id);
+            sessionStorage.setItem("traces-item", entry.id);
             sessionStorage.setItem("traces-from-community", "1");
           } catch (er) {}
           goTo("object.html");
         });
-        if (del) {
-          del.addEventListener("click", function () {
+        art.querySelector(".gal-hide").addEventListener("click", function () {
+          grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__hide) { a.__hide(); a.remove(); } });
+        });
+        var delBtn = art.querySelector(".gal-delete");
+        if (delBtn) {
+          delBtn.addEventListener("click", function () {
+            grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__remove) { a.__remove(); a.remove(); } });
+          });
+        }
+        return art;
+      }
+
+      // local items render immediately (no need to wait on anything) using
+      // just this browser's own local hidden list, then get reconciled
+      // against Mor's global hides below once that resolves - a quick,
+      // rare, invisible-in-practice DOM removal rather than a visible flash
+      var hidden = hiddenKeys();
+
+      // the visitor's own captures shared to the community appear first —
+      // remote items this same browser already made locally would otherwise
+      // double up (a remote community record's id is "<capture id>-community";
+      // strip that back off to compare against this browser's own local ids)
+      // only Mor's own devices get a delete control on a remote item (see
+      // js/owner.js) — declared up here, before the early return below, so
+      // it's still set even when this browser's own local Community is empty
+      // (the common case: buildEntry()/isOwner are needed by the remote-merge
+      // callback further down regardless of what's found locally)
+      var isOwner = window.isOwnerDevice && window.isOwnerDevice();
+      function buildEntry(c) {
+        return {
+          id: c.id, title: c.title, img: c.img, kind: c.kind,
+          metaText: ago(c.created), who: (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : ""),
+          hide: function () { hideItem(c.id); },
+          // a remote item (someone else's device, or Mor's own past share)
+          // only gets a delete control for Mor herself — a random visitor
+          // shouldn't be able to remove another person's shared capture
+          remove: (!c.remote || isOwner) ? function () {
             if (c.remote) {
               // a remote item lives only in the shared worker store, under
               // its own "<id>-community" record id — never in this browser's
@@ -177,17 +235,73 @@
               if (api) fetch(api + "/captures/" + c.id + "-community", { method: "DELETE" }).catch(function () {});
             } else {
               Community.remove(c.id);
+              // this browser's own share also lives on the shared server
+              // under its own record - without deleting that too, it would
+              // keep showing up for every other visitor even after "removed"
+              var api = (window.TRACES_API || "").replace(/\/$/, "");
+              if (api) fetch(api + "/captures/" + c.id + "-community", { method: "DELETE" }).catch(function () {});
             }
-            art.remove();
-          });
-        }
-        return art;
+          } : null,
+        };
       }
-      items.forEach(function (c) { grid.insertBefore(build(c), grid.firstChild); });
+
+      var items = (window.Community ? Community.all() : []).filter(function (c) { return hidden.indexOf(c.id) === -1; });
+      items.forEach(function (c) { grid.insertBefore(buildCard(buildEntry(c)), grid.firstChild); });
       if (window.alignGalleryTitle) window.alignGalleryTitle();
-      document.addEventListener("click", function (e) {
-        if (!e.target.closest(".gal-item")) {
-          grid.querySelectorAll(".gal-delete").forEach(function (b) { b.hidden = true; });
+
+      // Mor's global hides need to be known before the seed showcase and
+      // the remote-merge below decide what to build at all - fetching this
+      // first (in parallel with those two) and gating both on it avoids a
+      // race where a globally-hidden item could still flash into the grid
+      // before this resolves
+      var hiddenReady = window.RemoteCaptures ? RemoteCaptures.listHiddenShowcase() : Promise.resolve([]);
+      hiddenReady.then(function (list) {
+        globalHiddenKeys = list || [];
+        // reconcile the local items already built above, in case one of
+        // them is now globally hidden too
+        globalHiddenKeys.forEach(function (key) {
+          var art = grid.querySelector('.gal-item[data-hide-key="' + key + '"]');
+          if (art) art.remove();
+        });
+      });
+
+      // the fixed community showcase (seeded from community/manifest.json)
+      // renders first — then the visitor's own shared captures are
+      // inserted before them, so those appear first in the grid
+      if (window.communitySeedReady) {
+        Promise.all([window.communitySeedReady, hiddenReady]).then(function (results) {
+          var list = results[0];
+          var fullHidden = hiddenKeys();
+          (list || []).filter(function (d) { return fullHidden.indexOf(d.key) === -1; }).forEach(function (d) {
+            grid.appendChild(buildCard({
+              id: d.key, title: d.title, img: d.img, kind: d.kind,
+              metaText: d.meta, who: d.by + "'s capture from " + d.country,
+              hide: function () { hideItem(d.key); },
+            }));
+          });
+          if (window.alignGalleryTitle) window.alignGalleryTitle();
+        });
+      }
+
+      // the designer's own built-in showcase (chandelier, couch, etc.) stays
+      // in "my archive"/"your archive" only — the community is meant to hold
+      // real shared captures, not a copy of that catalog too.
+
+      var localCommunityIds = {};
+      (window.Community ? Community.all() : []).forEach(function (c) { localCommunityIds[c.id] = true; });
+      var remoteReady = window.RemoteCaptures ? RemoteCaptures.list("community") : Promise.resolve([]);
+      Promise.all([remoteReady, hiddenReady]).then(function (results) {
+        var list = results[0];
+        var fullHidden = hiddenKeys();
+        (list || []).forEach(function (c) {
+          var localId = c.id.replace(/-community$/, "");
+          if (localCommunityIds[localId] || fullHidden.indexOf(localId) !== -1) return;
+          grid.insertBefore(buildCard(buildEntry(Object.assign({}, c, { id: localId, remote: true }))), grid.firstChild);
+        });
+        // anything shared to the community from this browser before the
+        // shared store was reachable never made it there — send it now
+        if (window.RemoteCaptures) {
+          RemoteCaptures.syncMissing(window.Community ? Community.all() : [], list, "community");
         }
       });
     })();
