@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720l">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720l">
-<link rel="stylesheet" href="../css/object.css?v=20260720l">
-<script src="../js/cursor.js?v=20260720l" defer></script>
-<script src="../js/grain.js?v=20260720l" defer></script>
-<script src="../js/tilt3d.js?v=20260720l" defer></script>
-<script src="../js/owner.js?v=20260720l"></script>
-<script src="../js/config.js?v=20260720l"></script>
-<script src="../js/archive.js?v=20260720l"></script>
-<script src="../js/blobstore.js?v=20260720l"></script>
-<script src="../js/remote-captures.js?v=20260720l"></script>
-<script src="../js/community-seed.js?v=20260720l"></script>
-<script src="../js/flow.js?v=20260720l" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720l"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720m">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720m">
+<link rel="stylesheet" href="../css/object.css?v=20260720m">
+<script src="../js/cursor.js?v=20260720m" defer></script>
+<script src="../js/grain.js?v=20260720m" defer></script>
+<script src="../js/tilt3d.js?v=20260720m" defer></script>
+<script src="../js/owner.js?v=20260720m"></script>
+<script src="../js/config.js?v=20260720m"></script>
+<script src="../js/archive.js?v=20260720m"></script>
+<script src="../js/blobstore.js?v=20260720m"></script>
+<script src="../js/remote-captures.js?v=20260720m"></script>
+<script src="../js/community-seed.js?v=20260720m"></script>
+<script src="../js/flow.js?v=20260720m" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720m"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720l" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720m" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720l";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720l";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720m";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720m";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -58,6 +58,11 @@
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
+        <li hidden class="obj-menu-density" id="menuPointSizeRow">
+          <label for="menuPointSizeSlider">point size</label>
+          <input type="range" id="menuPointSizeSlider" min="1" max="5" value="3" step="1">
+          <span id="menuPointSizeLabel">balanced</span>
+        </li>
       </ul>
     </header>
 
@@ -376,6 +381,7 @@
             img: c.img || "../assets/images/photo-room.png",
             model: c.model || null,
             points: c.points || null,
+            pointSize: c.pointSize || null,
             connected: c.connected || "",
             connectedKey: c.connectedKey || null,
             feeling: c.feeling || "",
@@ -1386,7 +1392,7 @@
               if (!buf || key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: 0.013, initialView: catalog[k].defaultView || null });
+                { pointSize: catalog[k].pointSize || 0.013, initialView: catalog[k].defaultView || null });
               // once the cloud is ready, (re)draw annotations as 3D-anchored
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
@@ -1802,6 +1808,24 @@
 
       var menuSetDefaultView = document.getElementById("menuSetDefaultView");
       var menuSetDefaultViewRow = menuSetDefaultView.closest("li");
+      // same 5 steps as processing.html's own point-size slider, so a
+      // capture reopened here can be tuned the same way it was made -
+      // the choice made during processing only ever reached that one live
+      // preview before, reverting to a hardcoded "balanced" every time the
+      // capture was reopened afterwards
+      var POINT_SIZE_LEVELS = [0.006, 0.009, 0.013, 0.018, 0.026];
+      var POINT_SIZE_NAMES = ["sparse", "light", "balanced", "dense", "very dense"];
+      var menuPointSizeRow = document.getElementById("menuPointSizeRow");
+      var menuPointSizeSlider = document.getElementById("menuPointSizeSlider");
+      var menuPointSizeLabel = document.getElementById("menuPointSizeLabel");
+      function closestPointSizeIndex(size) {
+        var best = 0, bestDiff = Infinity;
+        POINT_SIZE_LEVELS.forEach(function (s, i) {
+          var diff = Math.abs(s - size);
+          if (diff < bestDiff) { bestDiff = diff; best = i; }
+        });
+        return best;
+      }
       document.getElementById("objMenuBtn").addEventListener("click", function () {
         var opening = menu.hidden;
         if (opening) {
@@ -1825,6 +1849,34 @@
         var onLiveModel = catalog[key].model && !modelViewer.hidden && modelViewer.loaded;
         var onLivePoints = pcViewer && !objPoints.hidden;
         menuSetDefaultViewRow.hidden = !(onLiveModel || onLivePoints);
+        menuPointSizeRow.hidden = !onLivePoints;
+        if (onLivePoints) {
+          var idx = closestPointSizeIndex(catalog[key].pointSize || 0.013);
+          menuPointSizeSlider.value = idx + 1;
+          menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
+        }
+      });
+      function savePointSize(size) {
+        catalog[key].pointSize = size;
+        var inArchive = window.Archive && Archive.get(key);
+        var inCommunity = window.Community && Community.get(key);
+        if (inArchive) Archive.update(key, { pointSize: size });
+        if (inCommunity) Community.update(key, { pointSize: size });
+        if (window.RemoteCaptures && (inArchive || inCommunity)) {
+          var isOwner = window.isOwnerDevice && window.isOwnerDevice();
+          if (inArchive && isOwner) RemoteCaptures.publish(Archive.get(key), "archive");
+          if (inCommunity) RemoteCaptures.publish(Community.get(key), "community");
+        }
+      }
+      menuPointSizeSlider.addEventListener("input", function () {
+        var idx = parseInt(menuPointSizeSlider.value, 10) - 1;
+        var size = POINT_SIZE_LEVELS[idx];
+        menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
+        if (pcViewer) pcViewer.setPointSize(size);
+      });
+      menuPointSizeSlider.addEventListener("change", function () {
+        var idx = parseInt(menuPointSizeSlider.value, 10) - 1;
+        savePointSize(POINT_SIZE_LEVELS[idx]);
       });
       // writes a freshly-captured thumbnail back to the Archive/Community
       // record — gallery.html, community.html and connect.html all read a

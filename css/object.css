@@ -158,6 +158,71 @@
   color: var(--color-ink-blue);
 }
 
+/* the point-size row sits inline in the menu list, same square-blue-thumb
+   slider language as processing.html's own density control */
+.obj-menu-density {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+}
+
+.obj-menu-density label {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.obj-menu-density input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.obj-menu-density input[type="range"]::-webkit-slider-runnable-track {
+  height: 1px;
+  background: rgba(240, 238, 234, 0.7);
+}
+
+.obj-menu-density input[type="range"]::-moz-range-track {
+  height: 1px;
+  background: rgba(240, 238, 234, 0.7);
+  border: none;
+}
+
+.obj-menu-density input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--color-ink-blue);
+  outline: 1px solid var(--color-cream);
+  margin-top: -7px;
+  cursor: pointer;
+}
+
+.obj-menu-density input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--color-ink-blue);
+  outline: 1px solid var(--color-cream);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.obj-menu-density span {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  min-width: 70px;
+  text-align: right;
+}
+
 /* ---------- Timeline ---------- */
 
 .obj-timeline {
