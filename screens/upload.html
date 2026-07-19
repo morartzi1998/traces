@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719b">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719b">
-<link rel="stylesheet" href="../css/upload.css?v=20260719b">
-<script src="../js/config.js?v=20260719b"></script>
-<script src="../js/cursor.js?v=20260719b" defer></script>
-<script src="../js/grain.js?v=20260719b" defer></script>
-<script src="../js/blobstore.js?v=20260719b"></script>
-<script src="../js/flow.js?v=20260719b" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260719b" defer></script>
-<script src="../js/normalize-image.js?v=20260719b" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260719b"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719b"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719c">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719c">
+<link rel="stylesheet" href="../css/upload.css?v=20260719c">
+<script src="../js/config.js?v=20260719c"></script>
+<script src="../js/cursor.js?v=20260719c" defer></script>
+<script src="../js/grain.js?v=20260719c" defer></script>
+<script src="../js/blobstore.js?v=20260719c"></script>
+<script src="../js/flow.js?v=20260719c" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260719c" defer></script>
+<script src="../js/normalize-image.js?v=20260719c" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260719c"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719c"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -25,12 +25,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719b" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719c" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260719b";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260719b";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260719c";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260719c";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -233,6 +233,11 @@
                 hint.textContent = "photo received — processing…";
                 try {
                   sessionStorage.removeItem("traces-task-error");
+                  // same staleness risk as the desktop upload path: a
+                  // leftover model/thumb from an earlier capture would
+                  // otherwise get mistaken for this phone capture's own
+                  sessionStorage.removeItem("traces-capture-model");
+                  sessionStorage.removeItem("traces-capture-thumb");
                   sessionStorage.setItem("traces-capture-is-cloud", "0");
                   sessionStorage.setItem("traces-mode", "tripo");
                   sessionStorage.setItem("traces-task", d.task_id);
@@ -412,6 +417,12 @@
         sessionStorage.removeItem("traces-task");
         sessionStorage.removeItem("traces-task-error");
         sessionStorage.removeItem("traces-upload-img");
+        // a previous capture's thumbnail (only ever set when Tripo actually
+        // returned one) otherwise survives here unset, and describe-capture.html
+        // would mistake it for this capture's own — every capture after the
+        // first would silently reuse whichever photo happened to be the last
+        // one Tripo thumbnailed, instead of showing its own.
+        sessionStorage.removeItem("traces-capture-thumb");
         sessionStorage.setItem("traces-mode", "prescan");
         sessionStorage.setItem("traces-upload-name", file.name);
         sessionStorage.setItem("traces-capture-model", "idb:capture-pending");
@@ -450,6 +461,13 @@
       try {
         sessionStorage.removeItem("traces-task");
         sessionStorage.removeItem("traces-mode");
+        // a previous capture's model/thumbnail otherwise survive here unset
+        // (Tripo doesn't always return a thumb, and this is only ever set
+        // conditionally) — describe-capture.html would then mistake the
+        // leftover for this capture's own, so every capture after the first
+        // one that got a real thumb would silently reuse that same photo.
+        sessionStorage.removeItem("traces-capture-model");
+        sessionStorage.removeItem("traces-capture-thumb");
         // this is the flat image flow, not a ready-made point-cloud scan —
         // clear any leftover density-slider state from a previous scan
         // upload in this tab so it doesn't wrongly show up here
