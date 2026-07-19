@@ -341,6 +341,11 @@
             idx: idx, metaText: ago(c.created),
             hide: function () { hideDesignerItem(c.id); },
             remove: function () {
+              // optimistic: remoteArchiveItems is only fetched once at load,
+              // so without this the very next render() would just rebuild
+              // the same card from the stale cached list, making delete look
+              // like it silently did nothing even though the server call succeeds
+              remoteArchiveItems = remoteArchiveItems.filter(function (r) { return r.id !== c.id; });
               var api = (window.TRACES_API || "").replace(/\/$/, "");
               if (api) fetch(api + "/captures/" + c.id, { method: "DELETE" }).catch(function () {});
             },
