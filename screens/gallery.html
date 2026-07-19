@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720e">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720e">
-<script src="../js/cursor.js?v=20260720e" defer></script>
-<script src="../js/grain.js?v=20260720e" defer></script>
-<script src="../js/owner.js?v=20260720e"></script>
-<script src="../js/config.js?v=20260720e"></script>
-<script src="../js/archive.js?v=20260720e"></script>
-<script src="../js/blobstore.js?v=20260720e"></script>
-<script src="../js/remote-captures.js?v=20260720e"></script>
-<script src="../js/designer-archive.js?v=20260720e"></script>
-<script src="../js/gallery-title.js?v=20260720e" defer></script>
-<script src="../js/flow.js?v=20260720e" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720f">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720f">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720f">
+<script src="../js/cursor.js?v=20260720f" defer></script>
+<script src="../js/grain.js?v=20260720f" defer></script>
+<script src="../js/owner.js?v=20260720f"></script>
+<script src="../js/config.js?v=20260720f"></script>
+<script src="../js/archive.js?v=20260720f"></script>
+<script src="../js/blobstore.js?v=20260720f"></script>
+<script src="../js/remote-captures.js?v=20260720f"></script>
+<script src="../js/designer-archive.js?v=20260720f"></script>
+<script src="../js/gallery-title.js?v=20260720f" defer></script>
+<script src="../js/flow.js?v=20260720f" defer></script>
 </head>
 <body>
 
@@ -283,6 +283,13 @@
       // an acceptable gap for this provisional stopgap
       var remoteArchiveItems = [];
 
+      // Mor's real archive captures, for the placeholder shown to a visitor
+      // who hasn't captured anything yet - this is her intentionally-public
+      // showcase (same content as archive-mine.html), so unlike
+      // remoteArchiveItems above (owner-device-only, cross-device sync for
+      // her own "your archive") this fetch runs for every visitor
+      var showcaseRealItems = [];
+
       function render() {
         // the grid gets rebuilt below, but management mode's own state
         // (the screen class, the backdrop) lives outside it
@@ -310,13 +317,19 @@
               };
             });
         }
-        // the designer's own showcase belongs in "your archive" — the
-        // community showcase does not (community flows into the archive,
-        // not the other way around; see community.html) — but only until a
-        // real capture of your own exists. Once you've added your first
-        // one, the archive is genuinely yours: the sample pieces step aside
-        // rather than sitting mixed in with what you actually made.
-        var showcase = allItems.length ? [] : mapShowcase(window.DESIGNER_ARCHIVE);
+        // the placeholder shown before you've captured anything of your own
+        // is meant to look exactly like Mor's own public archive
+        // (archive-mine.html): her real captures first, newest first, then
+        // the fixed demo catalog filling out the rest. Once you've added
+        // your first real capture, the archive is genuinely yours: the
+        // sample pieces step aside rather than sitting mixed in with what
+        // you actually made.
+        var showcase = allItems.length ? [] : (
+          showcaseRealItems
+            .filter(function (c) { return hiddenDesigner.indexOf(c.id) === -1; })
+            .map(function (c) { return { key: c.id, title: c.title, img: c.img, meta: ago(c.created), kind: c.kind }; })
+            .concat(mapShowcase(window.DESIGNER_ARCHIVE))
+        );
 
         grid.innerHTML = "";
         empty.hidden = true;
@@ -520,6 +533,16 @@
             }
           });
         }
+      });
+
+      // Mor's real archive is her intentionally-public showcase (same
+      // content as archive-mine.html) - unlike remoteReady above, this
+      // fetch runs for every visitor, not just her own devices, since the
+      // whole point is a stranger with an empty archive sees the same
+      // placeholder she'd see linked from About
+      (window.RemoteCaptures ? RemoteCaptures.list("archive") : Promise.resolve([])).then(function (list) {
+        showcaseRealItems = list || [];
+        render();
       });
     })();
   </script>
