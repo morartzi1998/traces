@@ -138,5 +138,39 @@
     })();
   }
 
-  window.RemoteCaptures = { publish: publish, list: list, syncMissing: syncMissing };
+  // Mor hiding one of her own fixed demo pieces or public archive items is
+  // a curation decision - it should disappear for every visitor, not just
+  // her own browser. A regular visitor's own "hide" stays purely local
+  // (js/owner.js gates who's allowed to call these at all) and never
+  // touches this. Always resolves - a stale/unreachable worker just means
+  // the hide falls back to being local-only for this browser.
+  function listHiddenShowcase() {
+    if (!api()) return Promise.resolve([]);
+    return fetch(api() + "/hidden-showcase")
+      .then(function (r) { return r.ok ? r.json() : { hidden: [] }; })
+      .then(function (d) { return d.hidden || []; })
+      .catch(function () { return []; });
+  }
+
+  function hideShowcaseGlobally(key) {
+    if (!api()) return Promise.resolve(null);
+    return fetch(api() + "/hidden-showcase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: key }),
+    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+
+  function restoreShowcaseGlobally(key) {
+    if (!api()) return Promise.resolve(null);
+    return fetch(api() + "/hidden-showcase/" + encodeURIComponent(key), { method: "DELETE" })
+      .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+
+  window.RemoteCaptures = {
+    publish: publish, list: list, syncMissing: syncMissing,
+    listHiddenShowcase: listHiddenShowcase,
+    hideShowcaseGlobally: hideShowcaseGlobally,
+    restoreShowcaseGlobally: restoreShowcaseGlobally,
+  };
 })();

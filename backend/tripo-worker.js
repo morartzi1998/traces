@@ -353,6 +353,39 @@ export default {
         return json({ ok: true });
       }
 
+      // ---- 5b) shared showcase hides: when Mor hides one of her own fixed
+      // demo pieces or public archive items, that's a curation decision -
+      // it should disappear for every visitor, not just her own browser.
+      // A regular visitor hiding something stays purely local (see
+      // js/owner.js / the "traces-archive-hidden" localStorage list) and
+      // never touches this endpoint at all.
+      //   GET    /hidden-showcase        -> { hidden: ["key1", "key2", ...] }
+      //   POST   /hidden-showcase        body { key }  -> { hidden: [...] }
+      //   DELETE /hidden-showcase/<key>                -> { hidden: [...] }
+      if (url.pathname === "/hidden-showcase" && request.method === "GET") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const hidden = (await env.CAPTURES.get("meta:hidden-showcase", "json")) || [];
+        return json({ hidden });
+      }
+
+      if (url.pathname === "/hidden-showcase" && request.method === "POST") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const body = await request.json().catch(() => null);
+        if (!body || !body.key) return json({ error: "key required" }, 400);
+        const hidden = (await env.CAPTURES.get("meta:hidden-showcase", "json")) || [];
+        if (hidden.indexOf(body.key) === -1) hidden.push(body.key);
+        await env.CAPTURES.put("meta:hidden-showcase", JSON.stringify(hidden));
+        return json({ hidden });
+      }
+
+      if (url.pathname.startsWith("/hidden-showcase/") && request.method === "DELETE") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const key = decodeURIComponent(url.pathname.slice("/hidden-showcase/".length));
+        const hidden = ((await env.CAPTURES.get("meta:hidden-showcase", "json")) || []).filter((k) => k !== key);
+        await env.CAPTURES.put("meta:hidden-showcase", JSON.stringify(hidden));
+        return json({ hidden });
+      }
+
       // ---- 6) diagnostics: which keys/bindings does this worker actually see? -
       // never returns the secrets themselves, only whether each is set — safe
       // to open straight in a browser to sanity-check a deploy

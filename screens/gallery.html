@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720i">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720i">
-<script src="../js/cursor.js?v=20260720i" defer></script>
-<script src="../js/grain.js?v=20260720i" defer></script>
-<script src="../js/owner.js?v=20260720i"></script>
-<script src="../js/config.js?v=20260720i"></script>
-<script src="../js/archive.js?v=20260720i"></script>
-<script src="../js/blobstore.js?v=20260720i"></script>
-<script src="../js/remote-captures.js?v=20260720i"></script>
-<script src="../js/designer-archive.js?v=20260720i"></script>
-<script src="../js/gallery-title.js?v=20260720i" defer></script>
-<script src="../js/flow.js?v=20260720i" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720j">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720j">
+<script src="../js/cursor.js?v=20260720j" defer></script>
+<script src="../js/grain.js?v=20260720j" defer></script>
+<script src="../js/owner.js?v=20260720j"></script>
+<script src="../js/config.js?v=20260720j"></script>
+<script src="../js/archive.js?v=20260720j"></script>
+<script src="../js/blobstore.js?v=20260720j"></script>
+<script src="../js/remote-captures.js?v=20260720j"></script>
+<script src="../js/designer-archive.js?v=20260720j"></script>
+<script src="../js/gallery-title.js?v=20260720j" defer></script>
+<script src="../js/flow.js?v=20260720j" defer></script>
 </head>
 <body>
 
@@ -144,17 +144,35 @@
       // plain key list instead of a mutable Archive record, since they're
       // not real records to begin with.
       var DESIGNER_HIDDEN_KEY = "traces-archive-hidden";
+      // Mor hiding one of her own showcase pieces is curation, not a
+      // personal preference - it should disappear for every visitor. This
+      // is fetched once at load (every visitor, not just owner devices)
+      // and merged with the purely-local list below.
+      var globalHiddenKeys = [];
       function designerHiddenKeys() {
-        try { return JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) { return []; }
+        var local;
+        try { local = JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        return local.concat(globalHiddenKeys.filter(function (k) { return local.indexOf(k) === -1; }));
       }
       function hideDesignerItem(key) {
-        var keys = designerHiddenKeys();
-        if (keys.indexOf(key) === -1) keys.push(key);
-        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+        var local;
+        try { local = JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        if (local.indexOf(key) === -1) local.push(key);
+        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(local)); } catch (e) {}
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          if (globalHiddenKeys.indexOf(key) === -1) globalHiddenKeys.push(key);
+          RemoteCaptures.hideShowcaseGlobally(key);
+        }
       }
       function restoreDesignerItem(key) {
-        var keys = designerHiddenKeys().filter(function (k) { return k !== key; });
-        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+        var local;
+        try { local = JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        local = local.filter(function (k) { return k !== key; });
+        try { localStorage.setItem(DESIGNER_HIDDEN_KEY, JSON.stringify(local)); } catch (e) {}
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          globalHiddenKeys = globalHiddenKeys.filter(function (k) { return k !== key; });
+          RemoteCaptures.restoreShowcaseGlobally(key);
+        }
       }
 
       // showcase items aren't Archive records, so editing one's kind/title
@@ -543,6 +561,13 @@
       // placeholder she'd see linked from About
       (window.RemoteCaptures ? RemoteCaptures.list("archive") : Promise.resolve([])).then(function (list) {
         showcaseRealItems = list || [];
+        render();
+      });
+
+      // every visitor (not just owner devices) needs to know what Mor has
+      // globally hidden, so her curation choices actually apply to everyone
+      (window.RemoteCaptures ? RemoteCaptures.listHiddenShowcase() : Promise.resolve([])).then(function (list) {
+        globalHiddenKeys = list || [];
         render();
       });
     })();

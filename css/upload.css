@@ -45,6 +45,7 @@
 }
 
 .up-option-head {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -58,6 +59,32 @@
   text-transform: uppercase;
   cursor: pointer;
   padding: 0;
+}
+
+/* hover explanation for each capture method - same white-on-blue tooltip
+   language as the object timeline's version dots */
+.up-option-tip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  background: #ffffff;
+  color: var(--color-ink-blue);
+  font-family: var(--font-caption);
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.3;
+  padding: 8px 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 6;
+}
+
+.up-option-head:hover .up-option-tip,
+.up-option-head:focus-visible .up-option-tip {
+  opacity: 1;
 }
 
 .up-toggle {

@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — My archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720i">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720i">
-<script src="../js/cursor.js?v=20260720i" defer></script>
-<script src="../js/grain.js?v=20260720i" defer></script>
-<script src="../js/config.js?v=20260720i"></script>
-<script src="../js/archive.js?v=20260720i"></script>
-<script src="../js/blobstore.js?v=20260720i"></script>
-<script src="../js/remote-captures.js?v=20260720i"></script>
-<script src="../js/designer-archive.js?v=20260720i"></script>
-<script src="../js/gallery-title.js?v=20260720i" defer></script>
-<script src="../js/flow.js?v=20260720i" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720j">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720j">
+<script src="../js/cursor.js?v=20260720j" defer></script>
+<script src="../js/grain.js?v=20260720j" defer></script>
+<script src="../js/config.js?v=20260720j"></script>
+<script src="../js/archive.js?v=20260720j"></script>
+<script src="../js/blobstore.js?v=20260720j"></script>
+<script src="../js/remote-captures.js?v=20260720j"></script>
+<script src="../js/designer-archive.js?v=20260720j"></script>
+<script src="../js/gallery-title.js?v=20260720j" defer></script>
+<script src="../js/flow.js?v=20260720j" defer></script>
 </head>
 <body>
 
@@ -51,13 +51,24 @@
         goTo("object.html");
       }
 
+      // Mor hiding one of her own showcase pieces here is curation, not a
+      // personal preference - it should disappear for every visitor. See
+      // gallery.html for the same pattern.
+      var globalHiddenKeys = [];
       function hiddenKeys() {
-        try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { return []; }
+        var local;
+        try { local = JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { local = []; }
+        return local.concat(globalHiddenKeys.filter(function (k) { return local.indexOf(k) === -1; }));
       }
       function hideForever(key) {
-        var keys = hiddenKeys();
+        var keys;
+        try { keys = JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) { keys = []; }
         if (keys.indexOf(key) === -1) keys.push(key);
         try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(keys)); } catch (e) {}
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          if (globalHiddenKeys.indexOf(key) === -1) globalHiddenKeys.push(key);
+          RemoteCaptures.hideShowcaseGlobally(key);
+        }
       }
       function ago(ts) {
         if (!ts) return "just now";
@@ -97,6 +108,14 @@
         });
       }
 
+      // every visitor needs Mor's global hide list before building anything
+      // below, so a piece she's hidden never flashes into view even briefly
+      (window.RemoteCaptures ? RemoteCaptures.listHiddenShowcase() : Promise.resolve([])).then(function (list) {
+        globalHiddenKeys = list || [];
+        buildGrid();
+      });
+
+      function buildGrid() {
       // real captures made through the app (upload/scan -> describe -> save)
       // show up here too, above the fixed showcase, newest first — this used
       // to be a static demo page only the About screen linked to, completely
@@ -165,6 +184,7 @@
         wireCard(art, d.key, function () { openObject(d.key); }, function () { hideForever(d.key); });
         grid.appendChild(art);
       });
+      }
 
       document.addEventListener("click", function (e) {
         if (!e.target.closest(".gal-item")) {
