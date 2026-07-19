@@ -32,7 +32,9 @@
   left: 85vw; /* on the black just past the teddy's right edge */
   z-index: 25;
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 2vw, 2.1rem);
+  /* Same display scale as the archive title; the navigation label above is
+     intentionally metadata-sized, so the action owns the hierarchy. */
+  font-size: clamp(1.7rem, 2.6vw, 2.6rem);
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 5px;
@@ -51,12 +53,13 @@
    polaroid (the grid itself stays centred — the polaroids don't move) */
 .gal-title-block {
   /* line the title up with the fixed "Add New Capture" button on the right */
-  margin: 6vh 0 3.5vh;
+  margin: 6vh 0 1.5vh;
   text-align: left;
 }
 .gal-updated {
   font-size: 0.72rem; /* same size as the "[NN] · X days ago" capture meta */
-  opacity: 0.65;
+  color: var(--color-cream);
+  opacity: 1;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
@@ -114,7 +117,9 @@
 .gal-filters {
   display: flex;
   gap: 32px;
-  margin: -1.5vh 0 3.5vh;
+  /* Pair the filters tightly with the archive title, then return the removed
+     space below them so the capture grid keeps its existing position. */
+  margin: -2vh 0 6vh;
 }
 
 .gal-filter {
@@ -163,6 +168,7 @@
 
 .gal-item {
   width: auto;
+  position: relative;
 }
 
 @media (max-width: 1120px) {
@@ -181,7 +187,7 @@
     max-width: 42vw;
     white-space: normal;
     text-align: right;
-    font-size: 1rem;
+    font-size: 1.7rem;
   }
 }
 
@@ -191,6 +197,46 @@
   display: flex;
   gap: 16px;
   margin-top: 10px;
+}
+
+/* Long-press management mode: the archive recedes, while the selected
+   polaroid and its hide/delete controls stay above a dedicated backdrop. */
+.gal-manage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  border: none;
+  background: rgba(0, 0, 0, 0.66);
+  cursor: default;
+}
+
+.gal-screen--manage .gal-item--selected {
+  z-index: 20;
+}
+
+.gal-screen--manage .gal-add {
+  z-index: 17;
+}
+
+.gal-screen--manage .gal-item--selected .gal-card {
+  transform: none;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.72);
+}
+
+.gal-screen--manage .gal-item--selected .gal-item-actions {
+  margin-top: 10px;
+}
+
+.gal-screen--manage .gal-item--selected .gal-hide,
+.gal-screen--manage .gal-item--selected .gal-delete {
+  color: #ffffff;
+  text-decoration-color: #ffffff;
+}
+
+.gal-screen--manage .gal-item--selected .gal-hide:hover,
+.gal-screen--manage .gal-item--selected .gal-delete:hover {
+  color: var(--color-ink-blue);
+  text-decoration-color: var(--color-ink-blue);
 }
 
 .gal-delete,
@@ -221,7 +267,7 @@
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   border: none;
   /* thick lower frame like the welcome-screen polaroids */
-  padding: 10px 10px 34px;
+  padding: 10px 10px 42px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   position: relative;
@@ -249,9 +295,12 @@
 
 .gal-caption {
   position: absolute;
-  bottom: 10px;
+  bottom: 0;
   left: 14px;
   right: 12px;
+  height: 42px;
+  display: flex;
+  align-items: center;
   font-family: var(--font-caption);
   font-size: 1.15rem;
   line-height: 1;
@@ -261,20 +310,23 @@
   text-overflow: ellipsis;
 }
 
-/* a plain underlined text link, fixed to the viewport like the other corner
-   links — only appears once something's actually hidden */
+/* Hidden captures are reachable only inside long-press management mode. The
+   vertical tab echoes the supplied reference without permanently covering
+   the About link or the archive itself. */
 .gal-hidden-tab {
   position: fixed;
-  right: 2.5vw;
-  bottom: 4vh;
+  right: 0;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   z-index: 30;
   font-family: var(--font-display);
   font-size: 1rem;
-  color: var(--color-ink-blue);
-  background: none;
+  color: #ffffff;
+  background: var(--color-ink-blue);
   border: none;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  padding: 18px 10px;
+  writing-mode: vertical-rl;
   cursor: pointer;
 }
 
@@ -399,4 +451,3 @@
     width: 100%;
   }
 }
-

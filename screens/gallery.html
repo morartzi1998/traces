@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719f">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719f">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719f">
-<script src="../js/cursor.js?v=20260719f" defer></script>
-<script src="../js/grain.js?v=20260719f" defer></script>
-<script src="../js/config.js?v=20260719f"></script>
-<script src="../js/archive.js?v=20260719f"></script>
-<script src="../js/blobstore.js?v=20260719f"></script>
-<script src="../js/remote-captures.js?v=20260719f"></script>
-<script src="../js/designer-archive.js?v=20260719f"></script>
-<script src="../js/gallery-title.js?v=20260719f" defer></script>
-<script src="../js/flow.js?v=20260719f" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719g">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719g">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719g">
+<script src="../js/cursor.js?v=20260719g" defer></script>
+<script src="../js/grain.js?v=20260719g" defer></script>
+<script src="../js/config.js?v=20260719g"></script>
+<script src="../js/archive.js?v=20260719g"></script>
+<script src="../js/blobstore.js?v=20260719g"></script>
+<script src="../js/remote-captures.js?v=20260719g"></script>
+<script src="../js/designer-archive.js?v=20260719g"></script>
+<script src="../js/gallery-title.js?v=20260719g" defer></script>
+<script src="../js/flow.js?v=20260719g" defer></script>
 </head>
 <body>
 
@@ -52,6 +52,10 @@
       <button class="nav-link nav-corner nav-corner--br" type="button" onclick="goTo('about.html')">About</button>
     </footer>
 
+    <!-- long-press management mode: dims everything behind the selected
+         polaroid and its hide/delete controls -->
+    <div class="gal-manage-backdrop" id="galManageBackdrop" hidden></div>
+
     <!-- only shown once something has actually been hidden -->
     <button class="gal-hidden-tab" type="button" id="galHiddenTab" hidden>Hidden (<span id="galHiddenCount">0</span>)</button>
     <div class="gal-hidden-backdrop" id="galHiddenBackdrop" hidden></div>
@@ -71,6 +75,19 @@
       var grid = document.getElementById("galGrid");
       var empty = document.getElementById("galEmpty");
       var add = document.querySelector(".gal-add");
+      var screenEl = document.querySelector(".gal-screen");
+      var manageBackdrop = document.getElementById("galManageBackdrop");
+
+      // long-press management mode: dims the rest of the archive while one
+      // polaroid's hide/delete controls are open, so they read as a deliberate
+      // action instead of getting lost among the rest of the grid
+      function exitManageMode() {
+        grid.querySelectorAll(".gal-item-actions").forEach(function (a) { a.hidden = true; });
+        grid.querySelectorAll(".gal-item--selected").forEach(function (a) { a.classList.remove("gal-item--selected"); });
+        screenEl.classList.remove("gal-screen--manage");
+        manageBackdrop.hidden = true;
+      }
+      manageBackdrop.addEventListener("click", exitManageMode);
 
       function ago(ts) {
         if (!ts) return "just now";
@@ -172,9 +189,15 @@
           longPressed = false;
           timer = setTimeout(function () {
             longPressed = true;
-            // reveal this card's actions, hide any other card's
+            // reveal this card's actions, hide any other card's, and enter
+            // management mode so the selection reads clearly over a dimmed
+            // archive instead of getting lost among the rest of the grid
             grid.querySelectorAll(".gal-item-actions").forEach(function (a) { if (a !== actions) a.hidden = true; });
+            grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a !== art) a.classList.remove("gal-item--selected"); });
             actions.hidden = false;
+            art.classList.add("gal-item--selected");
+            screenEl.classList.add("gal-screen--manage");
+            manageBackdrop.hidden = false;
           }, 480);
         }
         function endPress() { clearTimeout(timer); }
@@ -208,6 +231,9 @@
       var remoteArchiveItems = [];
 
       function render() {
+        // the grid gets rebuilt below, but management mode's own state
+        // (the screen class, the backdrop) lives outside it
+        exitManageMode();
         var allItems = (window.Archive ? Archive.all() : []);
         var localIds = {};
         allItems.forEach(function (c) { localIds[c.id] = true; });
@@ -285,11 +311,9 @@
         refreshHiddenPanel();
       }
 
-      // tapping elsewhere dismisses an open actions row
+      // tapping elsewhere dismisses an open actions row and exits management mode
       document.addEventListener("click", function (e) {
-        if (!e.target.closest(".gal-item")) {
-          grid.querySelectorAll(".gal-item-actions").forEach(function (a) { a.hidden = true; });
-        }
+        if (!e.target.closest(".gal-item")) exitManageMode();
       });
 
       // a plain text link, fixed like the other corner links, only appears

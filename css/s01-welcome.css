@@ -9,8 +9,6 @@
   padding: 2.5vw 5vw;
 }
 
-
-
 /* ---------- Main content ---------- */
 
 .main {
@@ -30,6 +28,7 @@
   width: min(400px, 90vw);
   height: min(480px, 65vh);
   flex-shrink: 0;
+  transform: translateY(1.5vh);
 }
 
 .scan-meta {
@@ -47,7 +46,7 @@
   cursor: pointer;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
-  padding: 14px 14px 46px 14px;
+  padding: 14px 14px 46px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   width: 78%;
 }
@@ -58,14 +57,13 @@
   height: auto;
   aspect-ratio: 1 / 1.06;
   object-fit: cover;
-  /* the scan photos are transparent PNGs — the dark backdrop sits behind them */
   background: var(--photo-backdrop);
 }
 
 .polaroid-back {
-  top: 14%;
-  left: 26%;
-  transform: rotate(-6.8deg);
+  top: 9%;
+  left: 28%;
+  transform: rotate(-5deg);
   z-index: 1;
 }
 
@@ -73,33 +71,29 @@
   top: 0;
   left: 0;
   transform: rotate(-0.1deg);
+  z-index: 4;
+}
+
+.polaroid-third {
+  top: 18%;
+  left: 7%;
+  transform: rotate(4deg);
   z-index: 2;
 }
 
-/* a third capture peeking out below the stack */
-.polaroid-third {
-  top: 34%;
-  left: 12%;
-  transform: rotate(5.5deg);
-  z-index: 0;
-}
-
 .caption-third {
-  transform: rotate(-2.4deg);
-}
-
-.polaroid-third:hover,
-.polaroid-third:focus-visible {
-  transform: rotate(8deg) translateY(-8px) scale(1.025);
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
-  z-index: 3;
+  transform: none;
 }
 
 .polaroid-caption {
   position: absolute;
-  bottom: 8px;
+  bottom: 0;
   left: 14px;
   right: 14px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   font-family: var(--font-caption);
   color: var(--color-caption-blue);
   font-size: 1.4rem;
@@ -107,7 +101,7 @@
 }
 
 .caption-back {
-  transform: rotate(1.4deg);
+  transform: none;
 }
 
 .caption-front {
@@ -118,14 +112,27 @@
 .polaroid-front:focus-visible {
   transform: rotate(1.6deg) translateY(-8px) scale(1.025);
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
-  z-index: 3;
+  z-index: 5;
 }
 
 .polaroid-back:hover,
 .polaroid-back:focus-visible {
   transform: rotate(-4deg) translateY(-8px) scale(1.025);
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
-  z-index: 3;
+  z-index: 5;
+}
+
+.polaroid-third:hover,
+.polaroid-third:focus-visible {
+  transform: rotate(8deg) translateY(-8px) scale(1.025);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+}
+
+.polaroid.is-active {
+  transform: rotate(0deg) translateY(-8px) scale(1.025);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+  z-index: 6;
 }
 
 /* Headline / CTA */
@@ -139,7 +146,7 @@
   line-height: 0.95;
   text-transform: lowercase;
   font-weight: 400;
-  white-space: nowrap; /* keep each line intact so the headline stays 3 lines */
+  white-space: nowrap;
 }
 
 .headline .cap {
@@ -174,22 +181,16 @@
 
   .main {
     flex-direction: column;
-    gap: 5.5rem;
+    gap: 4rem;
     padding-top: 6rem;
-    padding-bottom: 5.5rem; /* keep the CTA clear of the fixed bottom nav */
+    padding-bottom: 5.5rem;
     justify-content: flex-start;
   }
 
-  /* the stack's polaroids are absolutely positioned and sized off the
-     container's width (78% each), so they can extend well past its
-     declared height — the gap above accounts for that real overflow */
   .polaroid-stack {
     width: min(190px, 55vw);
     height: min(160px, 20vh);
-  }
-
-  .hero-text {
-    text-align: left;
+    transform: translateY(1rem);
   }
 
   .headline {

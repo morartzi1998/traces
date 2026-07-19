@@ -67,14 +67,19 @@ body {
 
 .ab-polaroid figcaption {
   position: absolute;
-  bottom: 5px;
+  bottom: 0;
   left: 8px;
   right: 8px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   font-family: var(--font-caption);
   font-size: 0.75rem;
   color: var(--color-caption-blue);
   white-space: nowrap;
   overflow: hidden;
+  line-height: 1;
 }
 
 /* Story text */
