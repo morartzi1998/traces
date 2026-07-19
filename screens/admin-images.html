@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Replace images (temporary)</title>
+<link rel="icon" type="image/png" href="../assets/images/favicon.png">
+<link rel="stylesheet" href="../css/base.css?v=20260720p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720p">
+<script src="../js/cursor.js?v=20260720p" defer></script>
+<script src="../js/grain.js?v=20260720p" defer></script>
+<script src="../js/owner.js?v=20260720p"></script>
+<script src="../js/config.js?v=20260720p"></script>
+<script src="../js/flow.js?v=20260720p" defer></script>
+<style>
+  .admin-screen {
+    min-height: 100vh;
+    padding: 9vh 4vw 8vh;
+  }
+  .admin-title {
+    font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .admin-note {
+    opacity: 0.7;
+    font-size: 0.9rem;
+    max-width: 60ch;
+    margin-bottom: 4vh;
+  }
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+    max-width: 1400px;
+  }
+  .admin-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(240, 238, 234, 0.15);
+    padding: 12px;
+  }
+  .admin-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 8px;
+    background: #1a1a1a;
+  }
+  .admin-card-title {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+  .admin-card-meta {
+    font-size: 0.75rem;
+    opacity: 0.55;
+    margin-bottom: 10px;
+  }
+  .admin-replace {
+    display: inline-block;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-ink-blue);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .admin-replace input { display: none; }
+  .admin-status {
+    font-size: 0.75rem;
+    margin-top: 6px;
+    opacity: 0.8;
+  }
+  .admin-status--busy { color: var(--color-ink-blue); }
+  .admin-status--done { color: #7fbf7f; }
+  .admin-status--error { color: #d97a7a; }
+  .admin-empty {
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+  <div class="admin-screen">
+    <header class="gal-header" style="display:flex; justify-content:space-between; margin-bottom:2vh;">
+      <a class="logo nav-corner nav-corner--tl" href="../index.html">traces</a>
+    </header>
+
+    <h1 class="admin-title">Replace images</h1>
+    <p class="admin-note">
+      Temporary, owner-only tool — pick a new photo for any real archive or
+      community capture. It replaces the image everywhere immediately (this
+      writes straight to the shared record). Remove this page once you're
+      done curating.
+    </p>
+
+    <div id="adminGuard" hidden>
+      <p class="admin-empty">This page only works on your own device.</p>
+    </div>
+
+    <main class="admin-grid" id="adminGrid"></main>
+  </div>
+
+  <script>
+    (function () {
+      if (!(window.isOwnerDevice && window.isOwnerDevice())) {
+        document.getElementById("adminGuard").hidden = false;
+        return;
+      }
+
+      var grid = document.getElementById("adminGrid");
+
+      function api() { return (window.TRACES_API || "").replace(/\/$/, ""); }
+
+      function ago(ts) {
+        if (!ts) return "";
+        var d = Math.floor((Date.now() - ts) / 86400000);
+        if (d <= 0) return "today";
+        if (d === 1) return "1 day ago";
+        return d + " days ago";
+      }
+
+      function uploadFile(file) {
+        return new Promise(function (resolve) {
+          var form = new FormData();
+          form.append("file", file, file.name || "file");
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", api() + "/captures/upload");
+          xhr.timeout = 60000;
+          xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try { resolve(JSON.parse(xhr.responseText).url); } catch (e) { resolve(null); }
+            } else { resolve(null); }
+          };
+          xhr.onerror = function () { resolve(null); };
+          xhr.ontimeout = function () { resolve(null); };
+          xhr.send(form);
+        });
+      }
+
+      // overwrites the record in place - POSTing with the same id replaces
+      // whatever was already stored under it (see backend/tripo-worker.js)
+      function saveRecord(record) {
+        return fetch(api() + "/captures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(record),
+        }).then(function (r) { return r.ok; }).catch(function () { return false; });
+      }
+
+      function buildCard(c) {
+        var art = document.createElement("article");
+        art.className = "admin-card";
+        art.innerHTML =
+          '<img alt="">' +
+          '<p class="admin-card-title"></p>' +
+          '<p class="admin-card-meta"></p>' +
+          '<label class="admin-replace">choose new image<input type="file" accept="image/*"></label>' +
+          '<p class="admin-status" hidden></p>';
+        art.querySelector("img").src = c.img || "../assets/images/photo-room.png";
+        art.querySelector(".admin-card-title").textContent = c.title || "untitled capture";
+        art.querySelector(".admin-card-meta").textContent = (c.scope || "") + (c.by ? " · " + c.by : "") + (c.created ? " · " + ago(c.created) : "");
+        var input = art.querySelector("input");
+        var status = art.querySelector(".admin-status");
+        var imgEl = art.querySelector("img");
+        input.addEventListener("change", function () {
+          var file = input.files[0];
+          if (!file) return;
+          status.hidden = false;
+          status.className = "admin-status admin-status--busy";
+          status.textContent = "uploading…";
+          uploadFile(file).then(function (url) {
+            if (!url) {
+              status.className = "admin-status admin-status--error";
+              status.textContent = "upload failed — try again";
+              return;
+            }
+            var record = {
+              id: c.id, scope: c.scope, title: c.title, feeling: c.feeling || "",
+              kind: c.kind || "object", by: c.by || "", country: c.country || "",
+              created: c.created, img: url, model: c.model || null, points: c.points || null,
+              annotations: c.annotations || [],
+            };
+            return saveRecord(record).then(function (ok) {
+              if (ok) {
+                imgEl.src = url;
+                c.img = url;
+                status.className = "admin-status admin-status--done";
+                status.textContent = "saved";
+              } else {
+                status.className = "admin-status admin-status--error";
+                status.textContent = "save failed — try again";
+              }
+            });
+          });
+        });
+        return art;
+      }
+
+      if (!api()) {
+        grid.innerHTML = '<p class="admin-empty">No backend configured (window.TRACES_API is empty).</p>';
+        return;
+      }
+
+      fetch(api() + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+        .then(function (data) {
+          var list = data.captures || [];
+          if (!list.length) {
+            grid.innerHTML = '<p class="admin-empty">Nothing on the shared store yet.</p>';
+            return;
+          }
+          list.forEach(function (c) { grid.appendChild(buildCard(c)); });
+        })
+        .catch(function () {
+          grid.innerHTML = '<p class="admin-empty">Could not reach the shared store.</p>';
+        });
+    })();
+  </script>
+
+</body>
+</html>
