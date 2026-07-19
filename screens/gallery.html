@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719y">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719y">
-<link rel="stylesheet" href="../css/gallery.css?v=20260719y">
-<script src="../js/cursor.js?v=20260719y" defer></script>
-<script src="../js/grain.js?v=20260719y" defer></script>
-<script src="../js/owner.js?v=20260719y"></script>
-<script src="../js/config.js?v=20260719y"></script>
-<script src="../js/archive.js?v=20260719y"></script>
-<script src="../js/blobstore.js?v=20260719y"></script>
-<script src="../js/remote-captures.js?v=20260719y"></script>
-<script src="../js/designer-archive.js?v=20260719y"></script>
-<script src="../js/gallery-title.js?v=20260719y" defer></script>
-<script src="../js/flow.js?v=20260719y" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719z">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719z">
+<link rel="stylesheet" href="../css/gallery.css?v=20260719z">
+<script src="../js/cursor.js?v=20260719z" defer></script>
+<script src="../js/grain.js?v=20260719z" defer></script>
+<script src="../js/owner.js?v=20260719z"></script>
+<script src="../js/config.js?v=20260719z"></script>
+<script src="../js/archive.js?v=20260719z"></script>
+<script src="../js/blobstore.js?v=20260719z"></script>
+<script src="../js/remote-captures.js?v=20260719z"></script>
+<script src="../js/designer-archive.js?v=20260719z"></script>
+<script src="../js/gallery-title.js?v=20260719z" defer></script>
+<script src="../js/flow.js?v=20260719z" defer></script>
 </head>
 <body>
 
@@ -54,17 +54,8 @@
     </footer>
 
     <!-- long-press management mode: dims everything behind the selected
-         polaroid and its hide/delete controls -->
+         polaroid(s) and their hide/delete controls -->
     <div class="gal-manage-backdrop" id="galManageBackdrop" hidden></div>
-
-    <!-- multi-select bulk actions: shown once 1+ cards are checked during
-         management mode, so cleaning up several captures at once doesn't
-         mean repeating the single-item hide/delete flow one by one -->
-    <div class="gal-bulk-bar" id="galBulkBar" hidden>
-      <span id="galBulkCount">0</span> selected —
-      <button class="gal-bulk-act" type="button" id="galBulkHide">hide</button>
-      <button class="gal-bulk-act" type="button" id="galBulkDelete">delete</button>
-    </div>
 
     <!-- only shown once something has actually been hidden -->
     <button class="gal-hidden-tab" type="button" id="galHiddenTab" hidden>Hidden (<span id="galHiddenCount">0</span>)</button>
@@ -87,8 +78,6 @@
       var add = document.querySelector(".gal-add");
       var screenEl = document.querySelector(".gal-screen");
       var manageBackdrop = document.getElementById("galManageBackdrop");
-      var bulkBar = document.getElementById("galBulkBar");
-      var bulkCountEl = document.getElementById("galBulkCount");
 
       // the Hidden tab is only reachable while management mode is open —
       // it isn't a permanent fixture cluttering the corner, it's part of
@@ -98,32 +87,30 @@
         hiddenTab.hidden = !(hiddenTotal && screenEl.classList.contains("gal-screen--manage"));
       }
 
-      // multiple captures can be checked at once during management mode
-      // (a long-press to start, then a plain tap on any other card toggles
-      // it too) so cleaning up several at a time doesn't mean repeating a
-      // single-item hide/delete one card at a time
-      function updateBulkBar() {
-        var n = grid.querySelectorAll(".gal-item--selected").length;
-        bulkCountEl.textContent = n;
-        bulkBar.hidden = n === 0;
+      // several captures can be marked at once (long-press the first,
+      // shift-click any others), but only one hide/delete row is ever on
+      // screen — it lives under whichever card was marked most recently,
+      // and acting on it applies to every currently marked card, not just
+      // that one
+      var activeActionsRow = null;
+      function showActionsUnder(art) {
+        if (activeActionsRow) activeActionsRow.hidden = true;
+        activeActionsRow = art.querySelector(".gal-item-actions");
+        activeActionsRow.hidden = false;
       }
-      document.getElementById("galBulkHide").addEventListener("click", function () {
-        grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__hide) a.__hide(); });
-        render();
-      });
-      document.getElementById("galBulkDelete").addEventListener("click", function () {
-        grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__remove) a.__remove(); });
-        render();
-      });
+      function hideActiveActionsRow() {
+        if (activeActionsRow) activeActionsRow.hidden = true;
+        activeActionsRow = null;
+      }
 
       // long-press management mode: dims the rest of the archive while the
-      // checked polaroids' bulk actions are open, so the selection reads
+      // marked polaroids' hide/delete row is open, so the selection reads
       // clearly instead of getting lost among the rest of the grid
       function exitManageMode() {
         grid.querySelectorAll(".gal-item--selected").forEach(function (a) { a.classList.remove("gal-item--selected"); });
+        hideActiveActionsRow();
         screenEl.classList.remove("gal-screen--manage");
         manageBackdrop.hidden = true;
-        bulkBar.hidden = true;
         updateHiddenTabVisibility();
       }
       manageBackdrop.addEventListener("click", exitManageMode);
@@ -206,7 +193,11 @@
         art.innerHTML =
           '<div class="gal-item-select"></div>' +
           '<p class="gal-meta">[' + entry.idx + ']<br>' + entry.metaText + '</p>' +
-          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>';
+          '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+          '<div class="gal-item-actions" hidden>' +
+            '<button class="gal-hide" type="button">hide</button>' +
+            (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
+          '</div>';
         var imgEl = art.querySelector("img");
         if (window.BlobStore) {
           window.BlobStore.url(entry.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
@@ -214,31 +205,41 @@
           imgEl.src = entry.img || "../assets/images/photo-room.png";
         }
         art.querySelector(".gal-caption").textContent = entry.title || "untitled capture";
-        // exposed so the bulk hide/delete bar can act on every checked card
-        // at once, without each one needing its own individual controls
+        // exposed so the hide/delete row (shown under whichever card was
+        // marked last) can act on every currently marked card at once
         art.__hide = entry.hide;
         art.__remove = entry.remove;
 
         var card = art.querySelector(".gal-card");
         var timer = null, longPressed = false;
 
-        function toggleSelected() {
-          art.classList.toggle("gal-item--selected");
-          updateBulkBar();
+        // shift-click adds/removes this card from the marked set without
+        // navigating; a plain click always opens the capture as normal,
+        // whether or not management mode happens to be open
+        function toggleMarked() {
+          var nowSelected = art.classList.toggle("gal-item--selected");
+          if (nowSelected) {
+            showActionsUnder(art);
+          } else if (activeActionsRow === art.querySelector(".gal-item-actions")) {
+            // this was the one showing the row — hand it to another still-
+            // marked card, or close it if nothing's marked anymore
+            var stillMarked = grid.querySelector(".gal-item--selected");
+            if (stillMarked) showActionsUnder(stillMarked); else hideActiveActionsRow();
+          }
         }
 
         function startPress() {
           longPressed = false;
           timer = setTimeout(function () {
             longPressed = true;
-            // check this card and enter management mode, so the selection
+            // mark this card and enter management mode, so the selection
             // reads clearly over a dimmed archive instead of getting lost
             // among the rest of the grid
             art.classList.add("gal-item--selected");
             screenEl.classList.add("gal-screen--manage");
             manageBackdrop.hidden = false;
             updateHiddenTabVisibility();
-            updateBulkBar();
+            showActionsUnder(art);
           }, 480);
         }
         function endPress() { clearTimeout(timer); }
@@ -249,17 +250,22 @@
         card.addEventListener("mouseleave", endPress);
         card.addEventListener("touchend", endPress);
         card.addEventListener("click", function (e) {
-          if (longPressed) { e.preventDefault(); return; } // long-press already selected it
-          // once management mode is open, every further tap (on this card
-          // or any other) just checks/unchecks it instead of opening it —
-          // that's how several captures get cleaned up in one pass
-          if (screenEl.classList.contains("gal-screen--manage")) {
-            toggleSelected();
-            return;
-          }
+          if (longPressed) { e.preventDefault(); return; } // long-press already marked it
+          if (e.shiftKey) { toggleMarked(); return; }
           try { sessionStorage.setItem("traces-item", entry.id); } catch (er) {}
           goTo("object.html");
         });
+        art.querySelector(".gal-hide").addEventListener("click", function () {
+          grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__hide) a.__hide(); });
+          render();
+        });
+        var delBtn = art.querySelector(".gal-delete");
+        if (delBtn) {
+          delBtn.addEventListener("click", function () {
+            grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__remove) a.__remove(); });
+            render();
+          });
+        }
         return art;
       }
 
