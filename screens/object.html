@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260719h">
-<link rel="stylesheet" href="../css/chrome.css?v=20260719h">
-<link rel="stylesheet" href="../css/object.css?v=20260719h">
-<script src="../js/cursor.js?v=20260719h" defer></script>
-<script src="../js/grain.js?v=20260719h" defer></script>
-<script src="../js/tilt3d.js?v=20260719h" defer></script>
-<script src="../js/config.js?v=20260719h"></script>
-<script src="../js/archive.js?v=20260719h"></script>
-<script src="../js/blobstore.js?v=20260719h"></script>
-<script src="../js/remote-captures.js?v=20260719h"></script>
-<script src="../js/community-seed.js?v=20260719h"></script>
-<script src="../js/flow.js?v=20260719h" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719h"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260719i">
+<link rel="stylesheet" href="../css/chrome.css?v=20260719i">
+<link rel="stylesheet" href="../css/object.css?v=20260719i">
+<script src="../js/cursor.js?v=20260719i" defer></script>
+<script src="../js/grain.js?v=20260719i" defer></script>
+<script src="../js/tilt3d.js?v=20260719i" defer></script>
+<script src="../js/config.js?v=20260719i"></script>
+<script src="../js/archive.js?v=20260719i"></script>
+<script src="../js/blobstore.js?v=20260719i"></script>
+<script src="../js/remote-captures.js?v=20260719i"></script>
+<script src="../js/community-seed.js?v=20260719i"></script>
+<script src="../js/flow.js?v=20260719i" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260719i"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -26,11 +26,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719h" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260719i" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719h";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719h";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260719i";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260719i";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -119,26 +119,46 @@
           <button class="obj-link-card-act" type="button" id="linkCardMove">move point</button>
           <button class="obj-link-card-act" type="button" id="linkCardDelete">delete link</button>
         </div>
-        <hr class="obj-white-rule">
-        <p class="obj-white-label">Type of capture</p>
-        <div class="obj-white-choices">
-          <label><input type="checkbox" id="linkCardObj" disabled> object</label>
-          <label><input type="checkbox" id="linkCardSpace" disabled> space</label>
+
+        <div class="obj-link-card-content">
+          <div class="obj-link-card-section obj-link-card-section--kind">
+            <hr class="obj-white-rule">
+            <p class="obj-white-label">Type of capture</p>
+            <div class="obj-white-choices">
+              <label><input type="checkbox" id="linkCardObj" disabled> object</label>
+              <label><input type="checkbox" id="linkCardSpace" disabled> space</label>
+            </div>
+          </div>
+
+          <div class="obj-link-card-section obj-link-card-section--description">
+            <hr class="obj-white-rule">
+            <img class="obj-link-card-img" id="linkCardImg" alt="">
+            <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
+            <p class="obj-white-feeling" id="linkCardFeeling"></p>
+          </div>
+
+          <div class="obj-link-card-section obj-link-card-section--annotations">
+            <hr class="obj-white-rule">
+            <p class="obj-white-label">Annotations (<span id="linkCardAnnCount">0</span>)</p>
+            <hr class="obj-white-rule obj-white-empty-rule" id="linkCardAnnotationsEmptyRule">
+            <ul class="obj-white-list" id="linkCardAnnotations"></ul>
+            <hr class="obj-white-rule" id="linkCardAnnotationsFilledRule">
+          </div>
+
+          <div class="obj-link-card-section obj-link-card-section--visibility">
+            <hr class="obj-white-rule">
+            <p class="obj-white-label">Visibility</p>
+            <div class="obj-white-choices">
+              <label><input type="checkbox" id="linkCardPrivate" disabled> private</label>
+              <label><input type="checkbox" id="linkCardCommunity" disabled> community</label>
+            </div>
+          </div>
+
+          <div class="obj-link-card-section obj-link-card-section--actions">
+            <div class="obj-panel-spacer"></div>
+            <button class="obj-white-edit" type="button" id="linkCardOpen">Open</button>
+          </div>
         </div>
-        <hr class="obj-white-rule">
-        <img class="obj-link-card-img" id="linkCardImg" alt="">
-        <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
-        <p class="obj-white-feeling" id="linkCardFeeling"></p>
-        <hr class="obj-white-rule">
-        <p class="obj-white-label">Annotations (<span id="linkCardAnnCount">0</span>)</p>
-        <ul class="obj-white-list" id="linkCardAnnotations"></ul>
-        <p class="obj-white-label">Visibility</p>
-        <div class="obj-white-choices">
-          <label><input type="checkbox" id="linkCardPrivate" disabled> private</label>
-          <label><input type="checkbox" id="linkCardCommunity" disabled> community</label>
-        </div>
-        <div class="obj-panel-spacer"></div>
-        <button class="obj-white-edit" type="button" id="linkCardOpen">Open</button>
       </aside>
     </div>
 
@@ -159,38 +179,54 @@
         <button class="obj-white-close" type="button" id="whiteClose" aria-label="Close">&minus;</button>
       </header>
 
-      <hr class="obj-white-rule">
-      <p class="obj-white-label">Type of capture</p>
-      <div class="obj-white-choices" id="whiteKind">
-        <label><input type="checkbox" id="whiteObj" checked disabled> object</label>
-        <label><input type="checkbox" id="whiteSpace" disabled> space</label>
-      </div>
-      <hr class="obj-white-rule">
+      <div class="obj-white-content">
+        <div class="obj-white-section obj-white-section--kind">
+          <hr class="obj-white-rule">
+          <p class="obj-white-label">Type of capture</p>
+          <div class="obj-white-choices" id="whiteKind">
+            <label><input type="checkbox" id="whiteObj" checked disabled> object</label>
+            <label><input type="checkbox" id="whiteSpace" disabled> space</label>
+          </div>
+        </div>
 
-      <p class="obj-white-label wo-edit">Give a title to your capture</p>
-      <input class="obj-white-input wo-edit" id="whiteTitleInput" type="text">
-      <hr class="obj-white-rule wo-edit">
+        <div class="obj-white-section obj-white-section--description">
+          <hr class="obj-white-rule">
+          <p class="obj-white-label wo-edit">Give a title to your capture</p>
+          <input class="obj-white-input wo-edit" id="whiteTitleInput" type="text">
+          <hr class="obj-white-rule wo-edit">
+          <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
+          <p class="obj-white-feeling wo-read" id="whiteFeeling"></p>
+          <textarea class="obj-white-text wo-edit" id="whiteFeelingInput" placeholder="what's special about this?"></textarea>
+        </div>
 
-      <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
-      <p class="obj-white-feeling wo-read" id="whiteFeeling"></p>
-      <textarea class="obj-white-text wo-edit" id="whiteFeelingInput" placeholder="what's special about this?"></textarea>
-      <hr class="obj-white-rule">
-      <p class="obj-white-label">Annotations (<span id="whiteAnnCount">0</span>)</p>
-      <ul class="obj-white-hint" id="whiteAnnotationsHint">
-        <li>Open the menu and choose "Add an annotations" to pin a note on the capture</li>
-      </ul>
-      <ul class="obj-white-list" id="whiteAnnotations"></ul>
-      <hr class="obj-white-rule">
-      <p class="obj-white-label">Visibility</p>
-      <div class="obj-white-choices">
-        <label><input type="checkbox" id="whitePrivate" disabled> private</label>
-        <label><input type="checkbox" id="whiteCommunity" checked disabled> community</label>
-      </div>
-      <div class="obj-panel-spacer"></div>
-      <button class="obj-white-edit wo-read" type="button" id="whiteEditBtn">Edit</button>
-      <div class="obj-white-actions wo-edit">
-        <button class="obj-white-btn" type="button" id="whiteUpdateScan">Update scan</button>
-        <button class="obj-white-btn obj-white-btn--solid" type="button" id="whiteSave">Save</button>
+        <div class="obj-white-section obj-white-section--annotations">
+          <hr class="obj-white-rule">
+          <p class="obj-white-label">Annotations (<span id="whiteAnnCount">0</span>)</p>
+          <ul class="obj-white-hint" id="whiteAnnotationsHint">
+            <li>Open the menu and choose "Add an annotations" to pin a note on the capture</li>
+          </ul>
+          <hr class="obj-white-rule obj-white-empty-rule" id="whiteAnnotationsEmptyRule">
+          <ul class="obj-white-list" id="whiteAnnotations"></ul>
+          <hr class="obj-white-rule" id="whiteAnnotationsFilledRule">
+        </div>
+
+        <div class="obj-white-section obj-white-section--visibility">
+          <hr class="obj-white-rule">
+          <p class="obj-white-label">Visibility</p>
+          <div class="obj-white-choices">
+            <label><input type="checkbox" id="whitePrivate" disabled> private</label>
+            <label><input type="checkbox" id="whiteCommunity" checked disabled> community</label>
+          </div>
+        </div>
+
+        <div class="obj-white-section obj-white-section--actions">
+          <div class="obj-panel-spacer"></div>
+          <button class="obj-white-edit wo-read" type="button" id="whiteEditBtn">Edit</button>
+          <div class="obj-white-actions wo-edit">
+            <button class="obj-white-btn" type="button" id="whiteUpdateScan">Update scan</button>
+            <button class="obj-white-btn obj-white-btn--solid" type="button" id="whiteSave">Save</button>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -619,6 +655,8 @@
         }
         document.getElementById("linkCardFeeling").textContent = item.feeling || "";
         document.getElementById("linkCardAnnCount").textContent = item.annotations.length;
+        document.getElementById("linkCardAnnotationsEmptyRule").hidden = !!item.annotations.length;
+        document.getElementById("linkCardAnnotationsFilledRule").hidden = !item.annotations.length;
         document.getElementById("linkCardPrivate").checked = item.visibility !== "community";
         document.getElementById("linkCardCommunity").checked = item.visibility === "community";
 
@@ -1024,6 +1062,8 @@
         document.getElementById("whiteCommunity").checked = item.visibility === "community";
         document.getElementById("whiteAnnCount").textContent = item.annotations.length;
         document.getElementById("whiteAnnotationsHint").hidden = !!item.annotations.length;
+        document.getElementById("whiteAnnotationsEmptyRule").hidden = !!item.annotations.length;
+        document.getElementById("whiteAnnotationsFilledRule").hidden = !item.annotations.length;
         var ul = document.getElementById("whiteAnnotations");
         ul.innerHTML = "";
         if (item.annotations.length) {

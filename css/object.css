@@ -37,9 +37,9 @@
 /* a capture shared to the community shows blue-purple here instead of the
    default near-black — same accent as its card on the community gallery */
 .obj-screen--community {
-  background-color: #131a45;
+  background-color: #1c1440;
   background-image:
-    radial-gradient(120% 90% at 50% 42%, rgba(58, 92, 224, 0.45), transparent 70%),
+    radial-gradient(120% 90% at 50% 42%, rgba(90, 63, 209, 0.45), transparent 70%),
     radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.7), transparent),
     radial-gradient(1.5px 1.5px at 55% 15%, rgba(255, 255, 255, 0.8), transparent),
@@ -573,7 +573,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.obj-blue-fields > .obj-blue-rule:first-child {
+  margin: 0 0 20px;
 }
 
 .obj-blue-btn {
@@ -774,7 +779,51 @@
   height: 200px;
   object-fit: contain;
   background: #000000;
-  margin: 4px 0;
+  margin: 0;
+}
+
+.obj-link-card-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.obj-link-card-section {
+  flex: none;
+}
+
+.obj-link-card-section--description {
+  flex: 1;
+  min-height: 0;
+}
+
+.obj-link-card-section > .obj-white-rule:first-child {
+  margin: 0 0 16px;
+}
+
+.obj-link-card-section--description > .obj-white-rule:first-child {
+  margin-bottom: 20px;
+}
+
+.obj-link-card-img + .obj-white-label {
+  margin-top: 20px;
+}
+
+.obj-link-card-section > #linkCardAnnotationsFilledRule {
+  margin: 0;
+}
+
+.obj-link-card-section--actions {
+  padding-top: 6px;
+  transform: translateY(-12px);
+}
+
+.obj-link-card-section--actions .obj-white-edit {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
 }
 
 .obj-link-card-actions {
@@ -818,11 +867,6 @@
   cursor: pointer;
 }
 
-.obj-white-sub--link:hover,
-.obj-white-sub--link:focus-visible {
-  opacity: 1;
-}
-
 /* ---------- White details panel (click the title to toggle) ---------- */
 
 .obj-white {
@@ -858,6 +902,75 @@
   min-width: 0;
 }
 
+/* Keep the capture type paired with the divider below it. The description is
+   the useful flexible region, so any spare panel height belongs there rather
+   than being distributed as oversized gaps between every section. */
+.obj-white-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+.obj-white-section {
+  flex: none;
+}
+
+.obj-white-section--description {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Let the story prompt sit a touch farther from its divider, while lifting
+   the annotations block slightly to balance the large flexible story area. */
+.obj-white-section--description > .obj-white-rule:first-child {
+  margin-bottom: 24px;
+}
+
+.obj-white-section--annotations {
+  transform: translateY(-8px);
+}
+
+.obj-white-section--annotations > .obj-white-rule:first-child,
+.obj-link-card-section--annotations > .obj-white-rule:first-child {
+  display: none;
+}
+
+/* The content layout owns the gap between sections. Do not also add the
+   rule's legacy 24px lead-in or the same space gets counted twice. */
+.obj-white-section > .obj-white-rule:first-child {
+  margin: 0 0 16px;
+}
+
+.obj-white-section > #whiteAnnotationsFilledRule {
+  margin: 0;
+}
+
+.obj-white-section--actions .obj-white-edit {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+}
+
+.obj-white-section--actions {
+  padding-top: 6px;
+  transform: translateY(-12px);
+}
+
+/* In edit mode the actual textarea, rather than inter-section whitespace,
+   should absorb spare height just like it does on describe-capture. */
+.obj-white.editing .obj-white-content {
+  justify-content: flex-start;
+}
+
+.obj-white.editing .obj-white-section--description {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .obj-white-close {
   flex-shrink: 0;
   background: none;
@@ -884,12 +997,33 @@
 
 .obj-white-sub {
   display: block;
+  width: fit-content;
   font-size: 1.25rem;
   line-height: 1.4;
   margin-top: 7px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  background: none;
+  border: none;
   opacity: 0.85;
+}
+
+.obj-white-sub--link {
+  cursor: pointer;
+}
+
+/* Keep the connected-capture label clickable without giving it a second line.
+   The actual section divider sits a little lower to preserve breathing room. */
+.obj-white:has(.obj-white-sub--link:not([hidden]))
+  .obj-white-content > .obj-white-section:first-child > .obj-white-rule:first-child {
+  margin-top: 20px;
+}
+
+.obj-white-sub--link:hover,
+.obj-white-sub--link:focus-visible {
+  opacity: 1;
 }
 
 .obj-white-rule {
@@ -958,10 +1092,25 @@
   opacity: 0.85;
 }
 
+/* Match the empty-annotation treatment used on describe-capture: one quiet
+   empty message bracketed by dotted rules, rather than a second solid
+   section divider or two competing empty-state messages. */
+.obj-white-empty-rule {
+  border: none;
+  border-top: 2px dotted var(--color-ink-blue);
+  margin: 0;
+}
+
 .obj-white-list {
   list-style: none;
   display: flex;
   flex-direction: column;
+}
+
+/* A populated annotation list is bracketed consistently: a rule before the
+   first row, row separators between items, and the existing closing rule. */
+.obj-white-list:has(li:not(.obj-white-none)) {
+  border-top: 2px solid var(--color-ink-blue);
 }
 
 .obj-white-list li {
@@ -973,8 +1122,6 @@
   font-size: 1.25rem;
 }
 
-/* the .obj-white-rule right after this list already draws the section's
-   closing line — a border here too would double it up */
 /* the .obj-white-rule right after this list already draws the section's
    closing line — a border here too would double it up */
 .obj-white-list li:last-child {
@@ -1013,11 +1160,8 @@
   text-transform: lowercase;
 }
 
-/* a small fixed gap before the action button(s), same as the
-   describe-capture sidebar's own .spacer — that button should follow its
-   content, not get force-pinned to the panel's bottom edge regardless of
-   how little content is above it (which read as visually disconnected on
-   a short capture with no feeling text or annotations yet) */
+/* A small fixed breath between annotations and the bottom action group. The
+   description block above now absorbs any genuinely leftover panel height. */
 .obj-panel-spacer {
   flex: none;
   height: 20px;
