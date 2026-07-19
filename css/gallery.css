@@ -371,6 +371,11 @@
   box-sizing: border-box;
   border: 2px solid #ffffff;
   background: rgba(0, 0, 0, 0.35);
+  /* purely a visual indicator - it sits on top of the card, so without
+     this a tap aimed right at the square (the obvious thing to tap) hits
+     this plain div instead of the .gal-card button underneath and does
+     nothing at all */
+  pointer-events: none;
 }
 
 .gal-screen--manage .gal-item-select {
