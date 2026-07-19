@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720s">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720s">
-<link rel="stylesheet" href="../css/object.css?v=20260720s">
-<script src="../js/cursor.js?v=20260720s" defer></script>
-<script src="../js/grain.js?v=20260720s" defer></script>
-<script src="../js/tilt3d.js?v=20260720s" defer></script>
-<script src="../js/owner.js?v=20260720s"></script>
-<script src="../js/config.js?v=20260720s"></script>
-<script src="../js/archive.js?v=20260720s"></script>
-<script src="../js/blobstore.js?v=20260720s"></script>
-<script src="../js/remote-captures.js?v=20260720s"></script>
-<script src="../js/community-seed.js?v=20260720s"></script>
-<script src="../js/flow.js?v=20260720s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720t">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720t">
+<link rel="stylesheet" href="../css/object.css?v=20260720t">
+<script src="../js/cursor.js?v=20260720t" defer></script>
+<script src="../js/grain.js?v=20260720t" defer></script>
+<script src="../js/tilt3d.js?v=20260720t" defer></script>
+<script src="../js/owner.js?v=20260720t"></script>
+<script src="../js/config.js?v=20260720t"></script>
+<script src="../js/archive.js?v=20260720t"></script>
+<script src="../js/blobstore.js?v=20260720t"></script>
+<script src="../js/remote-captures.js?v=20260720t"></script>
+<script src="../js/community-seed.js?v=20260720t"></script>
+<script src="../js/flow.js?v=20260720t" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720t"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720s" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720t" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720s";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720s";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720t";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720t";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -1403,7 +1403,7 @@
       // for the current capture and for scrubbing between its timeline
       // versions — `k` guards against a late async load landing after the
       // user has already navigated to a different capture.
-      function swapScan(k, model, img, points) {
+      function swapScan(k, model, img, points, carriedView) {
         disposePcViewer();
         // fetching a real capture's photo/model/points can take real time -
         // an empty stage until it lands read as broken rather than loading.
@@ -1441,7 +1441,7 @@
               if (key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: catalog[k].pointSize || 0.013, initialView: catalog[k].defaultView || null,
+                { pointSize: catalog[k].pointSize || 0.013, initialView: carriedView || catalog[k].defaultView || null,
                   tilt: catalog[k].tilt || null });
               stage.classList.remove("obj-stage--loading");
               // once the cloud is ready, (re)draw annotations as 3D-anchored
@@ -1456,10 +1456,12 @@
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
-          // a saved default view restores model-viewer's own camera-orbit
-          // string — set before .src so it's already queued once the model
-          // itself finishes loading, same idea as the point-cloud initialView
-          var dv = catalog[k].defaultView;
+          // a saved default view (or, scrubbing the timeline, whatever
+          // angle was already being looked at) restores model-viewer's own
+          // camera-orbit string — set before .src so it's already queued
+          // once the model itself finishes loading, same idea as the
+          // point-cloud initialView
+          var dv = carriedView || catalog[k].defaultView;
           if (dv && dv.cameraOrbit) modelViewer.cameraOrbit = dv.cameraOrbit;
           // a capture saved from the "ready-made scan" flow keeps its GLB in
           // IndexedDB (too large for localStorage) — fetch it in on demand
@@ -1863,8 +1865,21 @@
         document.getElementById("objUpdated").textContent =
           isLatest ? "[latest — " + v.year + "]" : "[version — " + v.year + "]";
         // a version with its own scan swaps the stage; the curated
-        // annotation-only history (chandelier) keeps the current scan
-        if (v.model || v.img || v.points) swapScan(k, v.model, v.img, v.points);
+        // annotation-only history (chandelier) keeps the current scan.
+        // Carry over whatever angle was already being looked at, so
+        // scrubbing between dated versions of the same capture keeps
+        // showing the same area of the scan instead of resetting to a
+        // generic default framing each time.
+        if (v.model || v.img || v.points) {
+          var carriedView = null;
+          if (pcViewer && !objPoints.hidden) {
+            carriedView = pcViewer.getView();
+          } else if (catalog[k].model && !modelViewer.hidden && modelViewer.loaded) {
+            var orbit = modelViewer.getCameraOrbit();
+            carriedView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
+          }
+          swapScan(k, v.model, v.img, v.points, carriedView);
+        }
         closeBlue();
         closeRemarkCard();
         renderAnnotations();
@@ -2173,11 +2188,25 @@
         var remoteArchiveReady = window.RemoteCaptures
           ? withTimeout(RemoteCaptures.list("archive"), 7000, []) : Promise.resolve([]);
         var remoteCommunityReady = window.RemoteCaptures ? withTimeout(RemoteCaptures.list("community"), 7000, []) : Promise.resolve([]);
-        Promise.all([seedReady, remoteArchiveReady, remoteCommunityReady]).then(function (results) {
-          var seedList = results[0], remoteList = results[1].concat(results[2]);
+        var hiddenReady = window.RemoteCaptures ? withTimeout(RemoteCaptures.listHiddenShowcase(), 7000, []) : Promise.resolve([]);
+        Promise.all([seedReady, remoteArchiveReady, remoteCommunityReady, hiddenReady]).then(function (results) {
+          var seedList = results[0], remoteList = results[1].concat(results[2]), globalHidden = results[3] || [];
           mergeCommunitySeedIntoCatalog(seedList);
           mergeRemoteCapturesIntoCatalog(remoteList);
           communityOrder = communityOrder.concat((seedList || []).map(function (d) { return d.key; }));
+          // gallery.html/archive-mine.html/community.html all let a hidden
+          // item stop showing up in their own grids, but prev/next browsing
+          // here had no idea any of that existed - the arrows could still
+          // land you on something you'd already hidden (or, for Mor,
+          // something a visitor never should have seen at all)
+          var archiveHidden = [];
+          try { archiveHidden = JSON.parse(localStorage.getItem("traces-archive-hidden")) || []; } catch (e) {}
+          var communityHidden = [];
+          try { communityHidden = JSON.parse(localStorage.getItem("traces-community-hidden")) || []; } catch (e) {}
+          var hiddenArchiveSet = archiveHidden.concat(globalHidden);
+          var hiddenCommunitySet = communityHidden.concat(globalHidden);
+          order = order.filter(function (k) { return hiddenArchiveSet.indexOf(k) === -1; });
+          communityOrder = communityOrder.filter(function (k) { return hiddenCommunitySet.indexOf(k) === -1; });
           if (!catalog[key]) key = "chandelier";
           show(key);
         });
