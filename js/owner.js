@@ -33,10 +33,13 @@ if (window.isOwnerDevice()) {
   document.addEventListener("DOMContentLoaded", function () {
     var badge = document.createElement("div");
     badge.textContent = "מכשיר שלי מחובר";
+    // every screen corner is already taken by a nav-corner link (logo,
+    // Archive, Community, About) - the vertical middle of the left edge
+    // is the one spot guaranteed clear of all of them
     badge.style.cssText =
-      "position:fixed;bottom:6px;left:6px;z-index:99999;" +
-      "font-size:10px;opacity:0.4;color:#fff;" +
-      "font-family:sans-serif;pointer-events:none;";
+      "position:fixed;top:50%;left:6px;transform:translateY(-50%);z-index:99999;" +
+      "font-size:10px;opacity:0.45;color:#fff;" +
+      "font-family:sans-serif;pointer-events:none;white-space:nowrap;";
     document.body.appendChild(badge);
   });
 }
