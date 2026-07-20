@@ -38,28 +38,46 @@
       form.append("file", blob, "file");
       var xhr = new XMLHttpRequest();
       xhr.open("POST", api() + "/captures/upload");
-      // without this, a genuinely stalled connection (weak signal, a proxy
-      // that silently drops the request mid-flight) never fires
-      // onload/onerror at all - the sync-status badge was left showing
-      // "uploading… X%" forever with no way to ever resolve as failed.
-      // Scaled to the file's own size (with a floor) so a large real scan
-      // that's genuinely still uploading isn't cut off early.
-      xhr.timeout = Math.max(60000, blob.size / (256 * 1024) * 1000);
-      if (onProgress) {
-        xhr.upload.addEventListener("progress", function (e) {
-          if (e.lengthComputable) onProgress(e.loaded / e.total);
-        });
-      }
-      xhr.onload = function () {
+      // a genuinely stalled connection (weak signal, a proxy that silently
+      // drops the request mid-flight) never fires onload/onerror at all -
+      // the sync-status badge was left showing "uploading… X%" forever with
+      // no way to ever resolve as failed. But xhr.timeout is a TOTAL-time
+      // limit, which would wrongly kill a large file that's genuinely still
+      // uploading, just slowly, on an ordinary home connection. Instead,
+      // watch for a real STALL: reset a 45s timer on every progress event,
+      // so it only gives up when the bytes actually stop flowing - a slow
+      // but progressing upload is left to finish however long it needs.
+      var STALL_MS = 45000;
+      var stallTimer = null;
+      var settled = false;
+      function done(v) {
+        if (settled) return;
+        settled = true;
+        if (stallTimer) clearTimeout(stallTimer);
         if (onProgress) onProgress(1);
+        resolve(v);
+      }
+      function armStall() {
+        if (stallTimer) clearTimeout(stallTimer);
+        stallTimer = setTimeout(function () { try { xhr.abort(); } catch (e) {} done(null); }, STALL_MS);
+      }
+      xhr.upload.addEventListener("progress", function (e) {
+        armStall();
+        if (onProgress && e.lengthComputable) onProgress(e.loaded / e.total);
+      });
+      xhr.onload = function () {
+        if (stallTimer) clearTimeout(stallTimer);
         if (xhr.status >= 200 && xhr.status < 300) {
-          try { resolve(JSON.parse(xhr.responseText).url); } catch (e) { resolve(null); }
+          var url = null;
+          try { url = JSON.parse(xhr.responseText).url; } catch (e) {}
+          done(url);
         } else {
-          resolve(null);
+          done(null);
         }
       };
-      xhr.onerror = function () { if (onProgress) onProgress(1); resolve(null); };
-      xhr.ontimeout = function () { if (onProgress) onProgress(1); resolve(null); };
+      xhr.onerror = function () { done(null); };
+      xhr.onabort = function () { done(null); };
+      armStall(); // in case not even the first progress event ever fires
       xhr.send(form);
     });
   }
