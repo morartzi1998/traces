@@ -372,10 +372,19 @@
         empty.hidden = true;
         if (add) add.hidden = false;
 
-        setHeading(
-          allItems.length ? "your archive" : "my archive",
-          allItems.length ? "everything you capture lives here" : "the home i grew up in"
-        );
+        // a visitor is looking into someone else's personal archive, so the
+        // heading speaks in Mor's voice and gently turns the question back on
+        // them — "this is mine, what about yours?" — instead of mislabelling
+        // her captures as "your archive". Owners (and anyone who's started
+        // their own) keep the first-person "your archive".
+        var viewerIsOwner = window.isOwnerDevice && window.isOwnerDevice();
+        if (allItems.length) {
+          setHeading("your archive", "everything you capture lives here");
+        } else if (viewerIsOwner) {
+          setHeading("my archive", "the home i grew up in");
+        } else {
+          setHeading("my personal archive", "the home i grew up in — what about yours?");
+        }
 
         // owner-only: which of this browser's own local captures the last
         // server fetch already confirmed as present there too - lets each
