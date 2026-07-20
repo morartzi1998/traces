@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721b">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721b">
-<link rel="stylesheet" href="../css/gallery.css?v=20260721b">
-<script src="../js/cursor.js?v=20260721b" defer></script>
-<script src="../js/grain.js?v=20260721b" defer></script>
-<script src="../js/owner.js?v=20260721b"></script>
-<script src="../js/config.js?v=20260721b"></script>
-<script src="../js/archive.js?v=20260721b"></script>
-<script src="../js/blobstore.js?v=20260721b"></script>
-<script src="../js/remote-captures.js?v=20260721b"></script>
-<script src="../js/designer-archive.js?v=20260721b"></script>
-<script src="../js/community-seed.js?v=20260721b"></script>
-<script src="../js/gallery-title.js?v=20260721b" defer></script>
-<script src="../js/flow.js?v=20260721b" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721c">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721c">
+<link rel="stylesheet" href="../css/gallery.css?v=20260721c">
+<script src="../js/cursor.js?v=20260721c" defer></script>
+<script src="../js/grain.js?v=20260721c" defer></script>
+<script src="../js/owner.js?v=20260721c"></script>
+<script src="../js/config.js?v=20260721c"></script>
+<script src="../js/archive.js?v=20260721c"></script>
+<script src="../js/blobstore.js?v=20260721c"></script>
+<script src="../js/remote-captures.js?v=20260721c"></script>
+<script src="../js/designer-archive.js?v=20260721c"></script>
+<script src="../js/community-seed.js?v=20260721c"></script>
+<script src="../js/gallery-title.js?v=20260721c" defer></script>
+<script src="../js/flow.js?v=20260721c" defer></script>
 </head>
 <body>
 
@@ -139,6 +139,9 @@
           '<div class="gal-item-actions" hidden>' +
             '<button class="gal-hide" type="button">hide</button>' +
             (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
+            // owner-only, real server captures only: swap the polaroid's photo
+            // right here instead of on the separate admin page
+            (entry.serverId ? '<label class="gal-changeimg">change image<input type="file" accept="image/*" hidden></label>' : '') +
           '</div>';
         art.querySelector(".gal-who").textContent = entry.who;
         var imgEl = art.querySelector("img");
@@ -199,7 +202,53 @@
             grid.querySelectorAll(".gal-item--selected").forEach(function (a) { if (a.__remove) { a.__remove(); a.remove(); } });
           });
         }
+        var changeImg = art.querySelector(".gal-changeimg");
+        if (changeImg && entry.serverId) {
+          var input = changeImg.querySelector("input");
+          input.addEventListener("change", function () {
+            var file = input.files[0];
+            if (!file) return;
+            changeImg.textContent = "uploading…";
+            replaceImage(entry.serverId, file, imgEl, function (ok) {
+              changeImg.textContent = ok ? "changed" : "failed — retry";
+            });
+          });
+        }
         return art;
+      }
+
+      // upload a new photo, then rewrite that capture's shared record in
+      // place with the new image url (the same mechanism the admin page
+      // uses) - keeps every other field of the record intact
+      function replaceImage(serverId, file, imgEl, done) {
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api) { done(false); return; }
+        var form = new FormData();
+        form.append("file", file, file.name || "file");
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", api + "/captures/upload");
+        xhr.onload = function () {
+          if (xhr.status < 200 || xhr.status >= 300) { done(false); return; }
+          var url = null;
+          try { url = JSON.parse(xhr.responseText).url; } catch (e) {}
+          if (!url) { done(false); return; }
+          fetch(api + "/captures")
+            .then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+            .then(function (d) {
+              var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
+              if (!rec) { done(false); return; }
+              rec.img = url;
+              return fetch(api + "/captures", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(rec),
+              }).then(function (r2) {
+                if (r2.ok) { imgEl.src = url; done(true); } else { done(false); }
+              });
+            })
+            .catch(function () { done(false); });
+        };
+        xhr.onerror = function () { done(false); };
+        xhr.send(form);
       }
 
       // local items render immediately (no need to wait on anything) using
@@ -222,6 +271,9 @@
         return {
           id: c.id, title: c.title, img: c.img, kind: c.kind,
           metaText: ago(c.created), who: (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : ""),
+          // real shared captures live on the server under "<id>-community";
+          // only the owner may re-photograph one from here
+          serverId: isOwner ? c.id + "-community" : null,
           hide: function () { hideItem(c.id); },
           // a remote item (someone else's device, or Mor's own past share)
           // only gets a delete control for Mor herself — a random visitor

@@ -229,7 +229,8 @@
 }
 
 .gal-delete,
-.gal-hide {
+.gal-hide,
+.gal-changeimg {
   font-family: var(--font-display);
   font-size: 0.95rem;
   color: var(--color-ink-blue);
