@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721a">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721a">
-<link rel="stylesheet" href="../css/object.css?v=20260721a">
-<script src="../js/cursor.js?v=20260721a" defer></script>
-<script src="../js/grain.js?v=20260721a" defer></script>
-<script src="../js/tilt3d.js?v=20260721a" defer></script>
-<script src="../js/owner.js?v=20260721a"></script>
-<script src="../js/config.js?v=20260721a"></script>
-<script src="../js/archive.js?v=20260721a"></script>
-<script src="../js/blobstore.js?v=20260721a"></script>
-<script src="../js/remote-captures.js?v=20260721a"></script>
-<script src="../js/community-seed.js?v=20260721a"></script>
-<script src="../js/flow.js?v=20260721a" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721a"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721b">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721b">
+<link rel="stylesheet" href="../css/object.css?v=20260721b">
+<script src="../js/cursor.js?v=20260721b" defer></script>
+<script src="../js/grain.js?v=20260721b" defer></script>
+<script src="../js/tilt3d.js?v=20260721b" defer></script>
+<script src="../js/owner.js?v=20260721b"></script>
+<script src="../js/config.js?v=20260721b"></script>
+<script src="../js/archive.js?v=20260721b"></script>
+<script src="../js/blobstore.js?v=20260721b"></script>
+<script src="../js/remote-captures.js?v=20260721b"></script>
+<script src="../js/community-seed.js?v=20260721b"></script>
+<script src="../js/flow.js?v=20260721b" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721b"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721a" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721b" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260721a";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721a";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260721b";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721b";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -882,11 +882,11 @@
           buildLinkMarker(b);
           tags.appendChild(b);
         }
-        // always wait for the space model's OWN next "load" — checking
-        // modelViewer.loaded right after changing .src can still read the
-        // previous model's state, since the swap itself isn't synchronous,
-        // which raycasts against stale geometry and finds nothing
-        if (space.model) {
+        // only wait for a model "load" when a model is actually what's being
+        // shown - a point-cloud or photo space renders differently, and
+        // waiting on a load event that never fires would leave the marker
+        // unplaced forever
+        if (space.model && !modelViewer.hidden) {
           modelViewer.addEventListener("load", place, { once: true });
         } else {
           place();
@@ -906,7 +906,33 @@
         // read as unrelated/wrong content appearing rather than "you're
         // now looking at the space this connects to"
         document.getElementById("objTitle").textContent = space.title;
-        if (space.model) {
+        // a space captured as a raw point cloud must render through the
+        // point-cloud viewer (crisp per-point detail), exactly like the main
+        // view does - it used to fall straight to the voxelised `model` GLB
+        // here, which reads as a blocky, garbled mess instead of the actual
+        // scan. Prefer points, then a model, then a flat photo.
+        disposePcViewer();
+        if (space.points) {
+          stage.dataset.mode = "model";
+          photo.hidden = true;
+          modelViewer.hidden = true;
+          objPoints.hidden = false;
+          var spk = space.points.indexOf("idb:") === 0 ? space.points.slice(4) : null;
+          var spblob = spk && window.BlobStore
+            ? window.BlobStore.get(spk)
+            : fetch(space.points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+          if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
+            spblob.then(function (blob) {
+              if (!blob || !SPACE_VIEW_ACTIVE) return null;
+              return blob.arrayBuffer();
+            }).then(function (buf) {
+              if (!buf || !SPACE_VIEW_ACTIVE) return;
+              var geometry = window.__deserializeGeometry(buf);
+              pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
+                { pointSize: space.pointSize || 0.013, tilt: space.tilt || null });
+            }).catch(function () {});
+          }
+        } else if (space.model) {
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
