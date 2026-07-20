@@ -22,6 +22,14 @@
     if (!(window.BlobStore && api())) { if (onProgress) onProgress(1); return Promise.resolve(null); }
     return window.BlobStore.get(ref.slice(4)).then(function (blob) {
       if (!blob) { if (onProgress) onProgress(1); return null; }
+      // Cloudflare rejects a request body over ~100MB at the edge, before
+      // the worker (or this upload) ever sees it - confirmed by hand:
+      // 100MB went through, 120MB came back a clean 413. A large real
+      // scan hitting that limit was the likely cause of an "uploading…"
+      // badge that never moved again - failing it outright here, before
+      // ever opening the connection, is instant and unambiguous instead
+      // of leaving it to a network round-trip that may not resolve cleanly
+      if (blob.size > 95 * 1024 * 1024) { if (onProgress) onProgress(1); return null; }
       // XHR (not fetch) so upload progress is actually observable - the
       // model file alone can be tens of MB, and a flat "saving..." with no
       // sense of how far along it is reads the same whether it's about to
