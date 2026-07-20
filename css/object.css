@@ -1008,7 +1008,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-link-card-actions {
   display: flex;
   gap: 20px;
-  margin: 10px 0 4px;
+  margin: 6px 0 6px;
 }
 
 .obj-link-card-act {
