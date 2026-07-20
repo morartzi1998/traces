@@ -33,3 +33,31 @@ function locationPrefix() {
   return window.location.pathname.indexOf("/screens/") === -1 && !window.__artifactGo
     ? "screens/" : "";
 }
+
+/*
+  Exhibition / kiosk idle reset: after a long stretch with no interaction at
+  all, return to the home screen so the next person starts fresh. Any real
+  user activity (move, tap, key, scroll) restarts the countdown.
+
+  Skipped on the active capture-work screens (upload / processing /
+  describe) - navigating away from those mid-flow would throw away an
+  in-progress scan, which is the opposite of helpful.
+*/
+(function idleReset() {
+  var IDLE_MS = 10 * 60 * 1000;
+  var path = window.location.pathname;
+  var skip = /\/(upload|processing|describe-capture|phone-capture)\.html$/.test(path);
+  if (skip || window.__artifactGo) return; // single-file preview has no pages to reset to
+  var timer = null;
+  function goHome() {
+    goTo(path.indexOf("/screens/") !== -1 ? "../index.html" : "index.html");
+  }
+  function reset() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(goHome, IDLE_MS);
+  }
+  ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "wheel", "click"].forEach(function (ev) {
+    window.addEventListener(ev, reset, { passive: true });
+  });
+  reset();
+})();
