@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720w">
-<link rel="stylesheet" href="../css/gallery.css?v=20260720w">
-<script src="../js/cursor.js?v=20260720w" defer></script>
-<script src="../js/grain.js?v=20260720w" defer></script>
-<script src="../js/owner.js?v=20260720w"></script>
-<script src="../js/config.js?v=20260720w"></script>
-<script src="../js/archive.js?v=20260720w"></script>
-<script src="../js/blobstore.js?v=20260720w"></script>
-<script src="../js/remote-captures.js?v=20260720w"></script>
-<script src="../js/designer-archive.js?v=20260720w"></script>
-<script src="../js/gallery-title.js?v=20260720w" defer></script>
-<script src="../js/flow.js?v=20260720w" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720x">
+<link rel="stylesheet" href="../css/gallery.css?v=20260720x">
+<script src="../js/cursor.js?v=20260720x" defer></script>
+<script src="../js/grain.js?v=20260720x" defer></script>
+<script src="../js/owner.js?v=20260720x"></script>
+<script src="../js/config.js?v=20260720x"></script>
+<script src="../js/archive.js?v=20260720x"></script>
+<script src="../js/blobstore.js?v=20260720x"></script>
+<script src="../js/remote-captures.js?v=20260720x"></script>
+<script src="../js/designer-archive.js?v=20260720x"></script>
+<script src="../js/gallery-title.js?v=20260720x" defer></script>
+<script src="../js/flow.js?v=20260720x" defer></script>
 </head>
 <body>
 
@@ -198,6 +198,22 @@
         grid.querySelectorAll(".gal-item").forEach(function (art) {
           art.hidden = active.length > 0 && active.indexOf(art.dataset.kind) === -1;
         });
+        renumber();
+      }
+      // the [NN] index was baked into each card when it was built, so
+      // filtering (which hides some cards) left the remaining visible ones
+      // showing gaps like [15], [13], [10]. Recompute it over just the
+      // currently-visible cards so the sequence is always contiguous.
+      function renumber() {
+        var visible = [];
+        grid.querySelectorAll(".gal-item").forEach(function (art) {
+          if (!art.hidden) visible.push(art);
+        });
+        var n = visible.length;
+        visible.forEach(function (art, i) {
+          var idxEl = art.querySelector(".gal-idx");
+          if (idxEl) idxEl.textContent = "[" + ("0" + (n - i)).slice(-2) + "]";
+        });
       }
       filters.addEventListener("change", applyFilter);
 
@@ -209,7 +225,7 @@
         art.className = "gal-item";
         art.dataset.kind = entry.kind || "object";
         art.innerHTML =
-          '<p class="gal-meta">[' + entry.idx + ']<br>' + entry.metaText + '</p>' +
+          '<p class="gal-meta"><span class="gal-idx">[' + entry.idx + ']</span><br>' + entry.metaText + '</p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
           (entry.syncStatus ? '<p class="gal-sync-status gal-sync-status--' + entry.syncStatus + '" data-cap-id="' + entry.id + '"></p>' : '') +
           '<div class="gal-item-actions" hidden>' +

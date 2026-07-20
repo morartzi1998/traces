@@ -12,96 +12,101 @@
     return (window.TRACES_API || "").replace(/\/$/, "");
   }
 
-  // an idb: ref only means anything in this browser — upload the actual
-  // bytes so the worker can hand back a real, fetchable URL. A ref that's
-  // already a plain URL (e.g. a Tripo /proxy link) needs no upload at all
-  // (and is already "done" as far as onProgress is concerned).
-  function resolveRef(ref, onProgress) {
-    if (!ref) { if (onProgress) onProgress(1); return Promise.resolve(null); }
-    if (ref.indexOf("idb:") !== 0) { if (onProgress) onProgress(1); return Promise.resolve(ref); }
-    if (!(window.BlobStore && api())) { if (onProgress) onProgress(1); return Promise.resolve(null); }
-    return window.BlobStore.get(ref.slice(4)).then(function (blob) {
-      if (!blob) { if (onProgress) onProgress(1); return null; }
-      // Cloudflare rejects a request body over ~100MB at the edge, before
-      // the worker (or this upload) ever sees it - confirmed by hand:
-      // 100MB went through cleanly, 120MB came back a clean 413. Anything
-      // under that ceiling should upload exactly as before - this only
-      // catches the case that was doomed to fail ambiguously anyway,
-      // instead of leaving it to a network round-trip that may not
-      // resolve cleanly
-      if (blob.size > 100 * 1024 * 1024) { if (onProgress) onProgress(1); return null; }
-      // XHR (not fetch) so upload progress is actually observable - the
-      // model file alone can be tens of MB, and a flat "saving..." with no
-      // sense of how far along it is reads the same whether it's about to
-      // finish or has silently stalled
-      return new Promise(function (resolve) {
-        var form = new FormData();
-        form.append("file", blob, "file");
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", api() + "/captures/upload");
-        // without this, a genuinely stalled connection (weak signal, a
-        // proxy that silently drops the request mid-flight) never fires
-        // onload/onerror at all - the sync-status badge was left showing
-        // "uploading… X%" forever with no way to ever resolve as failed.
-        // Scaled to the file's own size (with a floor) - a flat 60s was
-        // cutting off large real scans that were genuinely still
-        // uploading on a normal connection, not actually stuck.
-        xhr.timeout = Math.max(60000, blob.size / (256 * 1024) * 1000);
-        if (onProgress) {
-          xhr.upload.addEventListener("progress", function (e) {
-            if (e.lengthComputable) onProgress(e.loaded / e.total);
-          });
+  // load the actual bytes an "idb:" ref points at. A ref that's already a
+  // plain URL (e.g. a Tripo /proxy link) or missing needs no upload, so
+  // there's nothing to load (null).
+  function loadBlob(ref) {
+    if (!ref || ref.indexOf("idb:") !== 0) return Promise.resolve(null);
+    if (!(window.BlobStore && api())) return Promise.resolve(null);
+    return window.BlobStore.get(ref.slice(4)).catch(function () { return null; });
+  }
+
+  // upload one blob, resolving to the worker's fetchable URL for it (or
+  // null on any failure). onProgress (optional) gets a 0..1 fraction of
+  // THIS blob's own bytes.
+  function uploadBlob(blob, onProgress) {
+    // Cloudflare rejects a request body over ~100MB at the edge, before
+    // the worker (or this upload) ever sees it - confirmed by hand: 100MB
+    // went through cleanly, 120MB came back a clean 413. Fail it here,
+    // instantly, instead of leaving it to a round-trip that never resolves.
+    if (blob.size > 100 * 1024 * 1024) { if (onProgress) onProgress(1); return Promise.resolve(null); }
+    // XHR (not fetch) so upload progress is actually observable - a real
+    // point-cloud file is tens of MB, and a flat "saving..." reads the same
+    // whether it's about to finish or has silently stalled
+    return new Promise(function (resolve) {
+      var form = new FormData();
+      form.append("file", blob, "file");
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", api() + "/captures/upload");
+      // without this, a genuinely stalled connection (weak signal, a proxy
+      // that silently drops the request mid-flight) never fires
+      // onload/onerror at all - the sync-status badge was left showing
+      // "uploading… X%" forever with no way to ever resolve as failed.
+      // Scaled to the file's own size (with a floor) so a large real scan
+      // that's genuinely still uploading isn't cut off early.
+      xhr.timeout = Math.max(60000, blob.size / (256 * 1024) * 1000);
+      if (onProgress) {
+        xhr.upload.addEventListener("progress", function (e) {
+          if (e.lengthComputable) onProgress(e.loaded / e.total);
+        });
+      }
+      xhr.onload = function () {
+        if (onProgress) onProgress(1);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText).url); } catch (e) { resolve(null); }
+        } else {
+          resolve(null);
         }
-        xhr.onload = function () {
-          if (onProgress) onProgress(1);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try { resolve(JSON.parse(xhr.responseText).url); } catch (e) { resolve(null); }
-          } else {
-            resolve(null);
-          }
-        };
-        xhr.onerror = function () { if (onProgress) onProgress(1); resolve(null); };
-        xhr.ontimeout = function () { if (onProgress) onProgress(1); resolve(null); };
-        xhr.send(form);
-      });
-    }).catch(function () { if (onProgress) onProgress(1); return null; });
+      };
+      xhr.onerror = function () { if (onProgress) onProgress(1); resolve(null); };
+      xhr.ontimeout = function () { if (onProgress) onProgress(1); resolve(null); };
+      xhr.send(form);
+    });
   }
 
   // pushes one capture under the given scope ("archive" or "community").
   // Fire-and-forget from the caller's point of view — never throws, never
   // blocks the local save that already happened. onProgress (optional),
-  // if given, is called repeatedly with a 0..1 fraction across all three
-  // possible blob uploads combined.
+  // if given, is called repeatedly with a 0..1 fraction across all the
+  // capture's blob uploads combined.
   function publish(cap, scope, onProgress) {
     if (!api()) return Promise.resolve(null);
-    var stage = [0, 0, 0];
-    function report() {
-      if (!onProgress) return;
-      onProgress((stage[0] + stage[1] + stage[2]) / 3);
-    }
+    var refs = [cap.img, cap.model, cap.points];
     // a ref that started as "idb:" genuinely needed its bytes uploaded -
     // if that upload comes back empty, the record would land on the server
     // with a broken/missing file. Treat that as the whole publish failing
     // rather than reporting success just because the metadata write alone
     // went through.
-    var neededUpload = [
-      !!(cap.img && cap.img.indexOf("idb:") === 0),
-      !!(cap.model && cap.model.indexOf("idb:") === 0),
-      !!(cap.points && cap.points.indexOf("idb:") === 0),
-    ];
-    return Promise.all([
-      resolveRef(cap.img, function (p) { stage[0] = p; report(); }),
-      resolveRef(cap.model, function (p) { stage[1] = p; report(); }),
-      resolveRef(cap.points, function (p) { stage[2] = p; report(); }),
-    ])
-      .then(function (refs) {
-        if (neededUpload.some(function (was, i) { return was && !refs[i]; })) return null;
+    var neededUpload = refs.map(function (r) { return !!(r && r.indexOf("idb:") === 0); });
+    return Promise.all(refs.map(loadBlob)).then(function (blobs) {
+      // weight the combined progress by each blob's real byte size. The old
+      // naive (a+b+c)/3 average made a point-cloud capture (a tiny thumbnail
+      // + no model + one big 50-80MB cloud) jump to ~67% the instant the two
+      // small/absent files "finished", then crawl the last third while the
+      // one big file actually uploaded - it read as frozen at ~70% even
+      // while working. Weighting by size makes the number track the file
+      // that's actually taking the time.
+      var sizes = blobs.map(function (b) { return b ? b.size : 0; });
+      var total = (sizes[0] + sizes[1] + sizes[2]) || 1;
+      var frac = [0, 0, 0];
+      function report() {
+        if (!onProgress) return;
+        onProgress((frac[0] * sizes[0] + frac[1] * sizes[1] + frac[2] * sizes[2]) / total);
+      }
+      return Promise.all([0, 1, 2].map(function (i) {
+        var blob = blobs[i];
+        // nothing to upload for this slot: a passthrough URL stays as-is, a
+        // null ref (or a failed idb load) stays null
+        if (!blob) { frac[i] = 1; report(); return Promise.resolve(neededUpload[i] ? null : refs[i]); }
+        return uploadBlob(blob, function (p) { frac[i] = p; report(); });
+      })).then(function (out) {
+        if (neededUpload.some(function (was, i) { return was && !out[i]; })) return null;
         var record = {
           id: scope === "community" ? cap.id + "-community" : cap.id,
           scope: scope,
           title: cap.title, feeling: cap.feeling || "", kind: cap.kind || "object",
           by: cap.by || "", country: cap.country || "", created: cap.created || Date.now(),
-          img: refs[0], model: refs[1], points: refs[2],
+          img: out[0], model: out[1], points: out[2],
           annotations: cap.annotations || [],
         };
         return fetch(api() + "/captures", {
@@ -109,8 +114,8 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(record),
         }).then(function (r) { return r.ok ? r.json() : null; });
-      })
-      .catch(function () { return null; });
+      });
+    }).catch(function () { return null; });
   }
 
   // fetches every shared capture for one scope. Always resolves (to [] on
