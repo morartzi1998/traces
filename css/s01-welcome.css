@@ -194,16 +194,53 @@
 
   .main {
     flex-direction: column;
-    gap: 4rem;
-    padding-top: 6rem;
+    gap: 3rem;
+    padding-top: 8.5rem; /* clear the fixed logo + give the meta line room */
     padding-bottom: 5.5rem;
     justify-content: flex-start;
+    align-items: flex-start;
   }
 
+  /* the desktop stack fans three polaroids wide, which on a phone collapsed
+     into one another so every caption piled up in the same spot. On mobile
+     it becomes a clean single card forward, with the other two as quiet
+     offset peeks behind it (their captions hidden) - the rotation still
+     swaps which capture is in front. */
   .polaroid-stack {
-    width: min(190px, 55vw);
-    height: min(160px, 20vh);
-    transform: translateY(1rem);
+    width: min(230px, 62vw);
+    height: auto;
+    aspect-ratio: 1 / 1.12;
+    margin: 0 auto;
+    align-self: center;
+    transform: none;
+  }
+
+  .scan-meta {
+    top: -2.4rem;
+    font-size: 0.8rem;
+  }
+
+  .polaroid {
+    width: 100%;
+  }
+
+  .polaroid-front { top: 0; left: 0; transform: rotate(-1deg); z-index: 3; }
+  .polaroid-back  { top: 5%; left: 7%; transform: rotate(4deg); z-index: 2; opacity: 0.5; }
+  .polaroid-third { top: 8%; left: -6%; transform: rotate(-5deg); z-index: 1; opacity: 0.4; }
+
+  /* only the card in front carries a caption on mobile - the peeks behind
+     stay quiet so nothing overlaps */
+  .polaroid-back .polaroid-caption,
+  .polaroid-third .polaroid-caption {
+    display: none;
+  }
+
+  .polaroid-caption {
+    font-size: 1.05rem;
+  }
+
+  .hero-text {
+    text-align: left;
   }
 
   .headline {
