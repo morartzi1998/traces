@@ -179,18 +179,40 @@
   .gal-grid { grid-template-columns: repeat(3, clamp(180px, 27vw, 320px)); }
 }
 @media (max-width: 720px) {
-  .gal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-  /* on a narrow screen, the plain nowrap label from the base rule runs too
-     wide - wrap it and shrink it down instead */
-  .gal-add {
-    right: 4vw;
-    top: 17.5vh;
-    max-width: 42vw;
-    white-space: normal;
-    text-align: right;
-    font-size: 1.7rem;
+  /* a cramped 2-up grid clipped captions and left no room to breathe -
+     on a phone the archive reads better as a single, generous vertical
+     feed of larger polaroids, scrolled top to bottom */
+  .gal-grid {
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+    max-width: 100%;
   }
+
+  /* clear the fixed bottom nav so the last polaroid's caption isn't
+     hidden behind Community / About */
+  .gal-screen {
+    padding-bottom: 6rem;
+  }
+
+  /* the "Add New Capture" action stops floating over the grid (where it
+     overlapped captures) and sits quietly under the title as its own row.
+     It's after the grid in the DOM, so flex order lifts it up to sit right
+     under the filters instead of dropping to the very bottom. */
+  .gal-add {
+    position: static;
+    display: block;
+    order: 2;
+    margin: 0 0 1.5rem;
+    max-width: none;
+    white-space: normal;
+    text-align: left;
+    font-size: 1.6rem;
+    top: auto;
+    right: auto;
+  }
+  .gal-title-block { order: 0; }
+  .gal-filters { order: 1; }
+  .gal-grid { order: 3; }
 }
 
 /* revealed under a capture on long-press — plain underlined text links,
