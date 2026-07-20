@@ -56,6 +56,22 @@
   transition: filter 1.1s ease;
 }
 
+/* while the AI rebuilds the capture there's no real geometry to show yet, so
+   instead of a stand-in photo of someone else's lamp we render a drifting
+   cloud of points that gradually gathers into a coherent mass — it reads as
+   "your scan is being assembled", and it's honest about there being nothing
+   solid there yet */
+.proc-particles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(66vh, 78vw);
+  height: min(66vh, 78vw);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .proc-density {
   position: absolute;
   left: 50%;

@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721j">
-<link rel="stylesheet" href="../css/processing.css?v=20260721j">
-<script src="../js/owner.js?v=20260721j"></script>
-<script src="../js/config.js?v=20260721j"></script>
-<script src="../js/cursor.js?v=20260721j" defer></script>
-<script src="../js/grain.js?v=20260721j" defer></script>
-<script src="../js/blobstore.js?v=20260721j"></script>
-<script src="../js/flow.js?v=20260721j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721k">
+<link rel="stylesheet" href="../css/processing.css?v=20260721k">
+<script src="../js/owner.js?v=20260721k"></script>
+<script src="../js/config.js?v=20260721k"></script>
+<script src="../js/cursor.js?v=20260721k" defer></script>
+<script src="../js/grain.js?v=20260721k" defer></script>
+<script src="../js/blobstore.js?v=20260721k"></script>
+<script src="../js/flow.js?v=20260721k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721k"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721j" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721k" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js?v=20260721j";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721j";
+  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js?v=20260721k";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721k";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -38,6 +38,7 @@
     <model-viewer class="proc-model" id="procModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
       interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
     <div class="proc-points" id="procPoints" hidden></div>
+    <canvas class="proc-particles" id="procParticles" hidden></canvas>
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
     <p class="proc-error-detail" id="procErrorDetail" hidden></p>
@@ -74,13 +75,122 @@
         }
       } catch (e) {}
 
-      // once a real 3D capture exists, replace the flat cloud image with an
-      // interactive model so the visitor can spin it around and judge the
-      // result before deciding to proceed or cancel
-      function showModel(url) {
-        model.src = url;
-        model.hidden = false;
+      // ---- "scan assembling" particle field ---------------------------------
+      // a drifting sphere of points that slowly gathers as progress climbs,
+      // shown during AI reconstruction in place of a stand-in lamp photo. It's
+      // purely decorative but honest: there's no real geometry yet, and this
+      // looks like one being built rather than pretending a finished object.
+      var particleCanvas = document.getElementById("procParticles");
+      var procProgress = 0;   // 0..100, driven by setPct
+      var assembleRaf = null;
+      function startAssembling() {
+        var canvas = particleCanvas;
+        canvas.hidden = false;
         cloud.hidden = true;
+        var ctx = canvas.getContext("2d");
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        function size() {
+          var r = canvas.getBoundingClientRect();
+          canvas.width = r.width * dpr;
+          canvas.height = r.height * dpr;
+        }
+        size();
+        window.addEventListener("resize", size);
+        // seed points on a rough sphere shell, each with a random outward
+        // "scatter" offset that shrinks toward zero as the scan resolves
+        var N = 520;
+        var pts = [];
+        for (var i = 0; i < N; i++) {
+          var u = Math.random(), v = Math.random();
+          var theta = 2 * Math.PI * u, phi = Math.acos(2 * v - 1);
+          pts.push({
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.sin(phi) * Math.sin(theta),
+            z: Math.cos(phi),
+            scatter: 0.35 + Math.random() * 1.05,
+            twinkle: Math.random() * Math.PI * 2
+          });
+        }
+        var t0 = performance.now();
+        function frame(now) {
+          var w = canvas.width, h = canvas.height;
+          ctx.clearRect(0, 0, w, h);
+          var cx = w / 2, cy = h / 2;
+          var R = Math.min(w, h) * 0.34;
+          var ang = (now - t0) * 0.00035;
+          var cosA = Math.cos(ang), sinA = Math.sin(ang);
+          // coherence 0→1 as progress climbs; scatter and jitter fade with it
+          var coh = Math.min(1, procProgress / 92);
+          for (var i = 0; i < pts.length; i++) {
+            var p = pts[i];
+            var s = p.scatter * (1 - coh);
+            var jx = (Math.sin(now * 0.0011 + p.twinkle) * s);
+            var jy = (Math.cos(now * 0.0013 + p.twinkle) * s);
+            var jz = (Math.sin(now * 0.0009 + p.twinkle * 1.7) * s);
+            var px = p.x + jx, py = p.y + jy, pz = p.z + jz;
+            // rotate around Y so the cloud turns like an object on a turntable
+            var rx = px * cosA + pz * sinA;
+            var rz = -px * sinA + pz * cosA;
+            var persp = 1 / (2.2 - rz);
+            var sx = cx + rx * R * persp * 1.6;
+            var sy = cy + py * R * persp * 1.6;
+            var depth = Math.max(0, Math.min(1, (rz + 1) / 2)); // 0 back … 1 front
+            var tw = 0.6 + 0.4 * Math.sin(now * 0.004 + p.twinkle);
+            var alpha = (0.32 + 0.5 * depth) * (0.6 + 0.4 * coh) * tw;
+            var rad = (0.7 + depth * 1.6) * dpr;
+            ctx.beginPath();
+            ctx.arc(sx, sy, rad, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255,255,255," + alpha.toFixed(3) + ")";
+            ctx.fill();
+          }
+          assembleRaf = requestAnimationFrame(frame);
+        }
+        assembleRaf = requestAnimationFrame(frame);
+      }
+      function stopAssembling() {
+        if (assembleRaf) cancelAnimationFrame(assembleRaf);
+        assembleRaf = null;
+        particleCanvas.hidden = true;
+      }
+
+      // once a real 3D capture exists, replace the assembling cloud with an
+      // interactive model so the visitor can spin it around and judge the
+      // result before deciding to proceed or cancel. Crucially, only reveal it
+      // once model-viewer has actually loaded and painted the GLB — otherwise
+      // the status flips to "complete" while the frame is still blank, which
+      // reads as "nothing happened" (exactly the lag being reported).
+      function revealModelNow() {
+        stopAssembling();
+        cloud.hidden = true;
+        model.hidden = false;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            model.style.filter = "blur(0px) saturate(1)";
+          });
+        });
+      }
+      function showModel(url) {
+        var revealed = false;
+        function reveal() {
+          if (revealed) return;
+          revealed = true;
+          revealModelNow();
+          if (typeof onModelShown === "function") onModelShown();
+        }
+        var onModelShown = null;
+        showModel._onReady = function (cb) { onModelShown = cb; if (revealed) cb(); };
+        model.addEventListener("load", reveal, { once: true });
+        // a model that genuinely can't load should say so, not sit behind a
+        // "Capturing complete" over an empty screen (the exact thing reported)
+        model.addEventListener("error", function () {
+          if (revealed) return;
+          revealed = true;
+          failed("model failed to load");
+        }, { once: true });
+        model.src = url;
+        // safety net: some GLBs / data-URLs may not fire 'load' reliably —
+        // never leave the viewer stuck blank behind a "complete" status
+        setTimeout(reveal, 9000);
       }
 
       var isCloud = false;
@@ -174,6 +284,7 @@
       }
 
       function setPct(p) {
+        procProgress = p;
         status.innerHTML = 'Processing&nbsp;&nbsp;<span>' + p + "%</span>";
         var f = "blur(" + Math.max(0, (100 - p) * 0.45) + "px) saturate(0.85)";
         cloud.style.filter = f;
@@ -186,6 +297,7 @@
         proceed.hidden = false;
       }
       function failed(msg) {
+        stopAssembling();
         status.textContent = "Reconstruction failed";
         cloud.style.filter = "blur(6px) saturate(0.6)";
         model.style.filter = "blur(6px) saturate(0.6)";
@@ -227,6 +339,7 @@
       // ---- real Tripo reconstruction: poll the worker for progress ----------
       if (api && mode === "tripo") {
         if (err || !task) { failed(err || "no task id"); return; }
+        startAssembling();
         setPct(1);
         var poll = setInterval(function () {
           if (!status.isConnected) { clearInterval(poll); return; }
@@ -237,17 +350,25 @@
               setPct(d && d.progress ? d.progress : 1);
               if (s === "success") {
                 clearInterval(poll);
+                procProgress = 100;
+                // keep the assembling cloud running and hold off on the
+                // "complete" wording until the model has actually painted —
+                // completing the sentence before anything is on screen is
+                // precisely what read as "it says done but nothing loaded"
+                status.textContent = "Assembling…";
                 try {
                   if (d.model_url) {
                     // load the GLB through the worker proxy (avoids cross-origin issues)
                     var proxied = api + "/proxy?url=" + encodeURIComponent(d.model_url);
                     sessionStorage.setItem("traces-capture-model", proxied);
                     showModel(proxied);
+                    showModel._onReady(function () { complete(); });
+                  } else {
+                    complete();
                   }
                   if (d.thumb) sessionStorage.setItem("traces-capture-thumb", d.thumb);
-                } catch (e) {}
+                } catch (e) { complete(); }
                 localStorage.removeItem("traces-inflight-task");
-                complete();
               } else if (s === "failed" || s === "cancelled" || s === "banned" || s === "unknown") {
                 clearInterval(poll);
                 localStorage.removeItem("traces-inflight-task");

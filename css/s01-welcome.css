@@ -194,12 +194,24 @@
 
   .main {
     flex-direction: column;
-    gap: 3rem;
-    padding-top: 8.5rem; /* clear the fixed logo + give the meta line room */
+    gap: 2.5rem;
+    padding-top: 7rem; /* clear the fixed logo */
     padding-bottom: 5.5rem;
     justify-content: flex-start;
     align-items: flex-start;
   }
+
+  /* on a phone the headline reads first (above the photo), then the scan,
+     then a small "add your capture" line with a big plus off the edge below
+     it — dissolve the hero-text wrapper so its headline and cta become
+     direct flex children of .main and can be ordered around the stack */
+  .hero-text {
+    display: contents;
+  }
+
+  .headline { order: 0; }
+  .polaroid-stack { order: 1; }
+  .cta { order: 2; }
 
   /* the desktop stack fans three polaroids wide, which on a phone collapsed
      into one another so every caption piled up in the same spot. On mobile
@@ -210,7 +222,7 @@
     width: min(230px, 62vw);
     height: auto;
     aspect-ratio: 1 / 1.12;
-    margin: 0 auto;
+    margin: 0.5rem auto 0;
     align-self: center;
     transform: none;
   }
@@ -245,5 +257,34 @@
 
   .headline {
     white-space: normal;
+  }
+
+  /* small, quiet invitation line with an oversized plus dropped to the far
+     edge beneath it — the plus, not the words, is the thing to tap */
+  .cta {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin-top: 0.5rem;
+    text-decoration: none;
+    font-size: inherit;
+  }
+
+  .cta-text {
+    font-size: 1.05rem;
+    text-align: left;
+    text-transform: lowercase;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .cta-plus {
+    align-self: flex-end;
+    font-size: 4.75rem;
+    line-height: 0.8;
+    font-weight: 300;
+    margin-top: 0.4rem;
+    margin-right: -0.5vw;
   }
 }
