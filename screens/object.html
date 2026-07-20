@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260720x">
-<link rel="stylesheet" href="../css/chrome.css?v=20260720x">
-<link rel="stylesheet" href="../css/object.css?v=20260720x">
-<script src="../js/cursor.js?v=20260720x" defer></script>
-<script src="../js/grain.js?v=20260720x" defer></script>
-<script src="../js/tilt3d.js?v=20260720x" defer></script>
-<script src="../js/owner.js?v=20260720x"></script>
-<script src="../js/config.js?v=20260720x"></script>
-<script src="../js/archive.js?v=20260720x"></script>
-<script src="../js/blobstore.js?v=20260720x"></script>
-<script src="../js/remote-captures.js?v=20260720x"></script>
-<script src="../js/community-seed.js?v=20260720x"></script>
-<script src="../js/flow.js?v=20260720x" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260720y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260720y">
+<link rel="stylesheet" href="../css/object.css?v=20260720y">
+<script src="../js/cursor.js?v=20260720y" defer></script>
+<script src="../js/grain.js?v=20260720y" defer></script>
+<script src="../js/tilt3d.js?v=20260720y" defer></script>
+<script src="../js/owner.js?v=20260720y"></script>
+<script src="../js/config.js?v=20260720y"></script>
+<script src="../js/archive.js?v=20260720y"></script>
+<script src="../js/blobstore.js?v=20260720y"></script>
+<script src="../js/remote-captures.js?v=20260720y"></script>
+<script src="../js/community-seed.js?v=20260720y"></script>
+<script src="../js/flow.js?v=20260720y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260720y"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720x" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260720y" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720x";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720x";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260720y";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260720y";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -63,21 +63,31 @@
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
         <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
-        <li hidden class="obj-menu-density" id="menuPointSizeRow">
+        <li hidden><button type="button" id="menuAdjust">Adjust view &amp; orientation</button></li>
+      </ul>
+
+      <!-- opened from the menu's "Adjust view & orientation" entry - keeps
+           the point-size + straighten sliders in their own panel instead of
+           sitting inline in the menu list, which read as cluttered -->
+      <div class="obj-adjust-panel" id="objAdjustPanel" hidden>
+        <div class="obj-adjust-row">
           <label for="menuPointSizeSlider">point size</label>
           <input type="range" id="menuPointSizeSlider" min="1" max="5" value="3" step="1">
           <span id="menuPointSizeLabel">balanced</span>
-        </li>
-        <li hidden class="obj-menu-density" id="menuTiltXRow">
+        </div>
+        <div class="obj-adjust-row">
           <label for="menuTiltXSlider">tilt (forward/back)</label>
           <input type="range" id="menuTiltXSlider" min="-45" max="45" value="0" step="1">
-        </li>
-        <li hidden class="obj-menu-density" id="menuTiltZRow">
+        </div>
+        <div class="obj-adjust-row">
           <label for="menuTiltZSlider">tilt (side to side)</label>
           <input type="range" id="menuTiltZSlider" min="-45" max="45" value="0" step="1">
-        </li>
-        <li hidden><button type="button" id="menuSaveTilt">Save this as upright</button></li>
-      </ul>
+        </div>
+        <div class="obj-adjust-actions">
+          <button type="button" id="menuSaveTilt">Save as upright</button>
+          <button type="button" id="objAdjustDone">Done</button>
+        </div>
+      </div>
     </header>
 
     <!-- capture history timeline: the line runs through the cubes, ending at the
@@ -1904,7 +1914,6 @@
       // capture was reopened afterwards
       var POINT_SIZE_LEVELS = [0.006, 0.009, 0.013, 0.018, 0.026];
       var POINT_SIZE_NAMES = ["sparse", "light", "balanced", "dense", "very dense"];
-      var menuPointSizeRow = document.getElementById("menuPointSizeRow");
       var menuPointSizeSlider = document.getElementById("menuPointSizeSlider");
       var menuPointSizeLabel = document.getElementById("menuPointSizeLabel");
       function closestPointSizeIndex(size) {
@@ -1958,20 +1967,13 @@
         var onLiveModel = catalog[key].model && !modelViewer.hidden && modelViewer.loaded;
         var onLivePoints = pcViewer && !objPoints.hidden;
         menuSetDefaultViewRow.hidden = !(onLiveModel || onLivePoints);
-        menuPointSizeRow.hidden = !onLivePoints;
-        if (onLivePoints) {
-          var idx = closestPointSizeIndex(catalog[key].pointSize || 0.013);
-          menuPointSizeSlider.value = idx + 1;
-          menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
-        }
-        menuTiltXRow.hidden = !onLivePoints;
-        menuTiltZRow.hidden = !onLivePoints;
-        menuSaveTiltRow.hidden = !onLivePoints;
-        if (onLivePoints) {
-          var savedTilt = catalog[key].tilt || { x: 0, z: 0 };
-          menuTiltXSlider.value = Math.round((savedTilt.x || 0) * 180 / Math.PI);
-          menuTiltZSlider.value = Math.round((savedTilt.z || 0) * 180 / Math.PI);
-        }
+        // point-size + straighten sliders live behind this one entry now,
+        // in their own panel (see menuAdjust below), instead of a stack of
+        // inline slider rows cluttering the menu list itself
+        menuAdjustRow.hidden = !onLivePoints;
+        // closing the menu also dismisses the adjust panel, so it never
+        // lingers open over the capture on its own
+        if (!opening) closeAdjustPanel();
       });
       function savePointSize(size) {
         catalog[key].pointSize = size;
@@ -2005,10 +2007,29 @@
       // right angle doesn't write anything until it's confirmed
       var menuTiltXSlider = document.getElementById("menuTiltXSlider");
       var menuTiltZSlider = document.getElementById("menuTiltZSlider");
-      var menuTiltXRow = menuTiltXSlider.closest("li");
-      var menuTiltZRow = menuTiltZSlider.closest("li");
       var menuSaveTilt = document.getElementById("menuSaveTilt");
-      var menuSaveTiltRow = menuSaveTilt.closest("li");
+
+      // the single menu entry that opens the sliders in their own panel
+      var menuAdjust = document.getElementById("menuAdjust");
+      var menuAdjustRow = menuAdjust.closest("li");
+      var objAdjustPanel = document.getElementById("objAdjustPanel");
+      function closeAdjustPanel() { objAdjustPanel.hidden = true; }
+      menuAdjust.addEventListener("click", function () {
+        // close the menu and open the adjust panel in its place, seeded
+        // with this capture's current point-size + tilt so the sliders
+        // start where the scan actually is, not at their defaults
+        menu.hidden = true;
+        objMenuBtn.setAttribute("aria-expanded", "false");
+        var idx = closestPointSizeIndex(catalog[key].pointSize || 0.013);
+        menuPointSizeSlider.value = idx + 1;
+        menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
+        var savedTilt = catalog[key].tilt || { x: 0, z: 0 };
+        menuTiltXSlider.value = Math.round((savedTilt.x || 0) * 180 / Math.PI);
+        menuTiltZSlider.value = Math.round((savedTilt.z || 0) * 180 / Math.PI);
+        objAdjustPanel.hidden = false;
+      });
+      document.getElementById("objAdjustDone").addEventListener("click", closeAdjustPanel);
+
       function applyTiltFromSliders() {
         if (!pcViewer) return;
         var x = parseFloat(menuTiltXSlider.value) * Math.PI / 180;
