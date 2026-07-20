@@ -18,8 +18,8 @@
        the phone scans it, takes a photo, and calls /generate itself, then
        drops the resulting task_id in this tiny relay for the desktop to pick
        up — the desktop never needs its own connection to the phone --
-    POST /session/<id>   body { task_id }               -> { ok: true }
-    GET  /session/<id>                                  -> { task_id }  (null until set)
+    POST /session/<id>   body { task_id, thumb? }        -> { ok: true }
+    GET  /session/<id>                                  -> { task_id, thumb }  (null until set)
     Requires a KV namespace bound as SESSIONS (see backend/README.md).
 
     -- shared captures: a provisional stopgap so anything captured through
@@ -237,10 +237,15 @@ export default {
           const body = await request.json().catch(() => ({}));
           if (!body.task_id) return json({ error: "task_id required" }, 400);
           // sessions are single-use and short-lived — the QR is shown for one
-          // capture, not kept around
-          await env.SESSIONS.put(sessionId, JSON.stringify({ task_id: body.task_id }), {
-            expirationTtl: 600,
-          });
+          // capture, not kept around. The optional `thumb` is a small JPEG
+          // data URL of the phone's shot, relayed so the desktop can show the
+          // photo back for a final look before proceeding (older phone pages
+          // simply don't send it, and the desktop falls back gracefully).
+          await env.SESSIONS.put(
+            sessionId,
+            JSON.stringify({ task_id: body.task_id, thumb: body.thumb || null }),
+            { expirationTtl: 600 }
+          );
           return json({ ok: true });
         }
         if (request.method === "GET") {

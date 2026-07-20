@@ -227,3 +227,85 @@
 .up-btn:hover {
   opacity: 0.85;
 }
+
+/* Phone-capture confirm — the desktop shows the photo the phone just took,
+   with a Process button, so the capture is reviewed on the big screen before
+   the model is built (mirrors the review beat of the file-upload path) */
+.phone-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 9, 8, 0.82);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  padding: 5vw;
+}
+
+.phone-confirm-card {
+  background: #17150f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 26px 26px 24px;
+  max-width: min(420px, 90vw);
+  width: 100%;
+  text-align: center;
+  color: #ffffff;
+}
+
+.phone-confirm-title {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.phone-confirm-img {
+  display: block;
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  margin: 16px 0 14px;
+  background: #000000;
+}
+
+.phone-confirm-sub {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  margin-bottom: 20px;
+}
+
+.phone-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.phone-confirm-retake,
+.phone-confirm-process {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  cursor: pointer;
+}
+
+.phone-confirm-retake {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+.phone-confirm-process {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: var(--color-ink-blue);
+}
+
+.phone-confirm-retake:hover,
+.phone-confirm-process:hover {
+  opacity: 0.85;
+}

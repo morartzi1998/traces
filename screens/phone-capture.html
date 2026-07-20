@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721k">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260721k">
-<script src="../js/cursor.js?v=20260721k" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260721k" defer></script>
-<script src="../js/normalize-image.js?v=20260721k" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721l">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260721l">
+<script src="../js/cursor.js?v=20260721l" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260721l" defer></script>
+<script src="../js/normalize-image.js?v=20260721l" defer></script>
 </head>
 <body>
 
@@ -29,7 +29,7 @@
 
     <div class="pc-card" id="pcDone" hidden>
       <h1 class="pc-title">Done</h1>
-      <p class="pc-sub">Check your computer — the model is on its way.</p>
+      <p class="pc-sub">Head back to your computer to review the photo and build the model.</p>
     </div>
 
     <div class="pc-card" id="pcError" hidden>
@@ -64,15 +64,39 @@
         fail("This link is missing its session — scan the QR code again from your computer.");
       }
 
+      // a small JPEG preview of the shot, relayed to the desktop so it can
+      // show the photo back for a final look before building the model
+      function makeThumb(blob, maxSize) {
+        return new Promise(function (resolve) {
+          var img = new Image();
+          var url = URL.createObjectURL(blob);
+          img.onload = function () {
+            var scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+            var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+            var c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            try { resolve(c.toDataURL("image/jpeg", 0.72)); } catch (e) { resolve(null); }
+          };
+          img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+          img.src = url;
+        });
+      }
+
       document.getElementById("pcInput").addEventListener("change", function (e) {
         var file = e.target.files && e.target.files[0];
         if (!file || !sessionId || !api) return;
         showOnly(sending);
 
+        var previewThumb = null;
         window.normalizeImageToJpeg(file).then(function (jpegBlob) {
-          var fd = new FormData();
-          fd.append("image", jpegBlob, "capture.jpg");
-          return fetch(api + "/generate", { method: "POST", body: fd });
+          return makeThumb(jpegBlob, 640).then(function (thumb) {
+            previewThumb = thumb;
+            var fd = new FormData();
+            fd.append("image", jpegBlob, "capture.jpg");
+            return fetch(api + "/generate", { method: "POST", body: fd });
+          });
         })
           .then(function (r) { return r.json(); })
           .then(function (d) {
@@ -80,7 +104,7 @@
             return fetch(api + "/session/" + sessionId, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ task_id: d.task_id }),
+              body: JSON.stringify({ task_id: d.task_id, thumb: previewThumb }),
             }).then(function () { showOnly(done); });
           })
           .catch(function () { fail("Couldn't reach the server — check your connection."); });
