@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721l">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260721l">
-<script src="../js/cursor.js?v=20260721l" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260721l" defer></script>
-<script src="../js/normalize-image.js?v=20260721l" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721m">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260721m">
+<script src="../js/cursor.js?v=20260721m" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260721m" defer></script>
+<script src="../js/normalize-image.js?v=20260721m" defer></script>
 </head>
 <body>
 
@@ -101,10 +101,18 @@
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (!d || !d.task_id) { fail("The photo couldn't be processed."); return; }
+            // the deployed relay only stores whatever's in `task_id`, so the
+            // preview rides along inside it as a small JSON blob ({ t, thumb }).
+            // The desktop unpacks it; a plain id (no preview) still works too.
+            // Self-contained + expires with the 10-min session, so nothing is
+            // left behind — and it needs no backend change to work today.
+            var relay = previewThumb
+              ? JSON.stringify({ t: d.task_id, thumb: previewThumb })
+              : d.task_id;
             return fetch(api + "/session/" + sessionId, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ task_id: d.task_id, thumb: previewThumb }),
+              body: JSON.stringify({ task_id: relay }),
             }).then(function () { showOnly(done); });
           })
           .catch(function () { fail("Couldn't reach the server — check your connection."); });
