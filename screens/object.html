@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723x">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723x">
-<link rel="stylesheet" href="../css/object.css?v=20260723x">
-<script src="../js/cursor.js?v=20260723x" defer></script>
-<script src="../js/grain.js?v=20260723x" defer></script>
-<script src="../js/tilt3d.js?v=20260723x" defer></script>
-<script src="../js/owner.js?v=20260723x"></script>
-<script src="../js/config.js?v=20260723x"></script>
-<script src="../js/archive.js?v=20260723x"></script>
-<script src="../js/blobstore.js?v=20260723x"></script>
-<script src="../js/particle-loader.js?v=20260723x"></script>
-<script src="../js/remote-captures.js?v=20260723x"></script>
-<script src="../js/community-seed.js?v=20260723x"></script>
-<script src="../js/flow.js?v=20260723x" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723y">
+<link rel="stylesheet" href="../css/object.css?v=20260723y">
+<script src="../js/cursor.js?v=20260723y" defer></script>
+<script src="../js/grain.js?v=20260723y" defer></script>
+<script src="../js/tilt3d.js?v=20260723y" defer></script>
+<script src="../js/owner.js?v=20260723y"></script>
+<script src="../js/config.js?v=20260723y"></script>
+<script src="../js/archive.js?v=20260723y"></script>
+<script src="../js/blobstore.js?v=20260723y"></script>
+<script src="../js/particle-loader.js?v=20260723y"></script>
+<script src="../js/remote-captures.js?v=20260723y"></script>
+<script src="../js/community-seed.js?v=20260723y"></script>
+<script src="../js/flow.js?v=20260723y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723y"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723x" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723y" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723x";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723x";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723y";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723y";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -483,10 +483,13 @@
     });
     var positions = [], colors = [];
     var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
+    // which scan contributed each point — kept so the viewer can offer a
+    // "colour by scan" mode that makes the combination legible at a glance
+    var origin = [];
     // to keep the combined cloud from doubling in density (which just looks like
     // noise), thin each scan a little as more scans stack on the same spot
     var keep = norm.length > 1 ? Math.max(0.45, 1 / Math.sqrt(norm.length)) : 1;
-    norm.forEach(function (it) {
+    norm.forEach(function (it, scanIdx) {
       var pos = it.g.getAttribute("position");
       var col = it.g.getAttribute("color");
       for (var i = 0; i < pos.count; i++) {
@@ -501,13 +504,34 @@
           x = nx; y = ny; z = nz;
         }
         positions.push(x, y, z);                            // same shared space
+        origin.push(scanIdx);
         if (hasColor && col) colors.push(col.getX(i), col.getY(i), col.getZ(i));
+        else colors.push(0.94, 0.93, 0.9);
       }
     });
     if (!positions.length) return null;
     var merged = new THREE.BufferGeometry();
     merged.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    if (hasColor && colors.length) merged.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    var origColors = new Float32Array(colors);
+    merged.setAttribute("color", new THREE.BufferAttribute(new Float32Array(origColors), 3));
+    // distinct, dark-background-friendly tints, one per scan, plus the real
+    // colours — the UI swaps between the two buffers on demand
+    var TINTS = [
+      [0.94, 0.93, 0.9],   // cream
+      [0.36, 0.45, 1.0],   // blue
+      [1.0, 0.62, 0.26],   // amber
+      [0.36, 0.85, 0.62],  // green
+      [0.95, 0.42, 0.62],  // rose
+      [0.62, 0.5, 1.0],    // violet
+    ];
+    var altColors = new Float32Array(origin.length * 3);
+    for (var oi = 0; oi < origin.length; oi++) {
+      var tint = TINTS[origin[oi] % TINTS.length];
+      altColors[oi * 3] = tint[0]; altColors[oi * 3 + 1] = tint[1]; altColors[oi * 3 + 2] = tint[2];
+    }
+    merged.userData.origColors = origColors;
+    merged.userData.altColors = altColors;
+    merged.userData.tints = TINTS;
     return merged;
   };
 </script>
@@ -630,6 +654,10 @@
            and the alignment is computed from those anchors instead of the
            automatic guess -->
       <button class="obj-merge-manual" type="button" id="objMergeManual" hidden>align by hand</button>
+      <!-- tints every point by WHICH scan it came from, so the combination
+           reads visually; second press restores the real colours -->
+      <button class="obj-merge-manual obj-merge-tint" type="button" id="objMergeTint" hidden>colour by scan</button>
+      <div class="obj-merge-legend" id="objMergeLegend" hidden></div>
       <button class="obj-merge-close" type="button" id="objMergeClose" aria-label="Close">&times;</button>
     </div>
 
@@ -2843,6 +2871,40 @@
       // kept from the last merge so "align by hand" can rerun the combination
       // from the same loaded scans without re-fetching megabytes
       var lastMergeGeoms = null;
+      var lastMergeVersions = null; // aligned with lastMergeGeoms, for the legend
+      var lastMergedGeometry = null;
+      var tintOn = false;
+      function updateMergeLegend() {
+        var legend = document.getElementById("objMergeLegend");
+        legend.hidden = !tintOn;
+        if (!tintOn || !lastMergedGeometry) { legend.innerHTML = ""; return; }
+        var tints = lastMergedGeometry.userData.tints || [];
+        legend.innerHTML = "";
+        (lastMergeVersions || []).forEach(function (v, i) {
+          var t = tints[i % tints.length] || [1, 1, 1];
+          var chip = document.createElement("span");
+          var box = document.createElement("i");
+          box.style.background = "rgb(" + Math.round(t[0] * 255) + "," + Math.round(t[1] * 255) + "," + Math.round(t[2] * 255) + ")";
+          chip.appendChild(box);
+          var when = v && v.created ? new Date(v.created).toLocaleDateString() : "";
+          chip.appendChild(document.createTextNode((v && v.title ? v.title : "scan " + (i + 1)) + (when ? " — " + when : "")));
+          legend.appendChild(chip);
+        });
+      }
+      function applyTint() {
+        if (!lastMergedGeometry) return;
+        var attr = lastMergedGeometry.getAttribute("color");
+        var src = tintOn ? lastMergedGeometry.userData.altColors : lastMergedGeometry.userData.origColors;
+        if (!attr || !src) return;
+        attr.array.set(src);
+        attr.needsUpdate = true;
+        document.getElementById("objMergeTint").textContent = tintOn ? "real colours" : "colour by scan";
+        updateMergeLegend();
+      }
+      document.getElementById("objMergeTint").addEventListener("click", function () {
+        tintOn = !tintOn;
+        applyTint();
+      });
       function mountMergedResult(merged, doneText) {
         var view = document.getElementById("objMergeView");
         var label = document.getElementById("objMergeLabel");
@@ -2852,6 +2914,12 @@
         clearMergeMarks();
         mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
         label.textContent = doneText;
+        lastMergedGeometry = merged;
+        var tintBtn = document.getElementById("objMergeTint");
+        tintBtn.hidden = !(merged.userData && merged.userData.altColors);
+        tintOn = false;
+        tintBtn.textContent = "colour by scan";
+        updateMergeLegend();
       }
       function openVisualMerge() {
         var overlay = document.getElementById("objMerge");
@@ -2860,14 +2928,20 @@
         if (vs.length < 2) return;
         overlay.hidden = false;
         lastMergeGeoms = null;
+        lastMergeVersions = null;
         document.getElementById("objMergeManual").hidden = true;
+        document.getElementById("objMergeTint").hidden = true;
         label.textContent = "combining " + vs.length + " scans…";
-        Promise.all(vs.map(loadVersionGeometry)).then(function (geoms) {
-          geoms = geoms.filter(Boolean);
+        Promise.all(vs.map(loadVersionGeometry)).then(function (loaded) {
+          // keep the version metadata aligned with the scans that actually
+          // loaded, so the legend labels the right colours
+          var geoms = [], kept = [];
+          loaded.forEach(function (g, i) { if (g) { geoms.push(g); kept.push(vs[i]); } });
           if (geoms.length < 2 || !window.__frankensteinMerge || !window.__mountPointCloudViewer) {
             label.textContent = "couldn't combine these scans"; return;
           }
           lastMergeGeoms = geoms;
+          lastMergeVersions = kept;
           // the alignment (ICP) is heavy and synchronous — let the label
           // actually paint before it starts, or the screen just freezes on
           // the previous text for a few seconds
@@ -2917,6 +2991,11 @@
         if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
         view.innerHTML = "";
         clearMergeMarks();
+        // single-scan marking mode: the tint/legend belong to a merged result
+        lastMergedGeometry = null;
+        tintOn = false;
+        document.getElementById("objMergeTint").hidden = true;
+        document.getElementById("objMergeLegend").hidden = true;
         mergeViewer = window.__mountPointCloudViewer(view, lastMergeGeoms[which],
           { pointSize: catalog[key].pointSize || 0.013 });
         if (mergeViewer.onFrame) mergeViewer.onFrame(renderMergeMarks);
@@ -2964,8 +3043,13 @@
         mergeViewer = null;
         manualAlign = null;
         lastMergeGeoms = null;
+        lastMergeVersions = null;
+        lastMergedGeometry = null;
+        tintOn = false;
         clearMergeMarks();
         document.getElementById("objMergeManual").hidden = true;
+        document.getElementById("objMergeTint").hidden = true;
+        document.getElementById("objMergeLegend").hidden = true;
         document.getElementById("objMergeView").innerHTML = "";
         overlay.hidden = true;
       }
