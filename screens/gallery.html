@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723r">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723r">
-<link rel="stylesheet" href="../css/gallery.css?v=20260723r">
-<script src="../js/cursor.js?v=20260723r" defer></script>
-<script src="../js/grain.js?v=20260723r" defer></script>
-<script src="../js/owner.js?v=20260723r"></script>
-<script src="../js/config.js?v=20260723r"></script>
-<script src="../js/archive.js?v=20260723r"></script>
-<script src="../js/blobstore.js?v=20260723r"></script>
-<script src="../js/remote-captures.js?v=20260723r"></script>
-<script src="../js/designer-archive.js?v=20260723r"></script>
-<script src="../js/gallery-title.js?v=20260723r" defer></script>
-<script src="../js/flow.js?v=20260723r" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723s">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723s">
+<link rel="stylesheet" href="../css/gallery.css?v=20260723s">
+<script src="../js/cursor.js?v=20260723s" defer></script>
+<script src="../js/grain.js?v=20260723s" defer></script>
+<script src="../js/owner.js?v=20260723s"></script>
+<script src="../js/config.js?v=20260723s"></script>
+<script src="../js/archive.js?v=20260723s"></script>
+<script src="../js/blobstore.js?v=20260723s"></script>
+<script src="../js/remote-captures.js?v=20260723s"></script>
+<script src="../js/designer-archive.js?v=20260723s"></script>
+<script src="../js/gallery-title.js?v=20260723s" defer></script>
+<script src="../js/flow.js?v=20260723s" defer></script>
 </head>
 <body>
 
@@ -646,8 +646,16 @@
               var pushKey = "traces-verpush-" + cap.id;
               if (sessionStorage.getItem(pushKey) === "done") return;
               sessionStorage.setItem(pushKey, "trying");
-              var el = grid.querySelector('.gal-sync-status[data-cap-id="' + cap.id + '"]');
+              // the label is looked up FRESH on every update: render() runs
+              // again whenever another fetch resolves and rebuilds the grid,
+              // so an element captured once here ends up detached — every
+              // percentage was being written to a card that no longer existed
+              // ("uploading" with a frozen label that never moved)
+              function labelEl() {
+                return grid.querySelector('.gal-sync-status[data-cap-id="' + cap.id + '"]');
+              }
               RemoteCaptures.publish(cap, "archive", function (pct) {
+                var el = labelEl();
                 if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
               }).then(function (res) {
                 // keep the in-memory record's version count current too - a
@@ -661,6 +669,7 @@
                 } else {
                   sessionStorage.removeItem(pushKey);
                 }
+                var el = labelEl();
                 if (el) {
                   el.textContent = res ? "☁ synced — timeline visible to visitors too" : "only on this device";
                   el.className = "gal-sync-status gal-sync-status--" + (res ? "synced" : "local-only");
