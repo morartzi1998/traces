@@ -140,6 +140,15 @@
   width: min(360px, 60vw);
   transform-origin: top;
   transition: transform 0.2s ease, opacity 0.2s ease;
+  /* a dark scrim behind the menu so its text stays readable even when it
+     sits over a bright point-cloud / space capture (which was washing the
+     pale menu text out entirely) */
+  background: rgba(14, 12, 10, 0.82);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  padding: 2px 14px 4px;
+  border-radius: 3px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 /* closing collapses the menu down to a thin line rather than just
@@ -1485,6 +1494,21 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   .obj-head {
     left: 5vw;
     right: 5vw;
+  }
+
+  /* long single-word titles (e.g. BATHROOM_POINT_CLOUD) were running off the
+     right edge — let the title shrink and wrap within the header instead */
+  .obj-title-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .obj-title {
+    font-size: 1.2rem;
+    letter-spacing: 0.04em;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .obj-timeline {
