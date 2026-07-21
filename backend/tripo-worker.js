@@ -145,6 +145,13 @@ async function callTripo(apiKey, file) {
       // side/back with the face turned away from the viewer — align it to
       // how the object was actually framed in the photo instead
       orientation: "align_image",
+      // PBR generates real physically-based materials (roughness/metalness),
+      // so fabric/upholstery reads as cloth with proper sheen instead of a
+      // flat baked texture — the single best setting for furniture
+      pbr: true,
+      // keep the surface texture faithful to the actual photo instead of
+      // letting Tripo re-invent the pattern/weave
+      texture_alignment: "original_image",
     }),
   });
   const taskData = await taskRes.json().catch(() => ({}));
