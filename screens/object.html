@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722g">
-<link rel="stylesheet" href="../css/object.css?v=20260722g">
-<script src="../js/cursor.js?v=20260722g" defer></script>
-<script src="../js/grain.js?v=20260722g" defer></script>
-<script src="../js/tilt3d.js?v=20260722g" defer></script>
-<script src="../js/owner.js?v=20260722g"></script>
-<script src="../js/config.js?v=20260722g"></script>
-<script src="../js/archive.js?v=20260722g"></script>
-<script src="../js/blobstore.js?v=20260722g"></script>
-<script src="../js/remote-captures.js?v=20260722g"></script>
-<script src="../js/community-seed.js?v=20260722g"></script>
-<script src="../js/flow.js?v=20260722g" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722g"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722h">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722h">
+<link rel="stylesheet" href="../css/object.css?v=20260722h">
+<script src="../js/cursor.js?v=20260722h" defer></script>
+<script src="../js/grain.js?v=20260722h" defer></script>
+<script src="../js/tilt3d.js?v=20260722h" defer></script>
+<script src="../js/owner.js?v=20260722h"></script>
+<script src="../js/config.js?v=20260722h"></script>
+<script src="../js/archive.js?v=20260722h"></script>
+<script src="../js/blobstore.js?v=20260722h"></script>
+<script src="../js/remote-captures.js?v=20260722h"></script>
+<script src="../js/community-seed.js?v=20260722h"></script>
+<script src="../js/flow.js?v=20260722h" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722h"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722g" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722h" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722g";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722g";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722h";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722h";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -2113,6 +2113,8 @@
         var inArchive = window.Archive && Archive.get(key);
         var inCommunity = window.Community && Community.get(key);
         var isOwner = window.isOwnerDevice && window.isOwnerDevice();
+        // 1) update the local record(s) so this browser and the gallery show
+        // the new thumbnail right away
         if ((inArchive || inCommunity) && window.BlobStore) {
           var thumbKey = "thumb:" + key;
           window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(dataUrl)).then(function () {
@@ -2120,22 +2122,24 @@
             catalog[key].img = ref;
             if (inArchive) Archive.update(key, { img: ref });
             if (inCommunity) Community.update(key, { img: ref });
-            // sync the new thumbnail to the shared store too, not just this
-            // browser — same scoping rule as everywhere else: only Mor's own
-            // devices publish to the private "archive" scope
-            if (window.RemoteCaptures) {
-              if (inArchive && isOwner) RemoteCaptures.publish(Archive.get(key), "archive");
-              if (inCommunity) RemoteCaptures.publish(Community.get(key), "community");
-            }
           }).catch(function () {});
-          return;
         }
-        // a remote capture the owner is curating (e.g. noga's community item)
-        // isn't in this browser's local stores at all - upload the rendered
-        // thumbnail and rewrite that shared record's img directly on the server
+        // 2) update the SHARED server record too — but ONLY its img field (a
+        // light patch that reuses the existing model/points URLs). A full
+        // RemoteCaptures.publish() here re-uploaded the whole capture, and for
+        // a point-cloud like the Kitchen that meant re-sending a huge raw
+        // cloud that routinely stalls — dropping the thumbnail change with it,
+        // so the new display image never reached the server or other devices.
         if (isOwner) {
-          var serverId = (browsingCommunity || catalog[key].visibility === "community") ? key + "-community" : key;
-          saveThumbnailToServer(serverId, dataUrl);
+          if (inArchive) saveThumbnailToServer(key, dataUrl);
+          if (inCommunity) saveThumbnailToServer(key + "-community", dataUrl);
+          if (!inArchive && !inCommunity) {
+            // a remote capture the owner is curating (e.g. noga's community
+            // item) isn't in this browser's local stores at all — patch it
+            // straight on the server
+            var serverId = (browsingCommunity || catalog[key].visibility === "community") ? key + "-community" : key;
+            saveThumbnailToServer(serverId, dataUrl);
+          }
         }
       }
 
