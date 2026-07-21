@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723d">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723d">
-<link rel="stylesheet" href="../css/gallery.css?v=20260723d">
-<script src="../js/cursor.js?v=20260723d" defer></script>
-<script src="../js/grain.js?v=20260723d" defer></script>
-<script src="../js/owner.js?v=20260723d"></script>
-<script src="../js/config.js?v=20260723d"></script>
-<script src="../js/archive.js?v=20260723d"></script>
-<script src="../js/blobstore.js?v=20260723d"></script>
-<script src="../js/remote-captures.js?v=20260723d"></script>
-<script src="../js/designer-archive.js?v=20260723d"></script>
-<script src="../js/community-seed.js?v=20260723d"></script>
-<script src="../js/gallery-title.js?v=20260723d" defer></script>
-<script src="../js/flow.js?v=20260723d" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723e">
+<link rel="stylesheet" href="../css/gallery.css?v=20260723e">
+<script src="../js/cursor.js?v=20260723e" defer></script>
+<script src="../js/grain.js?v=20260723e" defer></script>
+<script src="../js/owner.js?v=20260723e"></script>
+<script src="../js/config.js?v=20260723e"></script>
+<script src="../js/archive.js?v=20260723e"></script>
+<script src="../js/blobstore.js?v=20260723e"></script>
+<script src="../js/remote-captures.js?v=20260723e"></script>
+<script src="../js/designer-archive.js?v=20260723e"></script>
+<script src="../js/community-seed.js?v=20260723e"></script>
+<script src="../js/gallery-title.js?v=20260723e" defer></script>
+<script src="../js/flow.js?v=20260723e" defer></script>
 </head>
 <body>
 
@@ -141,6 +141,7 @@
         art.innerHTML =
           '<p class="gal-meta">' + entry.metaText + '<br><span class="gal-who"></span></p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
+          (entry.syncStatus ? '<p class="gal-sync-status gal-sync-status--' + entry.syncStatus + '" data-cap-id="' + entry.id + '"></p>' : '') +
           '<div class="gal-item-actions" hidden>' +
             '<button class="gal-hide" type="button">hide</button>' +
             (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
@@ -156,6 +157,15 @@
           imgEl.src = entry.img || "../assets/images/photo-room.png";
         }
         art.querySelector(".gal-caption").textContent = entry.title || "untitled capture";
+        // a quiet confirmation that a capture shared to the community actually
+        // reached the shared server (so visitors on other devices can see it
+        // too) — same status pattern as "your archive"'s own sync line
+        if (entry.syncStatus) {
+          var statusEl = art.querySelector(".gal-sync-status");
+          statusEl.textContent = entry.syncStatus === "synced"
+            ? "☁ shared — visible to visitors"
+            : entry.syncStatus === "uploading" ? "sharing…" : "not shared yet";
+        }
         art.__hide = entry.hide;
         art.__remove = entry.remove;
 
@@ -276,6 +286,7 @@
         return {
           id: c.id, title: c.title, img: c.img, kind: c.kind,
           metaText: ago(c.created), who: (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : ""),
+          syncStatus: c.syncStatus,
           // real shared captures live on the server under "<id>-community";
           // only the owner may re-photograph one from here
           serverId: isOwner ? c.id + "-community" : null,
@@ -302,8 +313,12 @@
         };
       }
 
+      // this browser's own shared captures render immediately, before the
+      // server confirms anything - "not shared yet" is the honest starting
+      // state, corrected to "shared" (or caught up entirely) once the
+      // remote-merge below resolves, same as the archive's own sync line
       var items = (window.Community ? Community.all() : []).filter(function (c) { return hidden.indexOf(c.id) === -1; });
-      items.forEach(function (c) { grid.insertBefore(buildCard(buildEntry(c)), grid.firstChild); });
+      items.forEach(function (c) { grid.insertBefore(buildCard(buildEntry(Object.assign({ syncStatus: "local-only" }, c))), grid.firstChild); });
       if (window.alignGalleryTitle) window.alignGalleryTitle();
 
       // Mor's global hides need to be known before the seed showcase and
@@ -369,10 +384,32 @@
           if (localCommunityIds[localId] || fullHidden.indexOf(localId) !== -1) return;
           grid.insertBefore(buildCard(buildEntry(Object.assign({}, c, { id: localId, remote: true }))), grid.firstChild);
         });
+        // this browser's own cards rendered as "not shared yet" before this
+        // resolved - flip any that the server already actually has to
+        // "shared" now, rather than leaving a stale/wrong badge sitting there
+        (list || []).forEach(function (c) {
+          var localId = c.id.replace(/-community$/, "");
+          if (!localCommunityIds[localId]) return;
+          var el = grid.querySelector('.gal-sync-status[data-cap-id="' + localId + '"]');
+          if (el) { el.textContent = "☁ shared — visible to visitors"; el.className = "gal-sync-status gal-sync-status--synced"; }
+        });
         // anything shared to the community from this browser before the
         // shared store was reachable never made it there — send it now
         if (window.RemoteCaptures) {
-          RemoteCaptures.syncMissing(window.Community ? Community.all() : [], list, "community");
+          RemoteCaptures.syncMissing(window.Community ? Community.all() : [], list, "community", function (capId, pct, done, success) {
+            var el = grid.querySelector('.gal-sync-status[data-cap-id="' + capId + '"]');
+            if (!el) return;
+            if (!done) {
+              el.textContent = "sharing… " + Math.round(pct * 100) + "%";
+              el.className = "gal-sync-status gal-sync-status--uploading";
+            } else if (success) {
+              el.textContent = "☁ shared — visible to visitors";
+              el.className = "gal-sync-status gal-sync-status--synced";
+            } else {
+              el.textContent = "not shared yet";
+              el.className = "gal-sync-status gal-sync-status--local-only";
+            }
+          });
         }
       });
     })();
