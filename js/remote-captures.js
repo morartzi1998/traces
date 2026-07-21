@@ -15,10 +15,25 @@
   // load the actual bytes an "idb:" ref points at. A ref that's already a
   // plain URL (e.g. a Tripo /proxy link) or missing needs no upload, so
   // there's nothing to load (null).
+  // a Tripo /proxy link points at Tripo's own CDN with a short-lived signed
+  // URL — great for the live preview, useless once saved because it 403s within
+  // hours. Detect it so publish() can re-host its bytes permanently instead.
+  function isTripoProxy(ref) {
+    return typeof ref === "string" && ref.indexOf("/proxy?url=") !== -1;
+  }
+
   function loadBlob(ref) {
-    if (!ref || ref.indexOf("idb:") !== 0) return Promise.resolve(null);
-    if (!(window.BlobStore && api())) return Promise.resolve(null);
-    return window.BlobStore.get(ref.slice(4)).catch(function () { return null; });
+    if (ref && ref.indexOf("idb:") === 0) {
+      if (!(window.BlobStore && api())) return Promise.resolve(null);
+      return window.BlobStore.get(ref.slice(4)).catch(function () { return null; });
+    }
+    // download the Tripo model now (the link is still fresh at publish time)
+    // so its bytes get uploaded to our own store and the saved record keeps a
+    // permanent /captures/file URL, not an expiring one
+    if (isTripoProxy(ref)) {
+      return fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+    }
+    return Promise.resolve(null);
   }
 
   // upload one blob, resolving to the worker's fetchable URL for it (or
@@ -95,7 +110,7 @@
     // with a broken/missing file. Treat that as the whole publish failing
     // rather than reporting success just because the metadata write alone
     // went through.
-    var neededUpload = refs.map(function (r) { return !!(r && r.indexOf("idb:") === 0); });
+    var neededUpload = refs.map(function (r) { return !!(r && (r.indexOf("idb:") === 0 || isTripoProxy(r))); });
     return Promise.all(refs.map(loadBlob)).then(function (blobs) {
       // weight the combined progress by each blob's real byte size. The old
       // naive (a+b+c)/3 average made a point-cloud capture (a tiny thumbnail
