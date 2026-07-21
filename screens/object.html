@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723c">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723c">
-<link rel="stylesheet" href="../css/object.css?v=20260723c">
-<script src="../js/cursor.js?v=20260723c" defer></script>
-<script src="../js/grain.js?v=20260723c" defer></script>
-<script src="../js/tilt3d.js?v=20260723c" defer></script>
-<script src="../js/owner.js?v=20260723c"></script>
-<script src="../js/config.js?v=20260723c"></script>
-<script src="../js/archive.js?v=20260723c"></script>
-<script src="../js/blobstore.js?v=20260723c"></script>
-<script src="../js/particle-loader.js?v=20260723c"></script>
-<script src="../js/remote-captures.js?v=20260723c"></script>
-<script src="../js/community-seed.js?v=20260723c"></script>
-<script src="../js/flow.js?v=20260723c" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723c"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723d">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723d">
+<link rel="stylesheet" href="../css/object.css?v=20260723d">
+<script src="../js/cursor.js?v=20260723d" defer></script>
+<script src="../js/grain.js?v=20260723d" defer></script>
+<script src="../js/tilt3d.js?v=20260723d" defer></script>
+<script src="../js/owner.js?v=20260723d"></script>
+<script src="../js/config.js?v=20260723d"></script>
+<script src="../js/archive.js?v=20260723d"></script>
+<script src="../js/blobstore.js?v=20260723d"></script>
+<script src="../js/particle-loader.js?v=20260723d"></script>
+<script src="../js/remote-captures.js?v=20260723d"></script>
+<script src="../js/community-seed.js?v=20260723d"></script>
+<script src="../js/flow.js?v=20260723d" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723d"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723c" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723d" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723c";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723c";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723d";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723d";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -1971,16 +1971,27 @@
         openBlueEdit(editingAnnotation);
       });
 
+      // falling back to the archive's `order` here whenever the current key
+      // wasn't (yet) found in `communityOrder` used to mean: a visitor
+      // browsing the community, whose local Community store starts empty and
+      // only gets the real remote list merged in asynchronously, would see
+      // archive items the moment they clicked an arrow before that merge
+      // finished. Browsing the community must always stay within
+      // communityOrder, never silently cross over to the archive's list.
       function activeOrder() {
-        return (browsingCommunity && communityOrder.indexOf(key) !== -1) ? communityOrder : order;
+        return browsingCommunity ? communityOrder : order;
       }
       document.getElementById("objPrev").addEventListener("click", function () {
         var o = activeOrder();
-        show(o[(o.indexOf(key) + o.length - 1) % o.length]);
+        if (!o.length) return;
+        var i = o.indexOf(key);
+        show(o[((i === -1 ? 0 : i) + o.length - 1) % o.length]);
       });
       document.getElementById("objNext").addEventListener("click", function () {
         var o = activeOrder();
-        show(o[(o.indexOf(key) + 1) % o.length]);
+        if (!o.length) return;
+        var i = o.indexOf(key);
+        show(o[(i === -1 ? 0 : i + 1) % o.length]);
       });
 
       // timeline: one dot per dated scan version. Rebuilt per capture; hidden
