@@ -1253,9 +1253,10 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   margin-bottom: 24px;
 }
 
-.obj-white-section--annotations {
-  transform: translateY(-8px);
-}
+/* a translateY() nudge here doesn't push layout, so it only reads correctly
+   for short content — a long description or several annotations makes this
+   section visually collide with the one above it instead of just following
+   it, so it's removed in favor of leaving normal flex flow alone */
 
 .obj-white-section--annotations > .obj-white-rule:first-child,
 .obj-link-card-section--annotations > .obj-white-rule:first-child {
@@ -1280,7 +1281,6 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 
 .obj-white-section--actions {
   padding-top: 6px;
-  transform: translateY(-12px);
 }
 
 /* In edit mode the actual textarea, rather than inter-section whitespace,
