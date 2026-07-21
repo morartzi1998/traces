@@ -291,6 +291,7 @@
 }
 
 .phone-confirm-retake,
+.phone-confirm-cancel,
 .phone-confirm-process {
   font-family: var(--font-display);
   font-size: 0.78rem;
@@ -300,7 +301,8 @@
   cursor: pointer;
 }
 
-.phone-confirm-retake {
+.phone-confirm-retake,
+.phone-confirm-cancel {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.6);
   color: #ffffff;
@@ -313,6 +315,7 @@
 }
 
 .phone-confirm-retake:hover,
+.phone-confirm-cancel:hover,
 .phone-confirm-process:hover {
   opacity: 0.85;
 }

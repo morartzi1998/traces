@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722w">
-<link rel="stylesheet" href="../css/gallery.css?v=20260722w">
-<script src="../js/cursor.js?v=20260722w" defer></script>
-<script src="../js/grain.js?v=20260722w" defer></script>
-<script src="../js/owner.js?v=20260722w"></script>
-<script src="../js/config.js?v=20260722w"></script>
-<script src="../js/archive.js?v=20260722w"></script>
-<script src="../js/blobstore.js?v=20260722w"></script>
-<script src="../js/remote-captures.js?v=20260722w"></script>
-<script src="../js/designer-archive.js?v=20260722w"></script>
-<script src="../js/gallery-title.js?v=20260722w" defer></script>
-<script src="../js/flow.js?v=20260722w" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722x">
+<link rel="stylesheet" href="../css/gallery.css?v=20260722x">
+<script src="../js/cursor.js?v=20260722x" defer></script>
+<script src="../js/grain.js?v=20260722x" defer></script>
+<script src="../js/owner.js?v=20260722x"></script>
+<script src="../js/config.js?v=20260722x"></script>
+<script src="../js/archive.js?v=20260722x"></script>
+<script src="../js/blobstore.js?v=20260722x"></script>
+<script src="../js/remote-captures.js?v=20260722x"></script>
+<script src="../js/designer-archive.js?v=20260722x"></script>
+<script src="../js/gallery-title.js?v=20260722x" defer></script>
+<script src="../js/flow.js?v=20260722x" defer></script>
 </head>
 <body>
 
@@ -606,6 +606,14 @@
             var localV = (cap.versions || []).length;
             var remoteV = (remote.versions || []).length;
             if (localV >= 2 && remoteV < localV) {
+              // do this at most once per capture per browser session — without
+              // the guard, every gallery reload kicked off the (heavy) version
+              // re-upload again, saturating the connection so everything else
+              // loaded slowly ("everything takes an hour, even things that
+              // were fast"). One attempt per session is plenty.
+              var pushKey = "traces-verpush-" + cap.id;
+              if (sessionStorage.getItem(pushKey)) return;
+              sessionStorage.setItem(pushKey, "1");
               var el = grid.querySelector('.gal-sync-status[data-cap-id="' + cap.id + '"]');
               RemoteCaptures.publish(cap, "archive", function (pct) {
                 if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
