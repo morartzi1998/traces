@@ -592,6 +592,47 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 }
 .obj-merge-close:hover { opacity: 1; }
 
+/* "align by hand": offered on a two-scan merge — quiet bordered button in
+   the corner, same language as the proc/cancel buttons */
+.obj-merge-manual {
+  position: absolute;
+  bottom: 3.4vh;
+  right: 2.8vw;
+  z-index: 2;
+  background: transparent;
+  border: 1px solid var(--color-cream);
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.obj-merge-manual:hover { opacity: 1; }
+
+/* the numbered anchor dots pinned while marking matching spots */
+.obj-merge-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.obj-merge-marks span {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 18px;
+  height: 18px;
+  background: var(--color-ink-blue);
+  outline: 1px solid #ffffff;
+  color: #ffffff;
+  font-family: var(--font-caption);
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+}
+
 @keyframes obj-stage-loading-pulse {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }

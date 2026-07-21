@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723v">
-<link rel="stylesheet" href="../css/processing.css?v=20260723v">
-<script src="../js/owner.js?v=20260723v"></script>
-<script src="../js/config.js?v=20260723v"></script>
-<script src="../js/cursor.js?v=20260723v" defer></script>
-<script src="../js/grain.js?v=20260723v" defer></script>
-<script src="../js/blobstore.js?v=20260723v"></script>
-<script src="../js/flow.js?v=20260723v" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723w">
+<link rel="stylesheet" href="../css/processing.css?v=20260723w">
+<script src="../js/owner.js?v=20260723w"></script>
+<script src="../js/config.js?v=20260723w"></script>
+<script src="../js/cursor.js?v=20260723w" defer></script>
+<script src="../js/grain.js?v=20260723w" defer></script>
+<script src="../js/blobstore.js?v=20260723w"></script>
+<script src="../js/flow.js?v=20260723w" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723w"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723v" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723w" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260723v";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723v";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260723w";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723w";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__serializeGeometry = serializeGeometry;

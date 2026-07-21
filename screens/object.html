@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723v">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723v">
-<link rel="stylesheet" href="../css/object.css?v=20260723v">
-<script src="../js/cursor.js?v=20260723v" defer></script>
-<script src="../js/grain.js?v=20260723v" defer></script>
-<script src="../js/tilt3d.js?v=20260723v" defer></script>
-<script src="../js/owner.js?v=20260723v"></script>
-<script src="../js/config.js?v=20260723v"></script>
-<script src="../js/archive.js?v=20260723v"></script>
-<script src="../js/blobstore.js?v=20260723v"></script>
-<script src="../js/particle-loader.js?v=20260723v"></script>
-<script src="../js/remote-captures.js?v=20260723v"></script>
-<script src="../js/community-seed.js?v=20260723v"></script>
-<script src="../js/flow.js?v=20260723v" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723w">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723w">
+<link rel="stylesheet" href="../css/object.css?v=20260723w">
+<script src="../js/cursor.js?v=20260723w" defer></script>
+<script src="../js/grain.js?v=20260723w" defer></script>
+<script src="../js/tilt3d.js?v=20260723w" defer></script>
+<script src="../js/owner.js?v=20260723w"></script>
+<script src="../js/config.js?v=20260723w"></script>
+<script src="../js/archive.js?v=20260723w"></script>
+<script src="../js/blobstore.js?v=20260723w"></script>
+<script src="../js/particle-loader.js?v=20260723w"></script>
+<script src="../js/remote-captures.js?v=20260723w"></script>
+<script src="../js/community-seed.js?v=20260723w"></script>
+<script src="../js/flow.js?v=20260723w" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723w"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,15 +28,16 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723v" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723w" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723v";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723v";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723w";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723w";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
+  window.__THREE_VEC3 = THREE.Vector3; // the classic scripts hand these to viewer.project()
 
   // reads a (non-Draco) GLB and returns its mesh surface as a point
   // BufferGeometry — positions from every primitive's POSITION accessor,
@@ -82,7 +83,6 @@
         }
         return { data: out, comps: comps, count: acc.count };
       }
-      var positions = [], colors = [], sawColor = false;
       function nodeMatrix(node) {
         var m = new THREE.Matrix4();
         if (node.matrix) m.fromArray(node.matrix);
@@ -94,38 +94,113 @@
         }
         return m;
       }
+      // collect every drawable primitive with its world transform first, so a
+      // global sampling stride can cap the output (huge Tripo meshes carry a
+      // million+ vertices per version)
+      var prims = [];
       function walk(ni, parent) {
         var node = gltf.nodes[ni];
         var world = parent.clone().multiply(nodeMatrix(node));
         if (node.mesh != null) {
           (gltf.meshes[node.mesh].primitives || []).forEach(function (prim) {
-            if (prim.attributes == null || prim.attributes.POSITION == null) return;
-            var pos = accessorData(prim.attributes.POSITION);
-            if (!pos) return;
-            var col = prim.attributes.COLOR_0 != null ? accessorData(prim.attributes.COLOR_0) : null;
-            var v = new THREE.Vector3();
-            for (var i = 0; i < pos.count; i++) {
-              v.set(pos.data[i * 3], pos.data[i * 3 + 1], pos.data[i * 3 + 2]).applyMatrix4(world);
-              positions.push(v.x, v.y, v.z);
-              if (col) {
-                sawColor = true;
-                colors.push(col.data[i * col.comps], col.data[i * col.comps + 1], col.data[i * col.comps + 2]);
-              } else {
-                colors.push(0.94, 0.93, 0.9); // the site's cream, not dead white
-              }
-            }
+            if (prim.attributes && prim.attributes.POSITION != null) prims.push({ prim: prim, world: world });
           });
         }
         (node.children || []).forEach(function (c) { walk(c, world); });
       }
       var scene = gltf.scenes[gltf.scene || 0];
-      var I = new THREE.Matrix4();
-      (scene.nodes || []).forEach(function (n) { walk(n, I); });
-      if (!positions.length) return null;
-      var g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-      g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-      return g;
+      (scene.nodes || []).forEach(function (n) { walk(n, new THREE.Matrix4()); });
+      if (!prims.length) return null;
+
+      // a mesh's colour usually lives in its TEXTURE, not on the vertices —
+      // decode each material's base-colour image once, then sample it at every
+      // vertex's UV, so the derived points carry the real look of the object
+      // (this is what was rendering as flat white before)
+      var texCache = {};
+      function imageData(imgIdx) {
+        if (texCache[imgIdx]) return texCache[imgIdx];
+        texCache[imgIdx] = Promise.resolve(null).then(function () {
+          var img = (gltf.images || [])[imgIdx];
+          if (!img || img.bufferView == null) return null;
+          var bv = gltf.bufferViews[img.bufferView];
+          var bytes = new Uint8Array(bin.buffer, bin.byteOffset + (bv.byteOffset || 0), bv.byteLength);
+          return createImageBitmap(new Blob([bytes], { type: img.mimeType || "image/png" })).then(function (bmp) {
+            // cap the sampling canvas — colour fidelity doesn't need 4K
+            var w = Math.min(bmp.width, 1024), h = Math.min(bmp.height, 1024);
+            var cnv = document.createElement("canvas");
+            cnv.width = w; cnv.height = h;
+            var cx = cnv.getContext("2d");
+            cx.drawImage(bmp, 0, 0, w, h);
+            return cx.getImageData(0, 0, w, h);
+          }).catch(function () { return null; });
+        });
+        return texCache[imgIdx];
+      }
+      function materialColour(prim) {
+        var mat = (gltf.materials || [])[prim.material];
+        var pbr = (mat && mat.pbrMetallicRoughness) || {};
+        var factor = pbr.baseColorFactor || [1, 1, 1, 1];
+        var texInfo = pbr.baseColorTexture;
+        var imgIdx = null;
+        if (texInfo && (gltf.textures || [])[texInfo.index]) {
+          var tex = gltf.textures[texInfo.index];
+          imgIdx = tex.source;
+          // a webp-packed texture (EXT_texture_webp) keeps its image index
+          // inside the extension, not in the regular source field
+          if (imgIdx == null && tex.extensions && tex.extensions.EXT_texture_webp) {
+            imgIdx = tex.extensions.EXT_texture_webp.source;
+          }
+        }
+        return { factor: factor, imgIdx: imgIdx, uvSet: texInfo ? (texInfo.texCoord || 0) : 0 };
+      }
+      var imgPromises = prims.map(function (p) {
+        var mc = materialColour(p.prim);
+        return mc.imgIdx != null ? imageData(mc.imgIdx) : Promise.resolve(null);
+      });
+
+      return Promise.all(imgPromises).then(function (images) {
+        var total = 0;
+        prims.forEach(function (p) { total += gltf.accessors[p.prim.attributes.POSITION].count; });
+        var step = Math.max(1, Math.floor(total / 600000));
+        var positions = [], colors = [];
+        prims.forEach(function (p, pi) {
+          var prim = p.prim, world = p.world;
+          var pos = accessorData(prim.attributes.POSITION);
+          if (!pos) return;
+          var col = prim.attributes.COLOR_0 != null ? accessorData(prim.attributes.COLOR_0) : null;
+          var mc = materialColour(prim);
+          var uvAttr = "TEXCOORD_" + mc.uvSet;
+          var uv = (images[pi] && prim.attributes[uvAttr] != null) ? accessorData(prim.attributes[uvAttr]) : null;
+          var idata = uv ? images[pi] : null;
+          var v = new THREE.Vector3();
+          for (var i = 0; i < pos.count; i += step) {
+            v.set(pos.data[i * 3], pos.data[i * 3 + 1], pos.data[i * 3 + 2]).applyMatrix4(world);
+            positions.push(v.x, v.y, v.z);
+            if (col) {
+              colors.push(col.data[i * col.comps] * mc.factor[0],
+                          col.data[i * col.comps + 1] * mc.factor[1],
+                          col.data[i * col.comps + 2] * mc.factor[2]);
+            } else if (idata) {
+              // repeat-wrap the UV, then read the pixel straight out of the image
+              var u = uv.data[i * uv.comps], vv = uv.data[i * uv.comps + 1];
+              u = ((u % 1) + 1) % 1; vv = ((vv % 1) + 1) % 1;
+              var px = Math.min(idata.width - 1, Math.floor(u * idata.width));
+              var py = Math.min(idata.height - 1, Math.floor(vv * idata.height));
+              var o = (py * idata.width + px) * 4;
+              colors.push((idata.data[o] / 255) * mc.factor[0],
+                          (idata.data[o + 1] / 255) * mc.factor[1],
+                          (idata.data[o + 2] / 255) * mc.factor[2]);
+            } else {
+              colors.push(0.94 * mc.factor[0], 0.93 * mc.factor[1], 0.9 * mc.factor[2]);
+            }
+          }
+        });
+        if (!positions.length) return null;
+        var g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        return g;
+      }).catch(function () { return null; });
     } catch (e) { return null; }
   };
 
@@ -307,11 +382,24 @@
       var r = (g.boundingSphere && g.boundingSphere.radius) || 1;
       return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1), R: null, t: null };
     });
-    // the densest scan anchors the shared space; everyone else aligns to it
+    // the densest scan anchors the shared space; everyone else aligns to it.
+    // With hand-marked landmarks (opts.landmarks = {a, b}: matching spots
+    // clicked on scan 0 and scan 1, in each scan's own raw coordinates) the
+    // first scan is always the anchor, the anchors give the exact starting
+    // rotation+shift (Horn on the pairs), and ICP only fine-polishes.
+    var landmarks = opts.landmarks && geoms.length === 2
+      && opts.landmarks.a && opts.landmarks.b
+      && opts.landmarks.a.length >= 3 && opts.landmarks.a.length === opts.landmarks.b.length
+      ? opts.landmarks : null;
     var refIdx = 0;
-    norm.forEach(function (it, i) {
-      if (it.g.getAttribute("position").count > norm[refIdx].g.getAttribute("position").count) refIdx = i;
-    });
+    if (!landmarks) {
+      norm.forEach(function (it, i) {
+        if (it.g.getAttribute("position").count > norm[refIdx].g.getAttribute("position").count) refIdx = i;
+      });
+    }
+    function normPoint(it, p) {
+      return [(p[0] - it.cx) * it.s, (p[1] - it.cy) * it.s, (p[2] - it.cz) * it.s];
+    }
     function normed(it, n) {
       var raw = __samplePts(it.g, n);
       for (var i = 0; i < raw.length; i += 3) {
@@ -321,11 +409,52 @@
       }
       return raw;
     }
+    function landmarkFit(an, bn) {
+      var n = an.length;
+      var ca = [0, 0, 0], cb = [0, 0, 0];
+      for (var i = 0; i < n; i++) for (var c = 0; c < 3; c++) { ca[c] += an[i][c] / n; cb[c] += bn[i][c] / n; }
+      var S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      for (var j = 0; j < n; j++) for (var r = 0; r < 3; r++) for (var c2 = 0; c2 < 3; c2++)
+        S[r][c2] += (bn[j][r] - cb[r]) * (an[j][c2] - ca[c2]);
+      var R = __rotFromS(S);
+      var t = [
+        ca[0] - (R[0][0] * cb[0] + R[0][1] * cb[1] + R[0][2] * cb[2]),
+        ca[1] - (R[1][0] * cb[0] + R[1][1] * cb[1] + R[1][2] * cb[2]),
+        ca[2] - (R[2][0] * cb[0] + R[2][1] * cb[1] + R[2][2] * cb[2]),
+      ];
+      return { R: R, t: t };
+    }
     var refPts = normed(norm[refIdx], 7000);
     norm.forEach(function (it, i) {
       if (i === refIdx) return;
-      var fit = __icpAlign(refPts, normed(it, 5000));
-      it.R = fit.R; it.t = fit.t;
+      var mov = normed(it, 5000);
+      var init = null;
+      if (landmarks) {
+        var an = landmarks.a.map(function (p) { return normPoint(norm[0], p); });
+        var bn = landmarks.b.map(function (p) { return normPoint(it, p); });
+        init = landmarkFit(an, bn);
+        for (var m = 0; m < mov.length; m += 3) {
+          var x = mov[m], y = mov[m + 1], z = mov[m + 2];
+          mov[m] = init.R[0][0] * x + init.R[0][1] * y + init.R[0][2] * z + init.t[0];
+          mov[m + 1] = init.R[1][0] * x + init.R[1][1] * y + init.R[1][2] * z + init.t[1];
+          mov[m + 2] = init.R[2][0] * x + init.R[2][1] * y + init.R[2][2] * z + init.t[2];
+        }
+      }
+      var fit = __icpAlign(refPts, mov);
+      if (init) {
+        // total = fit ∘ init
+        var Rt = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        for (var r2 = 0; r2 < 3; r2++) for (var c3 = 0; c3 < 3; c3++)
+          Rt[r2][c3] = fit.R[r2][0] * init.R[0][c3] + fit.R[r2][1] * init.R[1][c3] + fit.R[r2][2] * init.R[2][c3];
+        it.R = Rt;
+        it.t = [
+          fit.R[0][0] * init.t[0] + fit.R[0][1] * init.t[1] + fit.R[0][2] * init.t[2] + fit.t[0],
+          fit.R[1][0] * init.t[0] + fit.R[1][1] * init.t[1] + fit.R[1][2] * init.t[2] + fit.t[1],
+          fit.R[2][0] * init.t[0] + fit.R[2][1] * init.t[1] + fit.R[2][2] * init.t[2] + fit.t[2],
+        ];
+      } else {
+        it.R = fit.R; it.t = fit.t;
+      }
     });
     var positions = [], colors = [];
     var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
@@ -469,7 +598,13 @@
          laid side by side so the object's history reads as a single piece -->
     <div class="obj-merge" id="objMerge" hidden>
       <div class="obj-merge-view" id="objMergeView"></div>
+      <!-- numbered anchor dots dropped while marking matching spots by hand -->
+      <div class="obj-merge-marks" id="objMergeMarks"></div>
       <p class="obj-merge-label" id="objMergeLabel">a merge of this object's scans over time</p>
+      <!-- offered for a two-scan merge: mark the same 3 spots on each scan
+           and the alignment is computed from those anchors instead of the
+           automatic guess -->
+      <button class="obj-merge-manual" type="button" id="objMergeManual" hidden>align by hand</button>
       <button class="obj-merge-close" type="button" id="objMergeClose" aria-label="Close">&times;</button>
     </div>
 
@@ -1997,11 +2132,13 @@
         // a capture that carries BOTH a mesh (model) and a point cloud (points)
         // can switch between the two — shown as an external pill toggle, not a
         // menu item, so the menu row stays hidden.
-        // only a TRUE dual capture (a real mesh uploaded alongside a real point
-        // cloud) gets the mesh/points switch. A plain point-cloud capture also
-        // carries a derived low-res voxel "model", but that's an ugly blocky
-        // blob, not a mesh worth offering — so gate on the explicit dual flag.
-        var hasBothReps2 = !!(catalog[k].dual && catalog[k].model && catalog[k].points);
+        // the mesh/points switch shows for: a TRUE dual capture (a real mesh
+        // uploaded alongside a real cloud), and now ANY model capture — its
+        // "points" side is derived by sampling the mesh surface, colours and
+        // all (see showDerivedPoints). A plain point-cloud capture still gets
+        // no switch: its only "mesh" is the ugly blocky voxel stand-in.
+        var hasBothReps2 = !!(catalog[k].dual && catalog[k].model && catalog[k].points)
+          || !!(catalog[k].model && !catalog[k].points);
         var menuToggleRepRow = document.getElementById("menuToggleRepRow");
         if (menuToggleRepRow) menuToggleRepRow.hidden = true;
         var repToggle = document.getElementById("objRepToggle");
@@ -2678,39 +2815,132 @@
           return g;
         }).catch(function () { return null; });
       }
+      // kept from the last merge so "align by hand" can rerun the combination
+      // from the same loaded scans without re-fetching megabytes
+      var lastMergeGeoms = null;
+      function mountMergedResult(merged, doneText) {
+        var view = document.getElementById("objMergeView");
+        var label = document.getElementById("objMergeLabel");
+        if (!merged) { label.textContent = "couldn't combine these scans"; return; }
+        if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
+        view.innerHTML = "";
+        clearMergeMarks();
+        mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
+        label.textContent = doneText;
+      }
       function openVisualMerge() {
         var overlay = document.getElementById("objMerge");
-        var view = document.getElementById("objMergeView");
         var label = document.getElementById("objMergeLabel");
         var vs = mergeableVersions(key);
         if (vs.length < 2) return;
         overlay.hidden = false;
+        lastMergeGeoms = null;
+        document.getElementById("objMergeManual").hidden = true;
         label.textContent = "combining " + vs.length + " scans…";
         Promise.all(vs.map(loadVersionGeometry)).then(function (geoms) {
           geoms = geoms.filter(Boolean);
           if (geoms.length < 2 || !window.__frankensteinMerge || !window.__mountPointCloudViewer) {
             label.textContent = "couldn't combine these scans"; return;
           }
+          lastMergeGeoms = geoms;
           // the alignment (ICP) is heavy and synchronous — let the label
           // actually paint before it starts, or the screen just freezes on
           // the previous text for a few seconds
           label.textContent = "aligning " + geoms.length + " scans onto each other…";
           setTimeout(function () {
             // every scan genuinely aligned to the first, then blended into one
-            var merged = window.__frankensteinMerge(geoms);
-            if (!merged) { label.textContent = "couldn't combine these scans"; return; }
-            if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
-            view.innerHTML = "";
-            mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
-            label.textContent = "every scan of this object, aligned and combined into one — drag to turn";
+            mountMergedResult(window.__frankensteinMerge(geoms),
+              "every scan of this object, aligned and combined into one — drag to turn");
+            // hand-alignment works on exactly two scans
+            document.getElementById("objMergeManual").hidden = geoms.length !== 2;
           }, 60);
         }).catch(function () { label.textContent = "couldn't combine these scans"; });
       }
+
+      // ---- "align by hand": mark the same 3 spots on each of the two scans,
+      // and the merge is re-computed from those anchor pairs (plus a light
+      // automatic polish) instead of the fully automatic guess ---------------
+      var manualAlign = null; // { step: 0|1, pairs: {a:[],b:[]}, offFrame }
+      function clearMergeMarks() {
+        document.getElementById("objMergeMarks").innerHTML = "";
+      }
+      function renderMergeMarks() {
+        var view = document.getElementById("objMergeView");
+        var marksEl = document.getElementById("objMergeMarks");
+        if (!manualAlign || !mergeViewer || !mergeViewer.project) return;
+        var pts = manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b;
+        marksEl.innerHTML = "";
+        var rect = view.getBoundingClientRect();
+        pts.forEach(function (p, i) {
+          var pr = mergeViewer.project(new window.__THREE_VEC3(p[0], p[1], p[2]));
+          if (!pr || pr.behind) return;
+          var el = document.createElement("span");
+          el.textContent = i + 1;
+          el.style.left = (rect.left - view.parentNode.getBoundingClientRect().left + pr.x * rect.width) + "px";
+          el.style.top = (rect.top - view.parentNode.getBoundingClientRect().top + pr.y * rect.height) + "px";
+          marksEl.appendChild(el);
+        });
+      }
+      function manualAlignLabel() {
+        var label = document.getElementById("objMergeLabel");
+        var count = (manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b).length;
+        label.textContent = (manualAlign.step === 0 ? "first scan" : "second scan (same spots, same order)")
+          + " — click matching spot " + (count + 1) + " of 3";
+      }
+      function showManualScan(which) {
+        var view = document.getElementById("objMergeView");
+        if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
+        view.innerHTML = "";
+        clearMergeMarks();
+        mergeViewer = window.__mountPointCloudViewer(view, lastMergeGeoms[which],
+          { pointSize: catalog[key].pointSize || 0.013 });
+        if (mergeViewer.onFrame) mergeViewer.onFrame(renderMergeMarks);
+        manualAlignLabel();
+      }
+      document.getElementById("objMergeManual").addEventListener("click", function () {
+        if (!lastMergeGeoms || lastMergeGeoms.length !== 2) return;
+        manualAlign = { step: 0, pairs: { a: [], b: [] } };
+        document.getElementById("objMergeManual").hidden = true;
+        showManualScan(0);
+      });
+      // a click that was really an orbit-drag must not drop an anchor
+      var mergeDown = null;
+      document.getElementById("objMergeView").addEventListener("pointerdown", function (e) {
+        mergeDown = { x: e.clientX, y: e.clientY };
+      });
+      document.getElementById("objMergeView").addEventListener("click", function (e) {
+        if (!manualAlign || !mergeViewer || !mergeViewer.raycastFromScreen) return;
+        if (mergeDown && Math.abs(e.clientX - mergeDown.x) + Math.abs(e.clientY - mergeDown.y) > 6) return;
+        var hit = mergeViewer.raycastFromScreen(e.clientX, e.clientY);
+        if (!hit) return;
+        var pts = manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b;
+        pts.push([hit.x, hit.y, hit.z]);
+        if (pts.length < 3) { manualAlignLabel(); return; }
+        if (manualAlign.step === 0) {
+          manualAlign.step = 1;
+          showManualScan(1);
+          return;
+        }
+        // both triplets collected — re-merge anchored on them
+        var pairs = manualAlign.pairs;
+        manualAlign = null;
+        clearMergeMarks();
+        document.getElementById("objMergeLabel").textContent = "aligning by your anchor points…";
+        setTimeout(function () {
+          mountMergedResult(window.__frankensteinMerge(lastMergeGeoms, { landmarks: pairs }),
+            "aligned by your anchors — drag to turn");
+          document.getElementById("objMergeManual").hidden = false;
+        }, 60);
+      });
       function closeVisualMerge() {
         var overlay = document.getElementById("objMerge");
         if (!overlay || overlay.hidden) return;
         if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
         mergeViewer = null;
+        manualAlign = null;
+        lastMergeGeoms = null;
+        clearMergeMarks();
+        document.getElementById("objMergeManual").hidden = true;
         document.getElementById("objMergeView").innerHTML = "";
         overlay.hidden = true;
       }
@@ -2724,13 +2954,45 @@
       // switch a dual-representation capture (both a mesh and a point cloud)
       // between its two views — re-renders the stage with one or the other and
       // syncs the external pill toggle's state/label
+      // a model-only capture still gets a "points" side: its mesh surface is
+      // sampled into a coloured cloud (textures included — see __glbToPoints)
+      // the first time, then cached for instant switching after that
+      var derivedPointsCache = {};
+      function showDerivedPoints(k) {
+        stage.dataset.mode = "model";
+        photo.hidden = true;
+        modelViewer.hidden = true;
+        objPoints.hidden = false;
+        disposePcViewer();
+        beginLoading();
+        var ready = derivedPointsCache[k]
+          ? Promise.resolve(derivedPointsCache[k])
+          : (function () {
+              var ref = catalog[k].model;
+              var pk = ref && ref.indexOf("idb:") === 0 ? ref.slice(4) : null;
+              var blobP = pk && window.BlobStore ? window.BlobStore.get(pk)
+                : fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+              return blobP.then(function (b) { return b ? b.arrayBuffer() : null; })
+                .then(function (buf) { return (buf && window.__glbToPoints) ? window.__glbToPoints(buf) : null; })
+                .then(function (g) { if (g) derivedPointsCache[k] = g; return g; });
+            })();
+        ready.then(function (g) {
+          if (key !== k) return;
+          if (!g) { endLoading(); swapScan(k, catalog[k].model, catalog[k].img, null); return; }
+          pcViewer = window.__mountPointCloudViewer(objPoints, g,
+            { pointSize: 0.006, tilt: catalog[k].tilt || null });
+          endLoading();
+        }).catch(function () { if (key === k) endLoading(); });
+      }
       function toggleRepresentation() {
         var img = catalog[key].img;
         var toPoints = !objPoints.hidden ? false : true; // currently showing points? then go to mesh
         if (!objPoints.hidden) {
           swapScan(key, catalog[key].model, img, null);   // points → mesh
+        } else if (catalog[key].dual && catalog[key].points) {
+          swapScan(key, null, img, catalog[key].points);  // mesh → its real cloud
         } else {
-          swapScan(key, null, img, catalog[key].points);  // mesh → points
+          showDerivedPoints(key);                          // mesh → derived cloud
         }
         var sw = document.getElementById("objRepSwitch");
         var lbl = document.getElementById("objRepLabel");
