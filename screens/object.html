@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722o">
-<link rel="stylesheet" href="../css/object.css?v=20260722o">
-<script src="../js/cursor.js?v=20260722o" defer></script>
-<script src="../js/grain.js?v=20260722o" defer></script>
-<script src="../js/tilt3d.js?v=20260722o" defer></script>
-<script src="../js/owner.js?v=20260722o"></script>
-<script src="../js/config.js?v=20260722o"></script>
-<script src="../js/archive.js?v=20260722o"></script>
-<script src="../js/blobstore.js?v=20260722o"></script>
-<script src="../js/particle-loader.js?v=20260722o"></script>
-<script src="../js/remote-captures.js?v=20260722o"></script>
-<script src="../js/community-seed.js?v=20260722o"></script>
-<script src="../js/flow.js?v=20260722o" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722o"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722p">
+<link rel="stylesheet" href="../css/object.css?v=20260722p">
+<script src="../js/cursor.js?v=20260722p" defer></script>
+<script src="../js/grain.js?v=20260722p" defer></script>
+<script src="../js/tilt3d.js?v=20260722p" defer></script>
+<script src="../js/owner.js?v=20260722p"></script>
+<script src="../js/config.js?v=20260722p"></script>
+<script src="../js/archive.js?v=20260722p"></script>
+<script src="../js/blobstore.js?v=20260722p"></script>
+<script src="../js/particle-loader.js?v=20260722p"></script>
+<script src="../js/remote-captures.js?v=20260722p"></script>
+<script src="../js/community-seed.js?v=20260722p"></script>
+<script src="../js/flow.js?v=20260722p" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722p"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722o" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722p" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722o";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722o";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722p";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722p";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -73,23 +73,24 @@
 
   // the "Frankenstein" merge: not scans laid out in a row, but ONE new unified
   // object stitched from parts of each scan. Every scan is aligned to a common
-  // centre + scale (a later re-scan isn't the same size/origin), then space is
-  // sliced into angular wedges around the vertical axis and each scan donates
-  // one wedge — so the result is a single chimera made of pieces of every scan.
+  // centre + scale (a later re-scan isn't the same size/origin), then the shared
+  // space is cut into a few contiguous vertical slabs along X and each scan owns
+  // one slab — so the result is a single CLEAN object whose sections come from
+  // different scans (adjacent slices that tile, not wedges overlapping through
+  // the middle, which read as chaos).
   window.__frankensteinMerge = function (geoms, opts) {
     opts = opts || {};
     geoms = (geoms || []).filter(Boolean);
     if (!geoms.length) return null;
     var n = geoms.length;
-    // wedgesPerScan > 1 interleaves the parts (a more woven chimera) instead of
-    // one big contiguous slice each; K total wedges around the circle
-    var K = n * (opts.wedgesPerScan || 2);
     var norm = geoms.map(function (g) {
       g.computeBoundingSphere();
       var c = (g.boundingSphere && g.boundingSphere.center) || { x: 0, y: 0, z: 0 };
       var r = (g.boundingSphere && g.boundingSphere.radius) || 1;
       return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1) };
     });
+    // after centre+scale, points sit within ~[-1,1] of the origin on each axis
+    var lo = -1, span = 2;
     var positions = [], colors = [];
     var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
     norm.forEach(function (it, j) {
@@ -99,9 +100,9 @@
         var x = (pos.getX(i) - it.cx) * it.s;
         var y = (pos.getY(i) - it.cy) * it.s;
         var z = (pos.getZ(i) - it.cz) * it.s;
-        var theta = Math.atan2(z, x);                       // -PI..PI
-        var wedge = Math.floor(((theta + Math.PI) / (2 * Math.PI)) * K) % K;
-        if (wedge % n !== j) continue;                      // this scan's wedges only
+        var slab = Math.floor(((x - lo) / span) * n);
+        if (slab < 0) slab = 0; else if (slab >= n) slab = n - 1;
+        if (slab !== j) continue;                          // this scan's slab only
         positions.push(x, y, z);
         if (hasColor && col) colors.push(col.getX(i), col.getY(i), col.getZ(i));
       }
