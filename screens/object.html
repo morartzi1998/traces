@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722z">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722z">
-<link rel="stylesheet" href="../css/object.css?v=20260722z">
-<script src="../js/cursor.js?v=20260722z" defer></script>
-<script src="../js/grain.js?v=20260722z" defer></script>
-<script src="../js/tilt3d.js?v=20260722z" defer></script>
-<script src="../js/owner.js?v=20260722z"></script>
-<script src="../js/config.js?v=20260722z"></script>
-<script src="../js/archive.js?v=20260722z"></script>
-<script src="../js/blobstore.js?v=20260722z"></script>
-<script src="../js/particle-loader.js?v=20260722z"></script>
-<script src="../js/remote-captures.js?v=20260722z"></script>
-<script src="../js/community-seed.js?v=20260722z"></script>
-<script src="../js/flow.js?v=20260722z" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722z"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723a">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723a">
+<link rel="stylesheet" href="../css/object.css?v=20260723a">
+<script src="../js/cursor.js?v=20260723a" defer></script>
+<script src="../js/grain.js?v=20260723a" defer></script>
+<script src="../js/tilt3d.js?v=20260723a" defer></script>
+<script src="../js/owner.js?v=20260723a"></script>
+<script src="../js/config.js?v=20260723a"></script>
+<script src="../js/archive.js?v=20260723a"></script>
+<script src="../js/blobstore.js?v=20260723a"></script>
+<script src="../js/particle-loader.js?v=20260723a"></script>
+<script src="../js/remote-captures.js?v=20260723a"></script>
+<script src="../js/community-seed.js?v=20260723a"></script>
+<script src="../js/flow.js?v=20260723a" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723a"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722z" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723a" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722z";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722z";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723a";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723a";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -71,39 +71,38 @@
     return merged;
   };
 
-  // the "Frankenstein" merge: not scans laid out in a row, but ONE new unified
-  // object stitched from parts of each scan. Every scan is aligned to a common
-  // centre + scale (a later re-scan isn't the same size/origin), then the shared
-  // space is cut into a few contiguous vertical slabs along X and each scan owns
-  // one slab — so the result is a single CLEAN object whose sections come from
-  // different scans (adjacent slices that tile, not wedges overlapping through
-  // the middle, which read as chaos).
+  // the "Frankenstein" merge: ONE new unified object that combines every scan.
+  // A later re-scan isn't the same size or origin, so first each scan is
+  // registered to a common centre + scale (bounding-sphere normalised). Then
+  // ALL scans are laid on TOP of each other, sharing the exact same positions,
+  // and their points are combined into a single overlaid cloud. The result is
+  // the same object seen through all its scans at once — not sliced into halves
+  // with a seam down the middle, but co-located and blended, so it reads as one
+  // whole thing rather than two pieces stitched side by side.
   window.__frankensteinMerge = function (geoms, opts) {
     opts = opts || {};
     geoms = (geoms || []).filter(Boolean);
     if (!geoms.length) return null;
-    var n = geoms.length;
     var norm = geoms.map(function (g) {
       g.computeBoundingSphere();
       var c = (g.boundingSphere && g.boundingSphere.center) || { x: 0, y: 0, z: 0 };
       var r = (g.boundingSphere && g.boundingSphere.radius) || 1;
       return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1) };
     });
-    // after centre+scale, points sit within ~[-1,1] of the origin on each axis
-    var lo = -1, span = 2;
     var positions = [], colors = [];
     var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
-    norm.forEach(function (it, j) {
+    // to keep the combined cloud from doubling in density (which just looks like
+    // noise), thin each scan a little as more scans stack on the same spot
+    var keep = norm.length > 1 ? Math.max(0.45, 1 / Math.sqrt(norm.length)) : 1;
+    norm.forEach(function (it) {
       var pos = it.g.getAttribute("position");
       var col = it.g.getAttribute("color");
       for (var i = 0; i < pos.count; i++) {
+        if (keep < 1 && ((i * 2654435761) % 1000) / 1000 > keep) continue;
         var x = (pos.getX(i) - it.cx) * it.s;
         var y = (pos.getY(i) - it.cy) * it.s;
         var z = (pos.getZ(i) - it.cz) * it.s;
-        var slab = Math.floor(((x - lo) / span) * n);
-        if (slab < 0) slab = 0; else if (slab >= n) slab = n - 1;
-        if (slab !== j) continue;                          // this scan's slab only
-        positions.push(x, y, z);
+        positions.push(x, y, z);                            // same shared space
         if (hasColor && col) colors.push(col.getX(i), col.getY(i), col.getZ(i));
       }
     });
@@ -1727,7 +1726,11 @@
         // a capture that carries BOTH a mesh (model) and a point cloud (points)
         // can switch between the two — shown as an external pill toggle, not a
         // menu item, so the menu row stays hidden.
-        var hasBothReps2 = !!(catalog[k].model && catalog[k].points);
+        // only a TRUE dual capture (a real mesh uploaded alongside a real point
+        // cloud) gets the mesh/points switch. A plain point-cloud capture also
+        // carries a derived low-res voxel "model", but that's an ugly blocky
+        // blob, not a mesh worth offering — so gate on the explicit dual flag.
+        var hasBothReps2 = !!(catalog[k].dual && catalog[k].model && catalog[k].points);
         var menuToggleRepRow = document.getElementById("menuToggleRepRow");
         if (menuToggleRepRow) menuToggleRepRow.hidden = true;
         var repToggle = document.getElementById("objRepToggle");
@@ -2382,13 +2385,13 @@
           if (geoms.length < 2 || !window.__frankensteinMerge || !window.__mountPointCloudViewer) {
             label.textContent = "couldn't combine these scans"; return;
           }
-          // one new unified object stitched from parts of each scan
-          var merged = window.__frankensteinMerge(geoms, { wedgesPerScan: 2 });
+          // every scan co-located on the same spot and blended into one object
+          var merged = window.__frankensteinMerge(geoms);
           if (!merged) { label.textContent = "couldn't combine these scans"; return; }
           if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
           view.innerHTML = "";
           mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
-          label.textContent = "a new piece stitched from parts of every scan — drag to turn";
+          label.textContent = "every scan of this object, combined into one — drag to turn";
         }).catch(function () { label.textContent = "couldn't combine these scans"; });
       }
       function closeVisualMerge() {
