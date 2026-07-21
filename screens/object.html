@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723o">
-<link rel="stylesheet" href="../css/object.css?v=20260723o">
-<script src="../js/cursor.js?v=20260723o" defer></script>
-<script src="../js/grain.js?v=20260723o" defer></script>
-<script src="../js/tilt3d.js?v=20260723o" defer></script>
-<script src="../js/owner.js?v=20260723o"></script>
-<script src="../js/config.js?v=20260723o"></script>
-<script src="../js/archive.js?v=20260723o"></script>
-<script src="../js/blobstore.js?v=20260723o"></script>
-<script src="../js/particle-loader.js?v=20260723o"></script>
-<script src="../js/remote-captures.js?v=20260723o"></script>
-<script src="../js/community-seed.js?v=20260723o"></script>
-<script src="../js/flow.js?v=20260723o" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723o"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723p">
+<link rel="stylesheet" href="../css/object.css?v=20260723p">
+<script src="../js/cursor.js?v=20260723p" defer></script>
+<script src="../js/grain.js?v=20260723p" defer></script>
+<script src="../js/tilt3d.js?v=20260723p" defer></script>
+<script src="../js/owner.js?v=20260723p"></script>
+<script src="../js/config.js?v=20260723p"></script>
+<script src="../js/archive.js?v=20260723p"></script>
+<script src="../js/blobstore.js?v=20260723p"></script>
+<script src="../js/particle-loader.js?v=20260723p"></script>
+<script src="../js/remote-captures.js?v=20260723p"></script>
+<script src="../js/community-seed.js?v=20260723p"></script>
+<script src="../js/flow.js?v=20260723p" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723p"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723o" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723p" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723o";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723o";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723p";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723p";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -134,7 +134,10 @@
       </div>
       <p class="obj-updated" id="objUpdated">[updated 15 days ago]</p>
       <div class="obj-title-row">
-        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions" aria-expanded="false">
+        <!-- starts hidden: show() reveals it only for the owner / the capture's
+             own creator. Default-visible meant a visitor briefly saw the
+             editing menu while a server-only capture was still merging in. -->
+        <button class="obj-menu-btn" type="button" id="objMenuBtn" aria-label="Capture actions" aria-expanded="false" hidden>
           <span class="obj-menu-btn-bar"></span>
           <span class="obj-menu-btn-bar"></span>
           <span class="obj-menu-btn-bar"></span>
@@ -1412,7 +1415,10 @@
       // — skipped while showing a different capture's space (SPACE_VIEW_ACTIVE),
       // since key still points at the object, not the space now on screen
       modelViewer.addEventListener("load", function () {
-        if (catalog[key].model && !SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
+        // catalog[key] guarded: this fires asynchronously, and key may have
+        // moved to a server-only capture that hasn't merged in yet — reading
+        // .model off undefined here crashed the whole screen's handlers
+        if (catalog[key] && catalog[key].model && !SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
       });
 
       // ----- hold Space to pan the camera target, for better viewing angles -----
@@ -1432,13 +1438,13 @@
         e.preventDefault(); // otherwise the page itself scrolls
         spaceHeld = true;
         stage.classList.add("obj-stage--pan-ready");
-        if (catalog[key].model && !modelViewer.hidden) modelViewer.removeAttribute("camera-controls");
+        if (catalog[key] && catalog[key].model && !modelViewer.hidden) modelViewer.removeAttribute("camera-controls");
       });
       function releasePan() {
         spaceHeld = false;
         panDrag = null;
         stage.classList.remove("obj-stage--pan-ready", "obj-stage--panning");
-        if (catalog[key].model) modelViewer.setAttribute("camera-controls", "");
+        if (catalog[key] && catalog[key].model) modelViewer.setAttribute("camera-controls", "");
       }
       document.addEventListener("keyup", function (e) {
         if (e.code !== "Space" && e.key !== " ") return;
@@ -1510,6 +1516,10 @@
       // repositionMode, or linkMode is active.
       stage.addEventListener("click", function (e) {
         if (stage.__suppressClick) return;
+        // nothing on stage yet (a server-only capture still merging in on a
+        // slow connection) — a click during that window used to throw and
+        // leave every later interaction dead
+        if (!catalog[key]) return;
         closeRemarkCard();
         closeLinkCard();
         if (linkMode) {
@@ -1689,6 +1699,16 @@
       }
 
       function show(k) {
+        // a stale traces-item (a shared capture that was deleted, or a remote
+        // id opened before the async server merge has landed) used to crash
+        // here — and because every later click re-enters show()/handlers with
+        // the same broken key, the WHOLE screen went dead: arrows, panels,
+        // menu, everything. Fall back to something that exists instead.
+        if (!catalog[k]) {
+          var fallback = order.concat(communityOrder).filter(function (id) { return !!catalog[id]; })[0];
+          if (!fallback || fallback === k) return;
+          k = fallback;
+        }
         key = k;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         clearHotspots();
@@ -2159,6 +2179,10 @@
       }
       var objMenuBtn = document.getElementById("objMenuBtn");
       objMenuBtn.addEventListener("click", function () {
+        // clicked while the capture is still merging in from the server —
+        // the row-visibility logic below reads catalog[key] and crashed,
+        // leaving the menu half-open and its handler dead from then on
+        if (!catalog[key]) return;
         var opening = menu.hidden;
         objMenuBtn.setAttribute("aria-expanded", opening ? "true" : "false");
         if (opening) {
