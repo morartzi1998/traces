@@ -146,6 +146,13 @@
     });
   }
 
+  // how many publishes are currently mid-flight — the kiosk idle reset
+  // (js/flow.js) checks this so it never navigates away from a tab that's
+  // still uploading, which silently killed the big timeline syncs every
+  // time the archive tab sat untouched for ten minutes
+  var inflightPublishes = 0;
+  function busy() { return inflightPublishes > 0; }
+
   // pushes one capture under the given scope ("archive" or "community").
   // Fire-and-forget from the caller's point of view — never throws, never
   // blocks the local save that already happened. onProgress (optional),
@@ -153,6 +160,9 @@
   // capture's blob uploads combined.
   function publish(cap, scope, onProgress) {
     if (!api()) return Promise.resolve(null);
+    inflightPublishes++;
+    var settled = false;
+    function done() { if (!settled) { settled = true; inflightPublishes--; } }
     var refs = [cap.img, cap.model, cap.points];
     // a ref that started as "idb:" genuinely needed its bytes uploaded -
     // if that upload comes back empty, the record would land on the server
@@ -268,7 +278,7 @@
           }).then(function (r) { return r.ok ? r.json() : null; });
         });
       });
-    }).catch(function () { return null; });
+    }).then(function (r) { done(); return r; }, function () { done(); return null; });
   }
 
   // fetches every shared capture for one scope. Always resolves (to [] on
@@ -342,7 +352,7 @@
   }
 
   window.RemoteCaptures = {
-    publish: publish, list: list, syncMissing: syncMissing,
+    publish: publish, list: list, syncMissing: syncMissing, busy: busy,
     listHiddenShowcase: listHiddenShowcase,
     hideShowcaseGlobally: hideShowcaseGlobally,
     restoreShowcaseGlobally: restoreShowcaseGlobally,

@@ -57,6 +57,12 @@ function locationPrefix() {
   if (skip || window.__artifactGo) return; // single-file preview has no pages to reset to
   var timer = null;
   function goHome() {
+    // an in-flight sync to the shared server (e.g. the heavy timeline
+    // re-uploads on the archive) must never be killed by this reset —
+    // navigating away silently aborted the transfer every time the tab
+    // sat untouched for ten minutes, which is precisely when a long
+    // upload is left alone to finish. Wait another round instead.
+    if (window.RemoteCaptures && RemoteCaptures.busy && RemoteCaptures.busy()) { reset(); return; }
     goTo(path.indexOf("/screens/") !== -1 ? "../index.html" : "index.html");
   }
   function reset() {
