@@ -57,6 +57,7 @@
       </div>
       <ul class="obj-menu" id="objMenu" hidden>
         <li><button type="button" id="menuUpdateCapture">Update capture</button></li>
+        <li id="menuSetImageRow" hidden><button type="button" id="menuSetImage">Set a display image</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
         <li><button type="button">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
@@ -65,6 +66,11 @@
         <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
         <li hidden><button type="button" id="menuAdjust">Adjust view &amp; orientation</button></li>
       </ul>
+      <!-- "Set a display image" file picker: swaps the polaroid thumbnail for
+           a chosen image, for any capture Mor can manage (hers, or a shared
+           community item she owns) — separate from "set this angle", which
+           only works when there's a live 3D view to screenshot -->
+      <input type="file" id="menuSetImageInput" accept="image/*" hidden>
 
       <!-- opened from the menu's "Adjust view & orientation" entry - keeps
            the point-size + straighten sliders in their own panel instead of
@@ -92,7 +98,7 @@
 
     <!-- capture history timeline: the line runs through the cubes, ending at the
          last cube -->
-    <div class="obj-timeline" id="objTimeline" data-editable="timeline" aria-label="Capture history">
+    <div class="obj-timeline" id="objTimeline" data-editable="timeline" aria-label="Capture history" hidden>
       <div class="obj-years">
         <button class="obj-year obj-year--active" type="button" data-year="2021"><span>2021</span><i class="obj-dot"></i></button>
         <button class="obj-year" type="button" data-year="2023"><span>2023</span><i class="obj-dot"></i></button>
@@ -657,8 +663,9 @@
       // otherwise (looking at an object) go pick the space to connect it to.
       window.startConnectFlow = function () {
         menu.hidden = true;
-        var timeline = document.querySelector(".obj-timeline");
-        if (timeline) timeline.hidden = false;
+        // the timeline's visibility is owned entirely by renderTimeline (shown
+        // only for 2+ dated versions) — don't force it on here, or a
+        // single-version capture flashes a stray timeline mid-flow
         if (catalog[key].kind === "space") {
           enterLinkMode(null);
         } else {
@@ -1560,6 +1567,10 @@
         // can open and look, but never edit what isn't theirs.
         var isOwnerHere = window.isOwnerDevice && window.isOwnerDevice();
         objMenuBtnEl.hidden = !isOwnerHere && !ownedHere;
+        // uploading a display image works for anything Mor can manage, live 3D
+        // view or not — so it's offered whenever the menu itself is
+        var menuSetImageRow = document.getElementById("menuSetImageRow");
+        if (menuSetImageRow) menuSetImageRow.hidden = !isOwnerHere && !ownedHere;
         // switching captures (prev/next, a jump link, entering community
         // browsing) always lands on a fully closed menu - this used to only
         // hide it, leaving the hamburger icon's bars stuck in their
@@ -2170,6 +2181,23 @@
       document.getElementById("menuUpdateCapture").addEventListener("click", function () {
         menu.hidden = true;
         startUpdateFlow();
+      });
+      // "Set a display image": pick a photo and use it as the polaroid
+      // thumbnail. saveThumbnail() already routes it to the right place — the
+      // local Archive/Community record, and/or the shared server record for a
+      // community item Mor owns — so this just reads the file and hands it over.
+      var menuSetImageInput = document.getElementById("menuSetImageInput");
+      document.getElementById("menuSetImage").addEventListener("click", function () {
+        menu.hidden = true;
+        menuSetImageInput.value = "";
+        menuSetImageInput.click();
+      });
+      menuSetImageInput.addEventListener("change", function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () { saveThumbnail(reader.result); };
+        reader.readAsDataURL(file);
       });
       document.getElementById("menuAddAnnotation").addEventListener("click", function () {
         menu.hidden = true;
