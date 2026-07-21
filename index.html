@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260721m">
-<link rel="stylesheet" href="css/chrome.css?v=20260721m">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260721m">
-<link rel="stylesheet" href="css/loading.css?v=20260721m">
+<link rel="stylesheet" href="css/base.css?v=20260721n">
+<link rel="stylesheet" href="css/chrome.css?v=20260721n">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260721n">
+<link rel="stylesheet" href="css/loading.css?v=20260721n">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,10 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260721m" defer></script>
-<script src="js/grain.js?v=20260721m" defer></script>
-<script src="js/owner.js?v=20260721m"></script>
-<script src="js/flow.js?v=20260721m" defer></script>
+<script src="js/cursor.js?v=20260721n" defer></script>
+<script src="js/grain.js?v=20260721n" defer></script>
+<script src="js/owner.js?v=20260721n"></script>
+<script src="js/flow.js?v=20260721n" defer></script>
 </head>
 <body>
 
@@ -184,19 +184,20 @@
 
       function rotate() {
         if (paused) return;
-        shown[0] = shown[1];
-        shown[1] = shown[2];
-        shown[2] = nextUp % HERO_ITEMS.length;
-        nextUp++;
-        // a brief fade rather than a hard swap, since the content changes
-        // out from under whatever the visitor was just looking at
-        slots.forEach(function (el, i) {
-          el.classList.add("polaroid--swap");
-          setTimeout(function () {
-            applyContent(el, HERO_ITEMS[shown[i]]);
-            el.classList.remove("polaroid--swap");
-          }, 220);
-        });
+        var front = slots[0];
+        // physically slide the top card off to the side, revealing the one
+        // behind it — a real movement, not a cross-fade in place
+        front.classList.add("polaroid--flick");
+        setTimeout(function () {
+          // shuffle the stack's contents while the front is out of view...
+          shown[0] = shown[1];
+          shown[1] = shown[2];
+          shown[2] = nextUp % HERO_ITEMS.length;
+          nextUp++;
+          slots.forEach(function (el, i) { applyContent(el, HERO_ITEMS[shown[i]]); });
+          // ...then let it settle back into place as the new front
+          front.classList.remove("polaroid--flick");
+        }, 300);
       }
 
       function restartTimer() {

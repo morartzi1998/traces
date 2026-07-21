@@ -51,17 +51,18 @@
   width: 78%;
 }
 
-/* the auto-rotating carousel swaps a slot's photo/caption underneath it
-   periodically - a brief fade instead of the image just snapping to a
-   different capture out of nowhere (see index.html's rotate()) */
-.polaroid img,
-.polaroid-caption {
-  transition: opacity 0.22s ease;
+/* rotation is a physical motion, not a cross-fade: the top card slides off to
+   the side (revealing the one behind it), the stack's contents shuffle while
+   it's out of view, then it settles back as the new front — so a real polaroid
+   appears to move and be replaced (see index.html's rotate()) */
+.polaroid-front {
+  transition: transform 0.34s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, opacity 0.34s ease;
 }
 
-.polaroid--swap img,
-.polaroid--swap .polaroid-caption {
+.polaroid-front.polaroid--flick {
+  transform: rotate(-8deg) translate(-54%, 16%) scale(0.9);
   opacity: 0;
+  z-index: 6;
 }
 
 .polaroid img {

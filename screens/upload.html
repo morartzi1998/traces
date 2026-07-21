@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721m">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721m">
-<link rel="stylesheet" href="../css/upload.css?v=20260721m">
-<script src="../js/owner.js?v=20260721m"></script>
-<script src="../js/config.js?v=20260721m"></script>
-<script src="../js/cursor.js?v=20260721m" defer></script>
-<script src="../js/grain.js?v=20260721m" defer></script>
-<script src="../js/blobstore.js?v=20260721m"></script>
-<script src="../js/flow.js?v=20260721m" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260721m" defer></script>
-<script src="../js/normalize-image.js?v=20260721m" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260721m"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721m"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721n">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721n">
+<link rel="stylesheet" href="../css/upload.css?v=20260721n">
+<script src="../js/owner.js?v=20260721n"></script>
+<script src="../js/config.js?v=20260721n"></script>
+<script src="../js/cursor.js?v=20260721n" defer></script>
+<script src="../js/grain.js?v=20260721n" defer></script>
+<script src="../js/blobstore.js?v=20260721n"></script>
+<script src="../js/flow.js?v=20260721n" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260721n" defer></script>
+<script src="../js/normalize-image.js?v=20260721n" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260721n"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721n"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -26,12 +26,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721m" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721n" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260721m";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260721m";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260721n";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260721n";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -114,9 +114,8 @@
         <div class="phone-confirm-card">
           <p class="phone-confirm-title">your phone photo</p>
           <img class="phone-confirm-img" id="phoneConfirmImg" alt="the photo taken on your phone">
-          <p class="phone-confirm-sub">build the 3D model from this photo?</p>
+          <p class="phone-confirm-sub">build the 3D model from this photo?<br><span class="phone-confirm-note">or just take another on your phone</span></p>
           <div class="phone-confirm-actions">
-            <button class="phone-confirm-retake" type="button" id="phoneConfirmRetake">Retake on phone</button>
             <button class="phone-confirm-process" type="button" id="phoneConfirmProcess">Process</button>
           </div>
         </div>
@@ -223,6 +222,10 @@
       var phoneApi = (window.TRACES_API || "").replace(/\/$/, "");
       var phonePollTimer = null;
       var phoneSessionId = null;
+      // which shot the confirm card is currently showing, so a re-shoot from
+      // the phone (a new task id in the same session) refreshes it rather than
+      // re-opening it every poll
+      var lastConfirmTaskId = null;
 
       function startPhoneSession() {
         var wrap = document.getElementById("phoneQrWrap");
@@ -232,6 +235,10 @@
           hint.textContent = "phone capture needs the Tripo worker configured (js/config.js)";
           return;
         }
+        // a brand-new QR session starts with nothing confirmed yet
+        lastConfirmTaskId = null;
+        var existingConfirm = document.getElementById("phoneConfirm");
+        if (existingConfirm) existingConfirm.hidden = true;
         phoneSessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
           : "sess-" + Date.now() + "-" + Math.random().toString(36).slice(2);
         var phoneUrl = new URL("phone-capture.html", window.location.href);
@@ -250,18 +257,23 @@
             .then(function (r) { return r.json(); })
             .then(function (d) {
               if (d && d.task_id) {
-                clearInterval(phonePollTimer);
                 var payload = resolvePhonePayload(d);
-                prepPhoneCapture(payload.taskId);
                 if (payload.thumb) {
-                  // the phone relayed a preview of what it shot — let Mor look
-                  // at it on the big screen and press Process herself, exactly
-                  // like reviewing a file before uploading it
-                  hint.textContent = "photo received — confirm on your computer";
-                  showPhoneConfirm(payload.thumb);
+                  // re-shooting happens on the phone; the computer keeps
+                  // listening and only ever shows the latest photo, so the
+                  // one thing done here is the final confirm. Don't stop the
+                  // relay — a fresh shot from the phone should refresh this.
+                  prepPhoneCapture(payload.taskId);
+                  if (payload.taskId !== lastConfirmTaskId) {
+                    lastConfirmTaskId = payload.taskId;
+                    hint.textContent = "photo received — confirm on your computer";
+                    showPhoneConfirm(payload.thumb);
+                  }
                 } else {
                   // no preview available: keep the original straight-to-
                   // processing behaviour, unchanged
+                  clearInterval(phonePollTimer);
+                  prepPhoneCapture(payload.taskId);
                   hint.textContent = "photo received — processing…";
                   goTo("processing.html");
                 }
@@ -317,16 +329,20 @@
       function showPhoneConfirm(thumb) {
         var overlay = document.getElementById("phoneConfirm");
         var img = document.getElementById("phoneConfirmImg");
-        img.src = thumb;
+        // if the phone re-shoots, this same card is refreshed in place with a
+        // quick cross-fade to the newer photo — no second dialog
+        if (!overlay.hidden && img.src) {
+          img.style.transition = "opacity 0.25s ease";
+          img.style.opacity = "0";
+          setTimeout(function () { img.src = thumb; img.style.opacity = "1"; }, 200);
+        } else {
+          img.src = thumb;
+        }
         overlay.hidden = false;
         document.getElementById("phoneConfirmProcess").onclick = function () {
+          clearInterval(phonePollTimer);
           overlay.hidden = true;
           goTo("processing.html");
-        };
-        document.getElementById("phoneConfirmRetake").onclick = function () {
-          overlay.hidden = true;
-          // let the phone shoot again — fresh session, fresh QR
-          startPhoneSession();
         };
       }
 
