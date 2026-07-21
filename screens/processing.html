@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722a">
-<link rel="stylesheet" href="../css/processing.css?v=20260722a">
-<script src="../js/owner.js?v=20260722a"></script>
-<script src="../js/config.js?v=20260722a"></script>
-<script src="../js/cursor.js?v=20260722a" defer></script>
-<script src="../js/grain.js?v=20260722a" defer></script>
-<script src="../js/blobstore.js?v=20260722a"></script>
-<script src="../js/flow.js?v=20260722a" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722a"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722b">
+<link rel="stylesheet" href="../css/processing.css?v=20260722b">
+<script src="../js/owner.js?v=20260722b"></script>
+<script src="../js/config.js?v=20260722b"></script>
+<script src="../js/cursor.js?v=20260722b" defer></script>
+<script src="../js/grain.js?v=20260722b" defer></script>
+<script src="../js/blobstore.js?v=20260722b"></script>
+<script src="../js/flow.js?v=20260722b" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722b"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722a" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722b" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js?v=20260722a";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722a";
+  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js?v=20260722b";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722b";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -34,7 +34,10 @@
 
   <div class="proc-screen">
 
-    <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true" id="procCloud">
+    <!-- hidden by default: only ever revealed to show the visitor's own
+         uploaded photo (below). The AI path shows the assembling particle
+         cloud instead, so no stand-in chandelier is ever left in the back. -->
+    <img class="proc-cloud" src="../assets/images/photo-chandelier-large.png" alt="" aria-hidden="true" id="procCloud" hidden>
     <model-viewer class="proc-model" id="procModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
       interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
     <div class="proc-points" id="procPoints" hidden></div>
@@ -68,10 +71,11 @@
         var up = sessionStorage.getItem("traces-upload-img");
         if (up && up.indexOf("idb:") === 0) {
           window.BlobStore.get(up.slice(4)).then(function (blob) {
-            if (blob) cloud.src = URL.createObjectURL(blob);
+            if (blob) { cloud.src = URL.createObjectURL(blob); cloud.hidden = false; }
           });
         } else if (up) {
           cloud.src = up;
+          cloud.hidden = false;
         }
       } catch (e) {}
 
@@ -299,8 +303,11 @@
       function failed(msg) {
         stopAssembling();
         status.textContent = "Reconstruction failed";
-        cloud.style.filter = "blur(6px) saturate(0.6)";
-        model.style.filter = "blur(6px) saturate(0.6)";
+        // hide the stand-in chandelier placeholder and the (never-loaded)
+        // model so a failed screen is just the message on the grid, not a
+        // random blurred lamp that has nothing to do with the capture
+        cloud.hidden = true;
+        model.hidden = true;
         console.warn("Tripo:", msg);
         // shown on-screen (not just the console) so the actual reason can be
         // read off a screenshot without opening dev tools
