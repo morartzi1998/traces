@@ -492,15 +492,15 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-arrow:focus { outline: none; }
 .obj-arrow:focus-visible { opacity: 1; }
 
-/* the pair used to be perfectly mirrored, but the timeline only ever lives
-   on the left, and it can keep growing taller as more dated scans get added
-   — sitting the prev arrow at a fixed vertical spot (top: 60%) meant a
-   capture with enough history would eventually grow right into it. Pushed
-   in past the timeline's own column width (3.4vw start + its widest
-   possible row) so the two can never collide, whatever the timeline's
-   length or the window's shape. */
+/* the timeline only ever lives on the left, and can keep growing taller as
+   more dated scans get added — sitting the prev arrow at a fixed vertical
+   spot (top: 60%) meant a capture with enough history would eventually grow
+   right into it, so it's pushed in past the timeline's own column width.
+   The next arrow has no timeline to clear, but matching the same inward
+   offset keeps the pair looking like a deliberate matched set instead of
+   one arrow sitting oddly closer to center than the other. */
 .obj-arrow--prev { left: calc(3.4vw + 70px); }
-.obj-arrow--next { right: 2.4vw; }
+.obj-arrow--next { right: calc(3.4vw + 70px); }
 
 /* ---------- Stage + tags ---------- */
 

@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723g">
-<link rel="stylesheet" href="../css/gallery.css?v=20260723g">
-<script src="../js/cursor.js?v=20260723g" defer></script>
-<script src="../js/grain.js?v=20260723g" defer></script>
-<script src="../js/owner.js?v=20260723g"></script>
-<script src="../js/config.js?v=20260723g"></script>
-<script src="../js/archive.js?v=20260723g"></script>
-<script src="../js/blobstore.js?v=20260723g"></script>
-<script src="../js/remote-captures.js?v=20260723g"></script>
-<script src="../js/designer-archive.js?v=20260723g"></script>
-<script src="../js/gallery-title.js?v=20260723g" defer></script>
-<script src="../js/flow.js?v=20260723g" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723h">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723h">
+<link rel="stylesheet" href="../css/gallery.css?v=20260723h">
+<script src="../js/cursor.js?v=20260723h" defer></script>
+<script src="../js/grain.js?v=20260723h" defer></script>
+<script src="../js/owner.js?v=20260723h"></script>
+<script src="../js/config.js?v=20260723h"></script>
+<script src="../js/archive.js?v=20260723h"></script>
+<script src="../js/blobstore.js?v=20260723h"></script>
+<script src="../js/remote-captures.js?v=20260723h"></script>
+<script src="../js/designer-archive.js?v=20260723h"></script>
+<script src="../js/gallery-title.js?v=20260723h" defer></script>
+<script src="../js/flow.js?v=20260723h" defer></script>
 </head>
 <body>
 
@@ -633,14 +633,19 @@
             var localV = (cap.versions || []).length;
             var remoteV = (remote.versions || []).length;
             if (localV >= 2 && remoteV < localV) {
-              // do this at most once per capture per browser session — without
-              // the guard, every gallery reload kicked off the (heavy) version
-              // re-upload again, saturating the connection so everything else
-              // loaded slowly ("everything takes an hour, even things that
-              // were fast"). One attempt per session is plenty.
+              // at most one ATTEMPT in flight per capture per session — without
+              // this, every gallery reload (or re-render) would kick off the
+              // (heavy) version re-upload again in parallel with itself,
+              // saturating the connection so everything else loaded slowly
+              // ("everything takes an hour, even things that were fast").
+              // Only locked in on confirmed SUCCESS below, though - marking it
+              // "done" before even trying meant one failed/interrupted attempt
+              // (e.g. while the server-side bug that dropped versions was
+              // still live) silently blocked every future retry for the rest
+              // of the browser session, even after the real fix landed.
               var pushKey = "traces-verpush-" + cap.id;
-              if (sessionStorage.getItem(pushKey)) return;
-              sessionStorage.setItem(pushKey, "1");
+              if (sessionStorage.getItem(pushKey) === "done") return;
+              sessionStorage.setItem(pushKey, "trying");
               var el = grid.querySelector('.gal-sync-status[data-cap-id="' + cap.id + '"]');
               RemoteCaptures.publish(cap, "archive", function (pct) {
                 if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
@@ -650,8 +655,11 @@
                 // still sees the old, behind-the-local-count server copy and
                 // wrongly flips this back to "timeline still catching up"
                 if (res) {
+                  sessionStorage.setItem(pushKey, "done");
                   remoteArchiveItems = remoteArchiveItems.filter(function (r) { return r.id !== cap.id; });
                   remoteArchiveItems.push(Object.assign({}, cap));
+                } else {
+                  sessionStorage.removeItem(pushKey);
                 }
                 if (el) {
                   el.textContent = res ? "☁ synced — timeline visible to visitors too" : "only on this device";
