@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722r">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722r">
-<link rel="stylesheet" href="../css/object.css?v=20260722r">
-<script src="../js/cursor.js?v=20260722r" defer></script>
-<script src="../js/grain.js?v=20260722r" defer></script>
-<script src="../js/tilt3d.js?v=20260722r" defer></script>
-<script src="../js/owner.js?v=20260722r"></script>
-<script src="../js/config.js?v=20260722r"></script>
-<script src="../js/archive.js?v=20260722r"></script>
-<script src="../js/blobstore.js?v=20260722r"></script>
-<script src="../js/particle-loader.js?v=20260722r"></script>
-<script src="../js/remote-captures.js?v=20260722r"></script>
-<script src="../js/community-seed.js?v=20260722r"></script>
-<script src="../js/flow.js?v=20260722r" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722r"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722s">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722s">
+<link rel="stylesheet" href="../css/object.css?v=20260722s">
+<script src="../js/cursor.js?v=20260722s" defer></script>
+<script src="../js/grain.js?v=20260722s" defer></script>
+<script src="../js/tilt3d.js?v=20260722s" defer></script>
+<script src="../js/owner.js?v=20260722s"></script>
+<script src="../js/config.js?v=20260722s"></script>
+<script src="../js/archive.js?v=20260722s"></script>
+<script src="../js/blobstore.js?v=20260722s"></script>
+<script src="../js/particle-loader.js?v=20260722s"></script>
+<script src="../js/remote-captures.js?v=20260722s"></script>
+<script src="../js/community-seed.js?v=20260722s"></script>
+<script src="../js/flow.js?v=20260722s" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722s"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722r" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722s" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722r";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722r";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722s";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722s";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -482,7 +482,21 @@
           catalog[k] = {
             kind: d.kind || "object", title: d.title, img: d.img,
             model: d.model, points: d.points,
+            pointSize: d.pointSize || null, tilt: d.tilt || null,
+            defaultView: d.defaultView || null,
             feeling: d.feeling || "", annotations: d.annotations || [], links: [],
+            // read the dated history from the server record so a visitor gets
+            // the same timeline the owner sees — this runs after the one-time
+            // version-defaulting pass above, so it sets versions itself
+            // (either the real history, or a single-version fallback).
+            versions: (Array.isArray(d.versions) && d.versions.length)
+              ? d.versions.map(function (v) {
+                  return { year: new Date(v.created || Date.now()).getFullYear(),
+                    created: v.created, model: v.model, img: v.img, points: v.points,
+                    title: v.title || d.title };
+                })
+              : [{ year: new Date(d.created || Date.now()).getFullYear(),
+                   created: d.created, model: d.model, img: d.img, points: d.points, title: d.title }]
           };
         });
       }

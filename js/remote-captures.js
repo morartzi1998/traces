@@ -183,19 +183,48 @@
         return uploadBlob(blob, function (p) { frac[i] = p; report(); });
       })).then(function (out) {
         if (neededUpload.some(function (was, i) { return was && !out[i]; })) return null;
-        var record = {
-          id: scope === "community" ? cap.id + "-community" : cap.id,
-          scope: scope,
-          title: cap.title, feeling: cap.feeling || "", kind: cap.kind || "object",
-          by: cap.by || "", country: cap.country || "", created: cap.created || Date.now(),
-          img: out[0], model: out[1], points: out[2],
-          annotations: cap.annotations || [],
-        };
-        return fetch(api() + "/captures", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(record),
-        }).then(function (r) { return r.ok ? r.json() : null; });
+        // reuse the just-uploaded top-level URLs when a timeline version points
+        // at the same source blob, so nothing is uploaded twice
+        var rehostCache = {};
+        refs.forEach(function (r, i) { if (r) rehostCache[r] = Promise.resolve(out[i]); });
+        function rehost(ref) {
+          if (!ref) return Promise.resolve(ref || null);
+          if (!(ref.indexOf("idb:") === 0 || isTripoProxy(ref))) return Promise.resolve(ref);
+          if (rehostCache[ref]) return rehostCache[ref];
+          var p = loadBlob(ref).then(function (b) { return b ? uploadBlob(b) : null; });
+          rehostCache[ref] = p;
+          return p;
+        }
+        // re-host each dated version's own blobs too, so a visitor loading this
+        // capture from the server gets the full timeline (its dated history),
+        // not just the latest scan — this is why the timeline showed in owner
+        // mode (local record has the versions) but never for visitors (the
+        // server record dropped them entirely).
+        var versions = Array.isArray(cap.versions) ? cap.versions : [];
+        return Promise.all(versions.map(function (v) {
+          return Promise.all([rehost(v.img), rehost(v.model), rehost(v.points)]).then(function (rv) {
+            return { created: v.created, title: v.title, img: rv[0], model: rv[1], points: rv[2] };
+          });
+        })).then(function (rehostedVersions) {
+          var record = {
+            id: scope === "community" ? cap.id + "-community" : cap.id,
+            scope: scope,
+            title: cap.title, feeling: cap.feeling || "", kind: cap.kind || "object",
+            by: cap.by || "", country: cap.country || "", created: cap.created || Date.now(),
+            img: out[0], model: out[1], points: out[2],
+            annotations: cap.annotations || [],
+            versions: rehostedVersions,
+          };
+          // carry the framing/render choices so visitors see the same angle
+          if (cap.defaultView != null) record.defaultView = cap.defaultView;
+          if (cap.pointSize != null) record.pointSize = cap.pointSize;
+          if (cap.tilt != null) record.tilt = cap.tilt;
+          return fetch(api() + "/captures", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(record),
+          }).then(function (r) { return r.ok ? r.json() : null; });
+        });
       });
     }).catch(function () { return null; });
   }
