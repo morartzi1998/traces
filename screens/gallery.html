@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722t">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722t">
-<link rel="stylesheet" href="../css/gallery.css?v=20260722t">
-<script src="../js/cursor.js?v=20260722t" defer></script>
-<script src="../js/grain.js?v=20260722t" defer></script>
-<script src="../js/owner.js?v=20260722t"></script>
-<script src="../js/config.js?v=20260722t"></script>
-<script src="../js/archive.js?v=20260722t"></script>
-<script src="../js/blobstore.js?v=20260722t"></script>
-<script src="../js/remote-captures.js?v=20260722t"></script>
-<script src="../js/designer-archive.js?v=20260722t"></script>
-<script src="../js/gallery-title.js?v=20260722t" defer></script>
-<script src="../js/flow.js?v=20260722t" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722u">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722u">
+<link rel="stylesheet" href="../css/gallery.css?v=20260722u">
+<script src="../js/cursor.js?v=20260722u" defer></script>
+<script src="../js/grain.js?v=20260722u" defer></script>
+<script src="../js/owner.js?v=20260722u"></script>
+<script src="../js/config.js?v=20260722u"></script>
+<script src="../js/archive.js?v=20260722u"></script>
+<script src="../js/blobstore.js?v=20260722u"></script>
+<script src="../js/remote-captures.js?v=20260722u"></script>
+<script src="../js/designer-archive.js?v=20260722u"></script>
+<script src="../js/gallery-title.js?v=20260722u" defer></script>
+<script src="../js/flow.js?v=20260722u" defer></script>
 </head>
 <body>
 
@@ -591,6 +591,21 @@
               el.textContent = "only on this device";
               el.className = "gal-sync-status gal-sync-status--local-only";
             }
+          });
+          // older captures were synced before the timeline (dated version
+          // history) was carried to the server, so their server copy shows no
+          // timeline to visitors even though the owner sees it. Re-publish any
+          // capture whose local history is richer than the server's — one-time
+          // and self-limiting: once the server copy has the versions the local
+          // count no longer exceeds it, so it won't run again.
+          var remoteById = {};
+          (list || []).forEach(function (c) { remoteById[(c.id || "").replace(/-community$/, "")] = c; });
+          (window.Archive ? Archive.all() : []).forEach(function (cap) {
+            var remote = remoteById[cap.id];
+            if (!remote) return; // not on the server yet — syncMissing covers it
+            var localV = (cap.versions || []).length;
+            var remoteV = (remote.versions || []).length;
+            if (localV >= 2 && remoteV < localV) RemoteCaptures.publish(cap, "archive");
           });
         }
       });
