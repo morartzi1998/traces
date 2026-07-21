@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723t">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723t">
-<link rel="stylesheet" href="../css/object.css?v=20260723t">
-<script src="../js/cursor.js?v=20260723t" defer></script>
-<script src="../js/grain.js?v=20260723t" defer></script>
-<script src="../js/tilt3d.js?v=20260723t" defer></script>
-<script src="../js/owner.js?v=20260723t"></script>
-<script src="../js/config.js?v=20260723t"></script>
-<script src="../js/archive.js?v=20260723t"></script>
-<script src="../js/blobstore.js?v=20260723t"></script>
-<script src="../js/particle-loader.js?v=20260723t"></script>
-<script src="../js/remote-captures.js?v=20260723t"></script>
-<script src="../js/community-seed.js?v=20260723t"></script>
-<script src="../js/flow.js?v=20260723t" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723t"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723u">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723u">
+<link rel="stylesheet" href="../css/object.css?v=20260723u">
+<script src="../js/cursor.js?v=20260723u" defer></script>
+<script src="../js/grain.js?v=20260723u" defer></script>
+<script src="../js/tilt3d.js?v=20260723u" defer></script>
+<script src="../js/owner.js?v=20260723u"></script>
+<script src="../js/config.js?v=20260723u"></script>
+<script src="../js/archive.js?v=20260723u"></script>
+<script src="../js/blobstore.js?v=20260723u"></script>
+<script src="../js/particle-loader.js?v=20260723u"></script>
+<script src="../js/remote-captures.js?v=20260723u"></script>
+<script src="../js/community-seed.js?v=20260723u"></script>
+<script src="../js/flow.js?v=20260723u" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723u"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,14 +28,106 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723t" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723u" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723t";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723t";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723u";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723u";
   window.__deserializeGeometry = deserializeGeometry;
+  window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
+
+  // reads a (non-Draco) GLB and returns its mesh surface as a point
+  // BufferGeometry — positions from every primitive's POSITION accessor,
+  // world-transformed through the node tree, plus COLOR_0 when present.
+  // This is what lets a capture whose timeline is made of MODELS (not point
+  // clouds) still take part in the visual merge: each version's mesh
+  // becomes a cloud of its surface points. Returns null when it can't
+  // (Draco-compressed, malformed, empty).
+  window.__glbToPoints = function (arrayBuffer) {
+    try {
+      var dv = new DataView(arrayBuffer);
+      if (dv.getUint32(0, true) !== 0x46546c67) return null; // "glTF"
+      var jsonLen = dv.getUint32(12, true);
+      var gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(arrayBuffer, 20, jsonLen)));
+      if ((gltf.extensionsRequired || []).indexOf("KHR_draco_mesh_compression") !== -1) return null;
+      var binStart = 20 + jsonLen;
+      if (binStart % 4) binStart += 4 - (binStart % 4);
+      var bin = null;
+      if (binStart + 8 <= arrayBuffer.byteLength) {
+        var binLen = dv.getUint32(binStart, true);
+        bin = new Uint8Array(arrayBuffer, binStart + 8, binLen);
+      }
+      if (!bin) return null;
+      function accessorData(ai) {
+        var acc = gltf.accessors[ai];
+        var bv = gltf.bufferViews[acc.bufferView];
+        var comps = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[acc.type];
+        var CT = { 5126: Float32Array, 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array,
+                   5120: Int8Array, 5122: Int16Array }[acc.componentType];
+        if (!CT || !comps) return null;
+        var elemBytes = CT.BYTES_PER_ELEMENT * comps;
+        var stride = bv.byteStride || elemBytes;
+        var base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+        var out = new Float32Array(acc.count * comps);
+        // KHR_mesh_quantization stores positions as normalized (u)ints, undone
+        // here; the node matrices then rescale them into real space
+        var norm = acc.normalized
+          ? ({ 5121: 255, 5123: 65535, 5120: 127, 5122: 32767 })[acc.componentType] || 1
+          : 1;
+        for (var i = 0; i < acc.count; i++) {
+          var arr = new CT(bin.buffer, bin.byteOffset + base + i * stride, comps);
+          for (var c = 0; c < comps; c++) out[i * comps + c] = arr[c] / norm;
+        }
+        return { data: out, comps: comps, count: acc.count };
+      }
+      var positions = [], colors = [], sawColor = false;
+      function nodeMatrix(node) {
+        var m = new THREE.Matrix4();
+        if (node.matrix) m.fromArray(node.matrix);
+        else {
+          var t = node.translation || [0, 0, 0], r = node.rotation || [0, 0, 0, 1], s = node.scale || [1, 1, 1];
+          m.compose(new THREE.Vector3(t[0], t[1], t[2]),
+                    new THREE.Quaternion(r[0], r[1], r[2], r[3]),
+                    new THREE.Vector3(s[0], s[1], s[2]));
+        }
+        return m;
+      }
+      function walk(ni, parent) {
+        var node = gltf.nodes[ni];
+        var world = parent.clone().multiply(nodeMatrix(node));
+        if (node.mesh != null) {
+          (gltf.meshes[node.mesh].primitives || []).forEach(function (prim) {
+            if (prim.attributes == null || prim.attributes.POSITION == null) return;
+            var pos = accessorData(prim.attributes.POSITION);
+            if (!pos) return;
+            var col = prim.attributes.COLOR_0 != null ? accessorData(prim.attributes.COLOR_0) : null;
+            var v = new THREE.Vector3();
+            for (var i = 0; i < pos.count; i++) {
+              v.set(pos.data[i * 3], pos.data[i * 3 + 1], pos.data[i * 3 + 2]).applyMatrix4(world);
+              positions.push(v.x, v.y, v.z);
+              if (col) {
+                sawColor = true;
+                colors.push(col.data[i * col.comps], col.data[i * col.comps + 1], col.data[i * col.comps + 2]);
+              } else {
+                colors.push(0.94, 0.93, 0.9); // the site's cream, not dead white
+              }
+            }
+          });
+        }
+        (node.children || []).forEach(function (c) { walk(c, world); });
+      }
+      var scene = gltf.scenes[gltf.scene || 0];
+      var I = new THREE.Matrix4();
+      (scene.nodes || []).forEach(function (n) { walk(n, I); });
+      if (!positions.length) return null;
+      var g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      return g;
+    } catch (e) { return null; }
+  };
 
   // "Make a visual merge from object's history": a true 3D combination of the
   // capture's dated scans — lay each version's point cloud side by side along X
@@ -2390,11 +2482,10 @@
         var inCommunity = window.Community && Community.get(key);
         if (inArchive) Archive.update(key, { pointSize: size });
         if (inCommunity) Community.update(key, { pointSize: size });
-        if (window.RemoteCaptures && (inArchive || inCommunity)) {
-          var isOwner = window.isOwnerDevice && window.isOwnerDevice();
-          if (inArchive && isOwner) RemoteCaptures.publish(Archive.get(key), "archive");
-          if (inCommunity) RemoteCaptures.publish(Community.get(key), "community");
-        }
+        // patch the shared record directly (a full publish through the local
+        // stores did nothing for server-only community captures, and
+        // re-uploaded megabytes for the rest — see syncViewToServer)
+        syncViewToServer();
       }
       menuPointSizeSlider.addEventListener("input", function () {
         var idx = parseInt(menuPointSizeSlider.value, 10) - 1;
@@ -2455,11 +2546,12 @@
         var inCommunity = window.Community && Community.get(key);
         if (inArchive) Archive.update(key, { tilt: tilt });
         if (inCommunity) Community.update(key, { tilt: tilt });
-        if (window.RemoteCaptures && (inArchive || inCommunity)) {
-          var isOwner = window.isOwnerDevice && window.isOwnerDevice();
-          if (inArchive && isOwner) RemoteCaptures.publish(Archive.get(key), "archive");
-          if (inCommunity) RemoteCaptures.publish(Community.get(key), "community");
-        }
+        // patch the shared record DIRECTLY (same as the default-view save) —
+        // publishing via the local stores silently did nothing for a
+        // community capture that only lives on the server, which is exactly
+        // the case of straightening a diagonal scan for everyone to see
+        persist(key);
+        syncViewToServer();
         menuSaveTilt.textContent = "Saved";
         setTimeout(function () { menuSaveTilt.textContent = "Save this as upright"; }, 1500);
       });
@@ -2553,18 +2645,38 @@
       // a true 3D combination: every dated scan that carries a real point cloud
       // is laid side by side along X in one scene, so the object's evolution
       // over time reads as a single piece you orbit as a whole.
+      // a version can join the merge with EITHER representation: a raw point
+      // cloud, or a mesh model whose surface gets sampled into points (see
+      // __glbToPoints) — so a capture whose whole history is models (like the
+      // chandelier's) finally gets its collage too
       function mergeableVersions(k) {
-        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) { return v && v.points; });
+        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) { return v && (v.points || v.model); });
       }
       var mergeViewer = null;
-      function loadVersionGeometry(v) {
-        var ref = v.points;
+      function fetchRefBuffer(ref) {
         var pk = ref.indexOf("idb:") === 0 ? ref.slice(4) : null;
         var blobP = pk && window.BlobStore ? window.BlobStore.get(pk)
           : fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
-        return blobP.then(function (b) { return b ? b.arrayBuffer() : null; })
-          .then(function (buf) { return (buf && window.__deserializeGeometry) ? window.__deserializeGeometry(buf) : null; })
-          .catch(function () { return null; });
+        return blobP.then(function (b) { return b ? b.arrayBuffer() : null; }).catch(function () { return null; });
+      }
+      function loadVersionGeometry(v) {
+        var fromPoints = v.points
+          ? fetchRefBuffer(v.points).then(function (buf) {
+              return (buf && window.__deserializeGeometry) ? window.__deserializeGeometry(buf) : null;
+            })
+          : Promise.resolve(null);
+        return fromPoints.then(function (g) {
+          if (g) return g;
+          if (!v.model || !window.__glbToPoints) return null;
+          return fetchRefBuffer(v.model).then(function (buf) { return buf ? window.__glbToPoints(buf) : null; });
+        }).then(function (g) {
+          // strip the stray drift specks around a raw scan before aligning —
+          // they were half of what made a merged room read as debris
+          if (g && window.__removeOutliers && g.getAttribute("position").count > 1000) {
+            try { g = window.__removeOutliers(g); } catch (e) {}
+          }
+          return g;
+        }).catch(function () { return null; });
       }
       function openVisualMerge() {
         var overlay = document.getElementById("objMerge");
@@ -2634,6 +2746,9 @@
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
         var fields = { defaultView: catalog[key].defaultView || null };
         if (catalog[key].pointSize != null) fields.pointSize = catalog[key].pointSize;
+        // the straightening choice travels too — fixing a scan that sits
+        // diagonally must reach visitors, not just this browser
+        if (catalog[key].tilt != null) fields.tilt = catalog[key].tilt;
         var inArchive = window.Archive && Archive.get(key);
         var inCommunity = window.Community && Community.get(key);
         if (inArchive) patchServerRecord(key, fields);
