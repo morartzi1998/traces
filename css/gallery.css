@@ -194,25 +194,31 @@
     padding-bottom: 6rem;
   }
 
-  /* the "Add New Capture" action stops floating over the grid (where it
-     overlapped captures) and sits quietly under the title as its own row.
-     It's after the grid in the DOM, so flex order lifts it up to sit right
-     under the filters instead of dropping to the very bottom. */
+  /* the "Add New Capture" action keeps floating over the feed on a phone too
+     (as on desktop), so it stays reachable while scrolling — it sits at the
+     bottom-right above the nav, with a small dark chip behind it so it stays
+     readable over whatever polaroid it happens to be floating over */
   .gal-add {
-    position: static;
-    display: block;
-    order: 2;
-    margin: 0 0 1.5rem;
-    max-width: none;
-    white-space: normal;
-    text-align: left;
-    font-size: 1.6rem;
+    position: fixed;
     top: auto;
-    right: auto;
+    left: auto;
+    bottom: 6.5rem;
+    right: 5vw;
+    z-index: 30;
+    display: inline-block;
+    margin: 0;
+    max-width: none;
+    white-space: nowrap;
+    text-align: right;
+    font-size: 1.1rem;
+    line-height: 1.15;
+    background: rgba(16, 14, 24, 0.88);
+    padding: 8px 12px;
+    border-radius: 4px;
   }
   .gal-title-block { order: 0; }
   .gal-filters { order: 1; }
-  .gal-grid { order: 3; }
+  .gal-grid { order: 2; }
 }
 
 /* revealed under a capture on long-press — plain underlined text links,
