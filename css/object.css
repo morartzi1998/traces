@@ -534,6 +534,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    blurred-bars placeholder so only the particles show */
 .obj-stage--particles::before { display: none; }
 
+/* annotation tags anchor to the OBJECT — while it's still loading there is
+   nothing for them to sit on, and a label floating alone over the particle
+   cloud read as a glitch. Hidden until the scan is actually on screen. */
+.obj-stage--loading .obj-tags { visibility: hidden; }
+
 .obj-loading-particles {
   position: absolute;
   inset: 0;
@@ -1593,6 +1598,13 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 /* ---------- Small screens ---------- */
 
 @media (max-width: 640px) {
+  /* the +70px inward offset exists to clear the desktop timeline column —
+     on a narrow phone it shoves both chevrons practically onto the object
+     itself, so here they go back to the screen edges (the mobile timeline
+     is compact enough not to collide) */
+  .obj-arrow--prev { left: 1.5vw; }
+  .obj-arrow--next { right: 1.5vw; }
+
   /* the side panels are drawers over the stage — on a narrow phone a sliver
      of the stage left showing behind them reads as broken, not a preview */
   .obj-white,
