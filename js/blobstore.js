@@ -23,12 +23,23 @@ window.BlobStore = (function () {
   }
 
   function set(key, blob) {
-    return open().then(function (db) {
-      return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, "readwrite");
-        tx.objectStore(STORE).put(blob, key);
-        tx.oncomplete = function () { resolve(); };
-        tx.onerror = function () { reject(tx.error); };
+    // iOS/WebKit can invalidate a Blob stored in IndexedDB once the page that
+    // created it is torn down by a navigation — reading it back on the next
+    // screen then yields a missing/unreadable entry (desktop keeps it fine,
+    // which is exactly why a captured scan opened on the computer but failed
+    // on the phone). Storing the raw bytes as an ArrayBuffer, which IDB copies
+    // by value, sidesteps that entirely so a scan/photo survives the hop.
+    var bytesReady = (blob && typeof blob.arrayBuffer === "function")
+      ? blob.arrayBuffer().then(function (buf) { return { buf: buf, type: blob.type || "application/octet-stream" }; })
+      : Promise.resolve(blob);
+    return bytesReady.then(function (record) {
+      return open().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(STORE, "readwrite");
+          tx.objectStore(STORE).put(record, key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
       });
     });
   }
@@ -38,7 +49,14 @@ window.BlobStore = (function () {
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(STORE, "readonly");
         var req = tx.objectStore(STORE).get(key);
-        req.onsuccess = function () { resolve(req.result || null); };
+        req.onsuccess = function () {
+          var r = req.result;
+          if (!r) { resolve(null); return; }
+          // new records wrap the bytes as { buf, type }; older entries (and the
+          // no-arrayBuffer fallback above) were stored as raw Blobs
+          if (r.buf) { resolve(new Blob([r.buf], { type: r.type || "application/octet-stream" })); return; }
+          resolve(r);
+        };
         req.onerror = function () { reject(req.error); };
       });
     });
