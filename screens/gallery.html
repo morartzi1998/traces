@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723f">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723f">
-<link rel="stylesheet" href="../css/gallery.css?v=20260723f">
-<script src="../js/cursor.js?v=20260723f" defer></script>
-<script src="../js/grain.js?v=20260723f" defer></script>
-<script src="../js/owner.js?v=20260723f"></script>
-<script src="../js/config.js?v=20260723f"></script>
-<script src="../js/archive.js?v=20260723f"></script>
-<script src="../js/blobstore.js?v=20260723f"></script>
-<script src="../js/remote-captures.js?v=20260723f"></script>
-<script src="../js/designer-archive.js?v=20260723f"></script>
-<script src="../js/gallery-title.js?v=20260723f" defer></script>
-<script src="../js/flow.js?v=20260723f" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723g">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723g">
+<link rel="stylesheet" href="../css/gallery.css?v=20260723g">
+<script src="../js/cursor.js?v=20260723g" defer></script>
+<script src="../js/grain.js?v=20260723g" defer></script>
+<script src="../js/owner.js?v=20260723g"></script>
+<script src="../js/config.js?v=20260723g"></script>
+<script src="../js/archive.js?v=20260723g"></script>
+<script src="../js/blobstore.js?v=20260723g"></script>
+<script src="../js/remote-captures.js?v=20260723g"></script>
+<script src="../js/designer-archive.js?v=20260723g"></script>
+<script src="../js/gallery-title.js?v=20260723g" defer></script>
+<script src="../js/flow.js?v=20260723g" defer></script>
 </head>
 <body>
 
@@ -229,7 +229,7 @@
         art.innerHTML =
           '<p class="gal-meta"><span class="gal-idx">[' + entry.idx + ']</span><br>' + entry.metaText + '</p>' +
           '<button class="gal-card" type="button"><img alt=""><span class="gal-caption"></span></button>' +
-          (entry.syncStatus ? '<p class="gal-sync-status gal-sync-status--' + entry.syncStatus + '" data-cap-id="' + entry.id + '"></p>' : '') +
+          (entry.syncStatus ? '<p class="gal-sync-status gal-sync-status--' + (entry.syncStatus === "timeline-pending" ? "uploading" : entry.syncStatus) + '" data-cap-id="' + entry.id + '"></p>' : '') +
           '<div class="gal-item-actions" hidden>' +
             '<button class="gal-hide" type="button">hide</button>' +
             (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
@@ -246,12 +246,17 @@
         // heads-up that it's still sitting on this device alone
         if (entry.syncStatus) {
           var statusEl = art.querySelector(".gal-sync-status");
-          // spell out the timeline specifically for a capture that actually
-          // has one — a plain "synced" here left it genuinely unclear
-          // whether that meant just the latest scan or the whole history
-          statusEl.textContent = entry.syncStatus === "synced"
-            ? (entry.hasTimeline ? "☁ synced — timeline visible to visitors too" : "☁ synced — visible on your other devices")
-            : "only on this device";
+          // three genuinely different states, not two — a capture's latest
+          // scan can be confirmed on the server while its dated history
+          // hasn't caught up yet, and that gap is exactly what used to read
+          // as a silent "synced" when it wasn't actually true yet
+          if (entry.syncStatus === "synced") {
+            statusEl.textContent = entry.hasTimeline ? "☁ synced — timeline visible to visitors too" : "☁ synced — visible on your other devices";
+          } else if (entry.syncStatus === "timeline-pending") {
+            statusEl.textContent = "☁ scan synced — timeline still catching up";
+          } else {
+            statusEl.textContent = "only on this device";
+          }
         }
         // exposed so the hide/delete row (shown under whichever card was
         // marked last) can act on every currently marked card at once
@@ -392,9 +397,13 @@
 
         // owner-only: which of this browser's own local captures the last
         // server fetch already confirmed as present there too - lets each
-        // card say plainly whether other devices can actually see it yet
-        var remoteArchiveIds = {};
-        remoteArchiveItems.forEach(function (c) { remoteArchiveIds[c.id] = true; });
+        // card say plainly whether other devices can actually see it yet.
+        // Keyed by full record (not just a boolean) so the version COUNT can
+        // be compared too — the base record can be confirmed on the server
+        // while its dated history hasn't caught up, and that's a genuinely
+        // different, honest state from "fully synced".
+        var remoteArchiveById = {};
+        remoteArchiveItems.forEach(function (c) { remoteArchiveById[c.id] = c; });
         var showSyncStatus = window.isOwnerDevice && window.isOwnerDevice();
 
         var total = realItems.length + remoteOnly.length + showcase.length;
@@ -402,11 +411,15 @@
         realItems.forEach(function (c) {
           var idx = ("0" + (pos + 1)).slice(-2);
           pos++;
+          var remote = remoteArchiveById[c.id];
+          var localV = (c.versions || []).length;
+          var remoteV = remote ? (remote.versions || []).length : 0;
+          var status = !remote ? "local-only" : (localV >= 2 && remoteV < localV ? "timeline-pending" : "synced");
           grid.appendChild(buildCard({
             id: c.id, title: c.title, img: c.img, kind: c.kind,
             idx: idx, metaText: ago(c.created),
-            syncStatus: showSyncStatus ? (remoteArchiveIds[c.id] ? "synced" : "local-only") : null,
-            hasTimeline: (c.versions || []).length >= 2,
+            syncStatus: showSyncStatus ? status : null,
+            hasTimeline: localV >= 2,
             hide: function () {
               Archive.update(c.id, { hidden: true });
               // hiding one of Mor's real captures is curation, not just a
@@ -584,7 +597,13 @@
         if (window.RemoteCaptures && isOwner) {
           RemoteCaptures.syncMissing(window.Archive ? Archive.all() : [], list, "archive", function (capId, pct, done, success) {
             var el = grid.querySelector('.gal-sync-status[data-cap-id="' + capId + '"]');
-            if (done && success) remoteArchiveItems.push({ id: capId });
+            // carry the real versions along (not just the id) - a later
+            // render() otherwise has no way to tell this just-synced record
+            // apart from one whose timeline still hasn't caught up
+            if (done && success) {
+              var justSynced = window.Archive ? Archive.get(capId) : null;
+              remoteArchiveItems.push(justSynced ? Object.assign({}, justSynced) : { id: capId });
+            }
             if (!el) return;
             if (!done) {
               el.textContent = "uploading… " + Math.round(pct * 100) + "%";
@@ -626,6 +645,14 @@
               RemoteCaptures.publish(cap, "archive", function (pct) {
                 if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
               }).then(function (res) {
+                // keep the in-memory record's version count current too - a
+                // later render() (e.g. after a hide/filter change) otherwise
+                // still sees the old, behind-the-local-count server copy and
+                // wrongly flips this back to "timeline still catching up"
+                if (res) {
+                  remoteArchiveItems = remoteArchiveItems.filter(function (r) { return r.id !== cap.id; });
+                  remoteArchiveItems.push(Object.assign({}, cap));
+                }
                 if (el) {
                   el.textContent = res ? "☁ synced — timeline visible to visitors too" : "only on this device";
                   el.className = "gal-sync-status gal-sync-status--" + (res ? "synced" : "local-only");

@@ -243,11 +243,14 @@
   // one-time catch-up: a capture made in this browser before the shared
   // store existed (or before it was reachable) never got sent. Called after
   // list() resolves, so it only pushes what the server doesn't have yet.
-  // One at a time, not all fired at once — a batch of these routinely
-  // includes several large raw point clouds, and launching a dozen-plus
-  // big uploads concurrently on an ordinary connection meant most of them
-  // silently lost the race (fire-and-forget swallows the failure) while
-  // only a couple of the smallest actually finished.
+  // All fired at once, by request — a batch of these can include several
+  // large raw point clouds, and an earlier version of this ran them one at a
+  // time after launching a dozen-plus concurrently on an ordinary connection
+  // meant most of them silently lost the race (fire-and-forget swallows the
+  // failure) while only a couple of the smallest actually finished. Each
+  // upload already retries itself a few times on its own (see uploadBlob),
+  // which is what makes firing them all together survivable rather than a
+  // repeat of that same failure.
   // onItem (optional): called as (capId, fraction, done, success) - fraction
   // climbs 0..1 while that capture's blobs upload, then a final call with
   // done=true reports whether it actually made it (success) or not.
@@ -258,18 +261,14 @@
       remoteIds[(c.id || "").replace(/-community$/, "")] = true;
     });
     var pending = (localList || []).filter(function (cap) { return !remoteIds[cap.id]; });
-    (function next() {
-      var cap = pending.shift();
-      if (!cap) return;
+    pending.forEach(function (cap) {
       publish(cap, scope, onItem ? function (p) { onItem(cap.id, p, false); } : null)
         .then(function (result) {
           if (onItem) onItem(cap.id, 1, true, !!result);
-          next();
         }, function () {
           if (onItem) onItem(cap.id, 1, true, false);
-          next();
         });
-    })();
+    });
   }
 
   // Mor hiding one of her own fixed demo pieces or public archive items is
