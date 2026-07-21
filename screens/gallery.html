@@ -596,6 +596,21 @@
       // globally hidden, so her curation choices actually apply to everyone
       (window.RemoteCaptures ? RemoteCaptures.listHiddenShowcase() : Promise.resolve([])).then(function (list) {
         globalHiddenKeys = list || [];
+        // an owner's local hides of showcase pieces are curation meant for
+        // everyone. If any never reached the shared list (hidden before owner
+        // mode was on, or a transient network failure at hide time), reconcile
+        // them up now — so a visitor's view catches up the next time Mor opens
+        // her archive as the owner, without her having to re-hide anything.
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          var localHidden = [];
+          try { localHidden = JSON.parse(localStorage.getItem(DESIGNER_HIDDEN_KEY)) || []; } catch (e) {}
+          localHidden.forEach(function (k) {
+            if (globalHiddenKeys.indexOf(k) === -1) {
+              globalHiddenKeys.push(k);
+              RemoteCaptures.hideShowcaseGlobally(k);
+            }
+          });
+        }
         render();
       });
     })();
