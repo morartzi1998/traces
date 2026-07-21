@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722j">
-<link rel="stylesheet" href="../css/object.css?v=20260722j">
-<script src="../js/cursor.js?v=20260722j" defer></script>
-<script src="../js/grain.js?v=20260722j" defer></script>
-<script src="../js/tilt3d.js?v=20260722j" defer></script>
-<script src="../js/owner.js?v=20260722j"></script>
-<script src="../js/config.js?v=20260722j"></script>
-<script src="../js/archive.js?v=20260722j"></script>
-<script src="../js/blobstore.js?v=20260722j"></script>
-<script src="../js/particle-loader.js?v=20260722j"></script>
-<script src="../js/remote-captures.js?v=20260722j"></script>
-<script src="../js/community-seed.js?v=20260722j"></script>
-<script src="../js/flow.js?v=20260722j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722k">
+<link rel="stylesheet" href="../css/object.css?v=20260722k">
+<script src="../js/cursor.js?v=20260722k" defer></script>
+<script src="../js/grain.js?v=20260722k" defer></script>
+<script src="../js/tilt3d.js?v=20260722k" defer></script>
+<script src="../js/owner.js?v=20260722k"></script>
+<script src="../js/config.js?v=20260722k"></script>
+<script src="../js/archive.js?v=20260722k"></script>
+<script src="../js/blobstore.js?v=20260722k"></script>
+<script src="../js/particle-loader.js?v=20260722k"></script>
+<script src="../js/remote-captures.js?v=20260722k"></script>
+<script src="../js/community-seed.js?v=20260722k"></script>
+<script src="../js/flow.js?v=20260722k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722k"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,11 +28,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722j" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722k" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722j";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722j";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722k";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722k";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -2193,16 +2193,48 @@
         };
         xhr.send(form);
       }
+      // persist the chosen framing (defaultView + point size) to the SHARED
+      // server record too, not just this browser — otherwise the angle Mor
+      // picks only ever shows for her, and every visitor still sees the raw
+      // default orientation. Patches just those fields, reusing the existing
+      // model/points URLs (never a re-upload of the whole capture).
+      function patchServerRecord(serverId, fields) {
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api) return;
+        fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+          .then(function (d) {
+            var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
+            if (!rec) return;
+            Object.keys(fields).forEach(function (fk) { rec[fk] = fields[fk]; });
+            return fetch(api + "/captures", {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec),
+            });
+          }).catch(function () {});
+      }
+      function syncViewToServer() {
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
+        var fields = { defaultView: catalog[key].defaultView || null };
+        if (catalog[key].pointSize != null) fields.pointSize = catalog[key].pointSize;
+        var inArchive = window.Archive && Archive.get(key);
+        var inCommunity = window.Community && Community.get(key);
+        if (inArchive) patchServerRecord(key, fields);
+        if (inCommunity) patchServerRecord(key + "-community", fields);
+        if (!inArchive && !inCommunity) {
+          patchServerRecord((browsingCommunity || catalog[key].visibility === "community") ? key + "-community" : key, fields);
+        }
+      }
       menuSetDefaultView.addEventListener("click", function () {
         menu.hidden = true;
         if (pcViewer && !objPoints.hidden) {
           catalog[key].defaultView = pcViewer.getView();
           persist(key);
+          syncViewToServer();
           saveThumbnail(pcViewer.screenshot());
         } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
           var orbit = modelViewer.getCameraOrbit();
           catalog[key].defaultView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
           persist(key);
+          syncViewToServer();
           modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
             var reader = new FileReader();
             reader.onload = function () { saveThumbnail(reader.result); };
