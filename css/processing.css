@@ -144,6 +144,12 @@
   min-width: 70px;
 }
 
+/* the background-trim slider stacks just above the point-size row — both
+   are centered at the same x, so only the vertical offset differs */
+.proc-density--trim {
+  bottom: calc(11vh + 46px);
+}
+
 .proc-status {
   position: absolute;
   left: 50%;

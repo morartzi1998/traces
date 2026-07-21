@@ -5,28 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723i">
-<link rel="stylesheet" href="../css/processing.css?v=20260723i">
-<script src="../js/owner.js?v=20260723i"></script>
-<script src="../js/config.js?v=20260723i"></script>
-<script src="../js/cursor.js?v=20260723i" defer></script>
-<script src="../js/grain.js?v=20260723i" defer></script>
-<script src="../js/blobstore.js?v=20260723i"></script>
-<script src="../js/flow.js?v=20260723i" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723i"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723j">
+<link rel="stylesheet" href="../css/processing.css?v=20260723j">
+<script src="../js/owner.js?v=20260723j"></script>
+<script src="../js/config.js?v=20260723j"></script>
+<script src="../js/cursor.js?v=20260723j" defer></script>
+<script src="../js/grain.js?v=20260723j" defer></script>
+<script src="../js/blobstore.js?v=20260723j"></script>
+<script src="../js/flow.js?v=20260723j" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723j"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723i" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723j" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry } from "../js/voxelize-shared.js?v=20260723i";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723i";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260723j";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723j";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
+  window.__serializeGeometry = serializeGeometry;
+  window.__cropCloudByRadius = cropCloudByRadius;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
 </head>
@@ -45,6 +47,15 @@
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
     <p class="proc-error-detail" id="procErrorDetail" hidden></p>
+
+    <!-- "isolate the object": peels the surrounding room away from a raw
+         point cloud, keeping only the points within a chosen radius of the
+         scan's core — full right keeps everything -->
+    <div class="proc-density proc-density--trim" id="procTrimRow" hidden>
+      <label for="procTrimSlider">background</label>
+      <input type="range" id="procTrimSlider" min="25" max="100" value="100" step="5">
+      <span class="proc-density-label" id="procTrimLabel">everything</span>
+    </div>
 
     <div class="proc-density" id="procDensityRow" hidden>
       <label for="procDensitySlider">point size</label>
@@ -209,9 +220,16 @@
         var densityRow = document.getElementById("procDensityRow");
         var densitySlider = document.getElementById("procDensitySlider");
         var densityLabel = document.getElementById("procDensityLabel");
+        var trimRow = document.getElementById("procTrimRow");
+        var trimSlider = document.getElementById("procTrimSlider");
+        var trimLabel = document.getElementById("procTrimLabel");
         var SIZE_LEVELS = [0.006, 0.009, 0.013, 0.018, 0.026];
         var SIZE_NAMES = ["sparse", "light", "balanced", "dense", "very dense"];
         var viewer = null;
+        // the untouched full scan — every background-trim crop derives from
+        // THIS, never from a previous crop, so sliding back right restores
+        // everything (nothing is destroyed while choosing)
+        var originalGeometry = null;
 
         // a real scan can be millions of points — deserializing +
         // building the GPU point buffer isn't instant, and the placeholder
@@ -248,6 +266,7 @@
             if (!blob) { scanReallyFailed(detail); return; }
             pointsEl.hidden = true;
             densityRow.hidden = true; // point-size only applies to the raw cloud
+            trimRow.hidden = true;    // and so does the background trim
             // downstream screens should now treat this as a plain GLB model,
             // not a raw point cloud whose renderer just failed
             try { sessionStorage.setItem("traces-capture-is-cloud", "0"); } catch (e) {}
@@ -305,7 +324,9 @@
                 return;
               }
               try { sessionStorage.setItem("traces-capture-point-size", SIZE_LEVELS[2]); } catch (e) {}
+              originalGeometry = geometry;
               densityRow.hidden = false;
+              trimRow.hidden = false;
               status.textContent = "Capturing complete";
               proceed.hidden = false;
               // same "comes into focus" reveal every other capture path gets —
@@ -342,6 +363,50 @@
           // describe-capture.html and the saved record both defaulted back
           // to "balanced" regardless of what was actually picked here
           try { sessionStorage.setItem("traces-capture-point-size", size); } catch (e) {}
+        });
+
+        // ---- "isolate the object from its background" ----------------------
+        function trimFrac() { return parseInt(trimSlider.value, 10) / 100; }
+        function croppedNow() {
+          if (!originalGeometry) return null;
+          if (trimFrac() >= 0.999) return originalGeometry;
+          if (!window.__cropCloudByRadius) return null;
+          var g = window.__cropCloudByRadius(originalGeometry, trimFrac());
+          var p = g && g.getAttribute && g.getAttribute("position");
+          return p && p.count ? g : null;
+        }
+        var trimTimer = null;
+        trimSlider.addEventListener("input", function () {
+          var v = parseInt(trimSlider.value, 10);
+          trimLabel.textContent = v >= 98 ? "everything" : (v >= 70 ? "most of it" : (v >= 45 ? "close around it" : "object only"));
+          // the viewer has no geometry-swap API, so a crop means a clean
+          // re-mount — debounced, or dragging would rebuild the GPU point
+          // buffer for every pixel of thumb movement
+          clearTimeout(trimTimer);
+          trimTimer = setTimeout(function () {
+            var g = croppedNow();
+            if (!g) return;
+            // keep the exact framing across the re-mount, so the room
+            // peeling away is the ONLY visible change (a camera jump on top
+            // of it read as the whole scene lurching)
+            var view = null;
+            try { view = viewer && viewer.getView ? viewer.getView() : null; } catch (e) {}
+            if (viewer && viewer.dispose) { try { viewer.dispose(); } catch (e) {} }
+            pointsEl.innerHTML = "";
+            viewer = window.__mountPointCloudViewer(pointsEl, g, {
+              pointSize: SIZE_LEVELS[parseInt(densitySlider.value, 10) - 1],
+              initialView: view,
+            });
+          }, 160);
+        });
+        // the choice must survive into the SAVED capture, not just this
+        // preview: overwrite the pending raw blob with the trimmed cloud.
+        // "change" fires once per released adjustment (unlike "input"), so
+        // this isn't re-serializing megabytes mid-drag.
+        trimSlider.addEventListener("change", function () {
+          var g = croppedNow();
+          if (!g || !window.__serializeGeometry || !window.BlobStore) return;
+          window.BlobStore.set("capture-pending-raw", window.__serializeGeometry(g)).catch(function () {});
         });
       } else {
         try {
