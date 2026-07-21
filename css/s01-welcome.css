@@ -51,78 +51,46 @@
   width: 78%;
 }
 
-/* rotation is a physical motion, not a cross-fade: the top card lifts up and
-   off the stack (like the hover lift, but all the way out), the contents
-   shuffle while it's gone, then the next card rises up from below into its
-   place — so a real polaroid pulls away and a new one slides up (bottom→top).
-   See index.html's rotate(). */
+/* rotation is a physical deal, and the ROLES travel: the top card flies off
+   the stack, the card behind it slides bodily into the front position
+   (top/left/transform all transition between the slot classes), the third
+   slides into the back slot, and the dealt card — once fully out of view —
+   is reloaded with the next capture and rises back in as the new third.
+   No card ever changes its photo while visible, so there is no hidden
+   content-swap window, no instant where the whole stack blinks out, and a
+   caption can never sit over the wrong picture. See index.html's rotate(). */
 .polaroid-front {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
   z-index: 4;
 }
 
-.polaroid-front.polaroid--flick {
+.polaroid-stack.dealing .polaroid {
+  transition:
+    top 0.95s cubic-bezier(0.3, 0.05, 0.2, 1),
+    left 0.95s cubic-bezier(0.3, 0.05, 0.2, 1),
+    transform 0.95s cubic-bezier(0.3, 0.05, 0.2, 1),
+    opacity 0.4s ease 0.45s;
+}
+
+/* the dealt card lifts up and away the way a hand takes the top photo off a
+   pile — visible for most of its flight, fading only near the end (the
+   delayed opacity above), never while still sitting in the stack */
+.polaroid-stack.dealing .polaroid--dealt {
+  transform: translate(-14%, -58%) rotate(-14deg) scale(0.98);
+  opacity: 0;
   z-index: 6;
-  transform-origin: 50% 120%; /* pivot low, so it swings like a dealt card */
-  will-change: transform, opacity;
-  animation: polaroid-card-shuffle 1.5s cubic-bezier(0.45, 0.05, 0.3, 1);
 }
 
-/* a hand-dealt card shuffle in one continuous, even sweep: the top polaroid
-   rotates up and off the deck, and the new top card swings down from the other
-   side and settles nearly flat — no pauses or held frames, so it reads smooth
-   rather than move-stop-move */
-@keyframes polaroid-card-shuffle {
-  0%   { transform: rotate(-0.1deg) translate(0, 0) scale(1); opacity: 1; }
-  38%  { transform: rotate(15deg) translate(10%, 4%) scale(0.99); opacity: 1; }
-  52%  { transform: rotate(23deg) translate(16%, 9%) scale(0.95); opacity: 0; }
-  56%  { transform: rotate(-13deg) translate(-10%, 5%) scale(0.93); opacity: 0; }
-  82%  { transform: rotate(-1.5deg) translate(0, 0) scale(1); opacity: 1; }
-  100% { transform: rotate(-0.1deg) translate(0, 0) scale(1); opacity: 1; }
-}
-
-/* the cards underneath react to the top one being dealt away — each one
-   advances up toward the spot the card ahead of it just vacated, then eases
-   back as the new arrangement settles, so the whole stack moves as one deck
-   instead of only the top card moving in isolation.
-   The peak displacement and the opacity dip now land at the SAME moment
-   (52–56%, matching the front card's own invisible window) instead of the
-   card reaching furthest into the front card's spot while still fully
-   opaque and only fading afterward — that mismatch was the actual bug: two
-   fully-visible polaroids briefly overlapping in the same spot, with their
-   captions reading as jumbled, illegible double-exposed text. */
-.polaroid-back.polaroid--shuffling {
-  will-change: transform, opacity;
-  animation: polaroid-advance-back 1.5s cubic-bezier(0.45, 0.05, 0.3, 1);
-}
-
-.polaroid-third.polaroid--shuffling {
-  will-change: transform, opacity;
-  animation: polaroid-advance-third 1.5s cubic-bezier(0.45, 0.05, 0.3, 1);
-}
-
-@keyframes polaroid-advance-back {
-  0%   { transform: rotate(-5deg) translate(0, 0) scale(1); opacity: 1; }
-  38%  { transform: rotate(-3.4deg) translate(-7%, -10%) scale(1.01); opacity: 0.8; }
-  52%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.02); opacity: 0; }
-  56%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.02); opacity: 0; }
-  82%  { transform: rotate(-4.2deg) translate(-4%, -7%) scale(1.008); opacity: 1; }
-  100% { transform: rotate(-5deg) translate(0, 0) scale(1); opacity: 1; }
-}
-
-@keyframes polaroid-advance-third {
-  0%   { transform: rotate(4deg) translate(0, 0) scale(1); opacity: 1; }
-  38%  { transform: rotate(2.6deg) translate(5%, -8%) scale(1.007); opacity: 0.8; }
-  52%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.014); opacity: 0; }
-  56%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.014); opacity: 0; }
-  82%  { transform: rotate(3.4deg) translate(3%, -5%) scale(1.004); opacity: 1; }
-  100% { transform: rotate(4deg) translate(0, 0) scale(1); opacity: 1; }
+/* the recycled card's buried starting pose: parked low and transparent with
+   no transition at all, so it can be repositioned + reloaded invisibly in
+   one frame, then released to ease up into the third slot */
+.polaroid-stack .polaroid--pre-enter {
+  transition: none;
+  opacity: 0;
+  transform: rotate(6deg) translateY(34px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .polaroid-front.polaroid--flick,
-  .polaroid-back.polaroid--shuffling,
-  .polaroid-third.polaroid--shuffling { animation: none; }
+  .polaroid-stack.dealing .polaroid { transition: none; }
 }
 
 .polaroid img {
@@ -256,11 +224,9 @@
     overflow: hidden;    /* guarantee no scroll on the home screen */
   }
 
-  /* the shuffle animation is desktop-only; make sure it can never run here */
-  .polaroid-front.polaroid--flick,
-  .polaroid-back.polaroid--shuffling,
-  .polaroid-third.polaroid--shuffling {
-    animation: none;
+  /* the dealing motion is desktop-only; make sure it can never run here */
+  .polaroid-stack.dealing .polaroid {
+    transition: none;
   }
 
   .main {

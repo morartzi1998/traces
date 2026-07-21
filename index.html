@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260723j">
-<link rel="stylesheet" href="css/chrome.css?v=20260723j">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260723j">
-<link rel="stylesheet" href="css/loading.css?v=20260723j">
+<link rel="stylesheet" href="css/base.css?v=20260723k">
+<link rel="stylesheet" href="css/chrome.css?v=20260723k">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260723k">
+<link rel="stylesheet" href="css/loading.css?v=20260723k">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,10 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260723j" defer></script>
-<script src="js/grain.js?v=20260723j" defer></script>
-<script src="js/owner.js?v=20260723j"></script>
-<script src="js/flow.js?v=20260723j" defer></script>
+<script src="js/cursor.js?v=20260723k" defer></script>
+<script src="js/grain.js?v=20260723k" defer></script>
+<script src="js/owner.js?v=20260723k"></script>
+<script src="js/flow.js?v=20260723k" defer></script>
 </head>
 <body>
 
@@ -189,31 +189,41 @@
         el.dataset.key = item.key;
       }
 
+      var dealing = false;
       function rotate() {
-        if (paused) return;
-        var front = slots[0];
-        // the top card lifts up and off, then the next rises from below into
-        // its place (see .polaroid-lift-swap) — a real movement, not a fade
-        front.classList.add("polaroid--flick");
-        // the two cards underneath advance to react to the top being dealt
-        // away, so the whole stack moves as one deck (not just the top card)
-        slots[1].classList.add("polaroid--shuffling");
-        slots[2].classList.add("polaroid--shuffling");
-        // swap the stack's contents while the card is out of view
-        // (the shuffle is fully transparent between ~52% and ~56% of 1.5s)
+        if (paused || dealing) return;
+        dealing = true;
+        var f = slots[0], b = slots[1], t = slots[2];
+        stack.classList.add("dealing");
+        // the top card flies up and off the pile…
+        f.classList.add("polaroid--dealt");
+        // …while the cards behind it PHYSICALLY travel one slot forward: the
+        // slot classes (which carry each position) move between the elements,
+        // and top/left/transform transition between them (see .dealing in the
+        // CSS). Each card keeps its own photo + caption for the whole ride,
+        // so a caption can never sit over the wrong picture mid-motion — the
+        // exact bug the old "swap the contents while invisible" version had.
+        b.classList.remove("polaroid-back");
+        b.classList.add("polaroid-front");
+        t.classList.remove("polaroid-third");
+        t.classList.add("polaroid-back");
+        slots = [b, t, f];
+        shown = [shown[1], shown[2], nextUp % HERO_ITEMS.length];
+        nextUp++;
+        // once the dealt card has fully flown out and faded, recycle it:
+        // load the NEXT capture into it while it's invisible, park it low
+        // beneath the stack, and let it rise up into the third slot
         setTimeout(function () {
-          shown[0] = shown[1];
-          shown[1] = shown[2];
-          shown[2] = nextUp % HERO_ITEMS.length;
-          nextUp++;
-          slots.forEach(function (el, i) { applyContent(el, HERO_ITEMS[shown[i]]); });
-        }, 810);
-        // clear the classes only after the animation has fully played out
-        setTimeout(function () {
-          front.classList.remove("polaroid--flick");
-          slots[1].classList.remove("polaroid--shuffling");
-          slots[2].classList.remove("polaroid--shuffling");
-        }, 1520);
+          applyContent(f, HERO_ITEMS[shown[2]]);
+          f.classList.remove("polaroid-front", "polaroid--dealt");
+          f.classList.add("polaroid-third", "polaroid--pre-enter");
+          void f.offsetWidth; // paint the buried pose before releasing it
+          f.classList.remove("polaroid--pre-enter");
+          setTimeout(function () {
+            stack.classList.remove("dealing");
+            dealing = false;
+          }, 1000);
+        }, 980);
       }
 
       function restartTimer() {
