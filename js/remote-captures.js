@@ -187,22 +187,63 @@
         // at the same source blob, so nothing is uploaded twice
         var rehostCache = {};
         refs.forEach(function (r, i) { if (r) rehostCache[r] = Promise.resolve(out[i]); });
-        function rehost(ref) {
-          if (!ref) return Promise.resolve(ref || null);
-          if (!(ref.indexOf("idb:") === 0 || isTripoProxy(ref))) return Promise.resolve(ref);
-          if (rehostCache[ref]) return rehostCache[ref];
-          var p = loadBlob(ref).then(function (b) { return b ? uploadBlob(b) : null; });
-          rehostCache[ref] = p;
-          return p;
-        }
         // re-host each dated version's own blobs too, so a visitor loading this
         // capture from the server gets the full timeline (its dated history),
         // not just the latest scan — this is why the timeline showed in owner
         // mode (local record has the versions) but never for visitors (the
         // server record dropped them entirely).
         var versions = Array.isArray(cap.versions) ? cap.versions : [];
+        // the version blobs are the megabytes that actually take the time
+        // here (the base refs above are usually already hosted), and they
+        // used to upload with NO progress reporting at all — the status
+        // label sat frozen for minutes, which read as "nothing is moving"
+        // every single time. Track a count-weighted fraction across every
+        // version ref that still needs uploading.
+        var vRefs = [];
+        versions.forEach(function (v) {
+          [["img", "hostedImg"], ["model", "hostedModel"], ["points", "hostedPoints"]].forEach(function (p) {
+            var ref = v[p[0]];
+            if (!v[p[1]] && ref && (ref.indexOf("idb:") === 0 || isTripoProxy(ref)) && !rehostCache[ref]) vRefs.push(ref);
+          });
+        });
+        var vFrac = {};
+        function reportVersions() {
+          if (!onProgress || !vRefs.length) return;
+          var sum = 0;
+          vRefs.forEach(function (r) { sum += vFrac[r] || 0; });
+          onProgress(sum / vRefs.length);
+        }
+        function rehost(ref) {
+          if (!ref) return Promise.resolve(ref || null);
+          if (!(ref.indexOf("idb:") === 0 || isTripoProxy(ref))) return Promise.resolve(ref);
+          if (rehostCache[ref]) return rehostCache[ref];
+          var p = loadBlob(ref).then(function (b) {
+            if (!b) return null;
+            return uploadBlob(b, function (f) { vFrac[ref] = f; reportVersions(); });
+          });
+          rehostCache[ref] = p;
+          return p;
+        }
         return Promise.all(versions.map(function (v) {
-          return Promise.all([rehost(v.img), rehost(v.model), rehost(v.points)]).then(function (rv) {
+          return Promise.all([
+            // a version whose upload already finished in an earlier attempt
+            // carries its hosted URL on the local record — skip it entirely
+            v.hostedImg ? Promise.resolve(v.hostedImg) : rehost(v.img),
+            v.hostedModel ? Promise.resolve(v.hostedModel) : rehost(v.model),
+            v.hostedPoints ? Promise.resolve(v.hostedPoints) : rehost(v.points),
+          ]).then(function (rv) {
+            // remember each finished upload ON the local record immediately —
+            // closing the tab mid-way used to restart ALL the megabytes from
+            // zero on the next attempt, so a big timeline could never finish
+            // across normal browsing. Now every completed piece sticks, and
+            // a restart only uploads what's still missing.
+            try {
+              if (rv[0]) v.hostedImg = rv[0];
+              if (rv[1]) v.hostedModel = rv[1];
+              if (rv[2]) v.hostedPoints = rv[2];
+              if (window.Archive && window.Archive.get(cap.id)) window.Archive.update(cap.id, { versions: versions });
+              if (window.Community && window.Community.get(cap.id)) window.Community.update(cap.id, { versions: versions });
+            } catch (e) {}
             return { created: v.created, title: v.title, img: rv[0], model: rv[1], points: rv[2] };
           });
         })).then(function (rehostedVersions) {
