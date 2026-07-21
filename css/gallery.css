@@ -212,9 +212,11 @@
     text-align: right;
     font-size: 1.1rem;
     line-height: 1.15;
-    background: rgba(16, 14, 24, 0.88);
-    padding: 8px 12px;
-    border-radius: 4px;
+    /* no box — just a soft dark halo so the blue text stays legible whether
+       it's floating over the dark page or over a bright polaroid */
+    background: none;
+    padding: 0;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9);
   }
   .gal-title-block { order: 0; }
   .gal-filters { order: 1; }
