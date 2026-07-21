@@ -343,14 +343,21 @@
 @media (max-width: 900px) {
   .screen {
     flex-direction: column;
-  }
-
-  .screen {
     height: auto;
   }
 
+  /* keep the object visible WHILE writing: it stays pinned to the top of the
+     screen as a shorter panel and the description form scrolls underneath it,
+     so you never lose sight of what you're describing. (The old layout stacked
+     the object above the form, so it scrolled away the instant you started
+     typing — exactly the "can't see the object while writing" problem.) */
   .capture-canvas {
-    height: 55vh;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 40vh;
+    background: var(--color-bg);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
   }
 
   .sidebar {

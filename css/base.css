@@ -105,6 +105,13 @@
   --font-caption: "Lumend Blur Demo", "Helvetica Neue", Arial, sans-serif;
   --font-ink: "Lumend Demo", "Helvetica Neue", Arial, sans-serif;
   --font-drawn: "Lumend Rounded Drawn Demo", "Helvetica Neue", Arial, sans-serif;
+
+  /* ---------- Shared type scale ----------
+     One small "metadata" size used for every secondary line that sits around a
+     title — the little label above a title, and the number + date above each
+     polaroid — so that tier is identical on the archive, community and object
+     screens instead of the several near-but-not-equal sizes that had crept in. */
+  --fs-meta: 0.75rem;
 }
 
 /* ---------- Reset ---------- */

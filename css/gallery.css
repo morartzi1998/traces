@@ -61,7 +61,7 @@
   text-align: left;
 }
 .gal-updated {
-  font-size: 0.72rem; /* same size as the "[NN] · X days ago" capture meta */
+  font-size: var(--fs-meta); /* same metadata tier as the "[NN] · X days ago" line */
   color: var(--color-cream);
   opacity: 1;
   letter-spacing: 0.04em;
@@ -273,7 +273,7 @@
 }
 
 .gal-meta {
-  font-size: 0.72rem;
+  font-size: var(--fs-meta);
   line-height: 1.5;
   letter-spacing: 0.02em;
   color: var(--color-cream);

@@ -75,7 +75,7 @@
 }
 
 .obj-updated {
-  font-size: 0.75rem;
+  font-size: var(--fs-meta);
   opacity: 0.65;
   letter-spacing: 0.04em;
   margin-bottom: 6px;
