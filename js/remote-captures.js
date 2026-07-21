@@ -37,9 +37,26 @@
   }
 
   // upload one blob, resolving to the worker's fetchable URL for it (or
-  // null on any failure). onProgress (optional) gets a 0..1 fraction of
+  // null after every retry fails). A big point-cloud upload that stalls is
+  // usually a transient weak moment on the connection, not a permanent error —
+  // dropping it there is exactly how a paid-for scan silently failed to save
+  // (the "living room chandelier" stuck at 17%). So retry the whole upload a
+  // few times with growing backoff before giving up.
+  function uploadBlob(blob, onProgress, attempt) {
+    attempt = attempt || 0;
+    return uploadBlobOnce(blob, onProgress).then(function (url) {
+      if (url || attempt >= 3) return url;
+      return new Promise(function (r) { setTimeout(r, 1500 * (attempt + 1)); }).then(function () {
+        if (onProgress) onProgress(0); // this blob starts over from 0%
+        return uploadBlob(blob, onProgress, attempt + 1);
+      });
+    });
+  }
+
+  // one upload attempt, resolving to the worker's fetchable URL for the blob
+  // (or null on any failure). onProgress (optional) gets a 0..1 fraction of
   // THIS blob's own bytes.
-  function uploadBlob(blob, onProgress) {
+  function uploadBlobOnce(blob, onProgress) {
     // Cloudflare rejects a request body over ~100MB at the edge, before
     // the worker (or this upload) ever sees it - confirmed by hand: 100MB
     // went through cleanly, 120MB came back a clean 413. Fail it here,
