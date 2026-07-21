@@ -66,24 +66,41 @@
     var fileId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
       : ("f" + Date.now() + "-" + Math.random().toString(36).slice(2)).replace(/[^a-f0-9-]/gi, "");
     var uploaded = 0;
-    function putChunk(i) {
-      if (i >= total) {
-        return fetch(base + "/captures/upload-finalize?fileId=" + fileId + "&chunks=" + total +
-          "&size=" + blob.size + "&type=" + encodeURIComponent(blob.type || "application/octet-stream"),
-          { method: "POST" })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) { if (onProgress) onProgress(1); return (d && d.url) ? d.url : null; })
-          .catch(function () { return null; });
-      }
-      var part = blob.slice(i * CHUNK, Math.min(blob.size, (i + 1) * CHUNK));
+    // each piece retries on its own — one transient hiccup used to fail the
+    // WHOLE file, throwing away every chunk that had already made it up
+    function putOne(i, part, attempt) {
       return fetch(base + "/captures/upload-chunk?fileId=" + fileId + "&index=" + i, { method: "POST", body: part })
-        .then(function (r) {
-          if (!r.ok) return null;
-          uploaded += part.size;
-          if (onProgress) onProgress(Math.min(0.99, uploaded / blob.size));
-          return putChunk(i + 1);
-        })
-        .catch(function () { return null; });
+        .then(function (r) { return r.ok ? true : null; })
+        .catch(function () { return null; })
+        .then(function (okr) {
+          if (okr) return true;
+          if ((attempt || 0) >= 2) return null;
+          return new Promise(function (r) { setTimeout(r, 1200 * ((attempt || 0) + 1)); })
+            .then(function () { return putOne(i, part, (attempt || 0) + 1); });
+        });
+    }
+    function finalize(attempt) {
+      return fetch(base + "/captures/upload-finalize?fileId=" + fileId + "&chunks=" + total +
+        "&size=" + blob.size + "&type=" + encodeURIComponent(blob.type || "application/octet-stream"),
+        { method: "POST" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+        .then(function (d) {
+          if (d && d.url) { if (onProgress) onProgress(1); return d.url; }
+          if ((attempt || 0) >= 2) return null;
+          return new Promise(function (r) { setTimeout(r, 1200 * ((attempt || 0) + 1)); })
+            .then(function () { return finalize((attempt || 0) + 1); });
+        });
+    }
+    function putChunk(i) {
+      if (i >= total) return finalize(0);
+      var part = blob.slice(i * CHUNK, Math.min(blob.size, (i + 1) * CHUNK));
+      return putOne(i, part, 0).then(function (okr) {
+        if (!okr) return null;
+        uploaded += part.size;
+        if (onProgress) onProgress(Math.min(0.99, uploaded / blob.size));
+        return putChunk(i + 1);
+      });
     }
     return putChunk(0);
   }
@@ -92,8 +109,14 @@
   // (or null on any failure). onProgress (optional) gets a 0..1 fraction of
   // THIS blob's own bytes.
   function uploadBlobOnce(blob, onProgress) {
-    // big files go up in chunks (single POST would be rejected at the edge)
-    if (blob.size > 90 * 1024 * 1024) return uploadBlobChunked(blob, onProgress);
+    // anything sizable goes up in pieces, not just files past the ~100MB edge
+    // limit: a single giant POST forces the worker to swallow the whole body
+    // at once (several sequential storage writes on its side while the
+    // client hangs at "100%"), and one hiccup costs the entire file. Small
+    // pieces each complete in seconds, retry individually, and give real
+    // granular progress. The threshold matches the worker's own 24MB
+    // per-stored-piece design.
+    if (blob.size > 24 * 1024 * 1024) return uploadBlobChunked(blob, onProgress);
     // XHR (not fetch) so upload progress is actually observable - a real
     // point-cloud file is tens of MB, and a flat "saving..." reads the same
     // whether it's about to finish or has silently stalled
