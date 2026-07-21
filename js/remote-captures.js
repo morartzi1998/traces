@@ -219,6 +219,7 @@
           if (cap.defaultView != null) record.defaultView = cap.defaultView;
           if (cap.pointSize != null) record.pointSize = cap.pointSize;
           if (cap.tilt != null) record.tilt = cap.tilt;
+          if (cap.dual) record.dual = true; // open on the mesh, not the voxel cloud
           return fetch(api() + "/captures", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

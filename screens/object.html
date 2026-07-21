@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722x">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722x">
-<link rel="stylesheet" href="../css/object.css?v=20260722x">
-<script src="../js/cursor.js?v=20260722x" defer></script>
-<script src="../js/grain.js?v=20260722x" defer></script>
-<script src="../js/tilt3d.js?v=20260722x" defer></script>
-<script src="../js/owner.js?v=20260722x"></script>
-<script src="../js/config.js?v=20260722x"></script>
-<script src="../js/archive.js?v=20260722x"></script>
-<script src="../js/blobstore.js?v=20260722x"></script>
-<script src="../js/particle-loader.js?v=20260722x"></script>
-<script src="../js/remote-captures.js?v=20260722x"></script>
-<script src="../js/community-seed.js?v=20260722x"></script>
-<script src="../js/flow.js?v=20260722x" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722y">
+<link rel="stylesheet" href="../css/object.css?v=20260722y">
+<script src="../js/cursor.js?v=20260722y" defer></script>
+<script src="../js/grain.js?v=20260722y" defer></script>
+<script src="../js/tilt3d.js?v=20260722y" defer></script>
+<script src="../js/owner.js?v=20260722y"></script>
+<script src="../js/config.js?v=20260722y"></script>
+<script src="../js/archive.js?v=20260722y"></script>
+<script src="../js/blobstore.js?v=20260722y"></script>
+<script src="../js/particle-loader.js?v=20260722y"></script>
+<script src="../js/remote-captures.js?v=20260722y"></script>
+<script src="../js/community-seed.js?v=20260722y"></script>
+<script src="../js/flow.js?v=20260722y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722y"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722x" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722y" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722x";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722x";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722y";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722y";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -482,7 +482,7 @@
           if (catalog[k]) return;
           catalog[k] = {
             kind: d.kind || "object", title: d.title, img: d.img,
-            model: d.model, points: d.points,
+            model: d.model, points: d.points, dual: !!d.dual,
             pointSize: d.pointSize || null, tilt: d.tilt || null,
             defaultView: d.defaultView || null,
             feeling: d.feeling || "", annotations: d.annotations || [], links: [],
@@ -514,6 +514,7 @@
           catalog[c.id] = {
             kind: c.kind || "object",
             title: c.title || "untitled capture",
+            dual: !!c.dual, // a true mesh+cloud dual upload (opens on the mesh)
             img: c.img || "../assets/images/photo-room.png",
             model: c.model || null,
             points: c.points || null,
@@ -1678,11 +1679,13 @@
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
         clearHotspots();
         document.getElementById("objTitle").textContent = catalog[k].title;
-        // a capture that carries BOTH a mesh and a point cloud defaults to the
-        // mesh — it's the more reliable render (a raw cloud can be huge/slow or
-        // come out sparse); the menu's "Show as point cloud" switches to it.
-        var hasBothReps = catalog[k].model && catalog[k].points;
-        swapScan(k, catalog[k].model, catalog[k].img, hasBothReps ? null : catalog[k].points);
+        // default to the point cloud when there is one — it's the crisp view.
+        // ONLY a true dual capture (a user-supplied mesh uploaded ALONGSIDE a
+        // .ply) opens on the mesh instead; a plain point-cloud capture also
+        // carries a low-res voxel "model" derived from its own cloud, and that
+        // must NOT be shown by default (it's the blocky blob that was reported).
+        var preferMesh = catalog[k].dual && catalog[k].model;
+        swapScan(k, catalog[k].model, catalog[k].img, preferMesh ? null : catalog[k].points);
         // the blue-purple backdrop is about HOW you got here, not what the
         // capture itself is — opening the same shared capture from your own
         // Archive should look like your Archive; only actually browsing
