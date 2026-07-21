@@ -222,13 +222,50 @@
         // — it's their own finished file being opened. Say so honestly, and
         // put the actual reason on screen (not just the console) so a phone
         // screenshot alone tells us what went wrong.
-        function scanFailed(detail) {
+        function scanReallyFailed(detail) {
           stopAssembling();
           cloud.hidden = true;
+          model.hidden = true;
           status.textContent = "Couldn't open this scan";
           var el = document.getElementById("procErrorDetail");
           if (el) { el.textContent = detail || ""; el.hidden = !detail; }
           if (detail) console.warn("scan open failed:", detail);
+        }
+
+        // The small preview on the upload screen rendered fine because it used
+        // a lightweight voxel GLB inside <model-viewer>; the big view here tries
+        // the heavier raw per-point renderer (three.js), which can fail to fetch
+        // or run on a phone. So instead of giving up, fall back to that same GLB
+        // (stored as traces-capture-model) — the object still shows at full
+        // size, blocky but there. Only if even that can't load do we show the
+        // real error.
+        function scanFailed(detail) {
+          stopAssembling();
+          var readyModel = null;
+          try { readyModel = sessionStorage.getItem("traces-capture-model"); } catch (e) {}
+          if (!readyModel || readyModel.indexOf("idb:") !== 0) { scanReallyFailed(detail); return; }
+          window.BlobStore.get(readyModel.slice(4)).then(function (blob) {
+            if (!blob) { scanReallyFailed(detail); return; }
+            pointsEl.hidden = true;
+            densityRow.hidden = true; // point-size only applies to the raw cloud
+            // downstream screens should now treat this as a plain GLB model,
+            // not a raw point cloud whose renderer just failed
+            try { sessionStorage.setItem("traces-capture-is-cloud", "0"); } catch (e) {}
+            status.textContent = "Preparing view…";
+            cloud.hidden = true;
+            model.hidden = false;
+            model.style.filter = "blur(0px) saturate(1)";
+            model.addEventListener("load", function () {
+              status.textContent = "Capturing complete";
+              proceed.hidden = false;
+            }, { once: true });
+            model.addEventListener("error", function () { scanReallyFailed(detail); }, { once: true });
+            model.src = URL.createObjectURL(blob);
+            // safety net if 'load' never fires on this device
+            setTimeout(function () {
+              if (proceed.hidden) { status.textContent = "Capturing complete"; proceed.hidden = false; }
+            }, 9000);
+          }).catch(function () { scanReallyFailed(detail); });
         }
 
         window.BlobStore.get("capture-pending-raw").then(function (blob) {
