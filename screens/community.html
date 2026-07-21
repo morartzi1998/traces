@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721p">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721p">
-<link rel="stylesheet" href="../css/gallery.css?v=20260721p">
-<script src="../js/cursor.js?v=20260721p" defer></script>
-<script src="../js/grain.js?v=20260721p" defer></script>
-<script src="../js/owner.js?v=20260721p"></script>
-<script src="../js/config.js?v=20260721p"></script>
-<script src="../js/archive.js?v=20260721p"></script>
-<script src="../js/blobstore.js?v=20260721p"></script>
-<script src="../js/remote-captures.js?v=20260721p"></script>
-<script src="../js/designer-archive.js?v=20260721p"></script>
-<script src="../js/community-seed.js?v=20260721p"></script>
-<script src="../js/gallery-title.js?v=20260721p" defer></script>
-<script src="../js/flow.js?v=20260721p" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721q">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721q">
+<link rel="stylesheet" href="../css/gallery.css?v=20260721q">
+<script src="../js/cursor.js?v=20260721q" defer></script>
+<script src="../js/grain.js?v=20260721q" defer></script>
+<script src="../js/owner.js?v=20260721q"></script>
+<script src="../js/config.js?v=20260721q"></script>
+<script src="../js/archive.js?v=20260721q"></script>
+<script src="../js/blobstore.js?v=20260721q"></script>
+<script src="../js/remote-captures.js?v=20260721q"></script>
+<script src="../js/designer-archive.js?v=20260721q"></script>
+<script src="../js/community-seed.js?v=20260721q"></script>
+<script src="../js/gallery-title.js?v=20260721q" defer></script>
+<script src="../js/flow.js?v=20260721q" defer></script>
 </head>
 <body>
 
@@ -314,6 +314,20 @@
       var hiddenReady = window.RemoteCaptures ? RemoteCaptures.listHiddenShowcase() : Promise.resolve([]);
       hiddenReady.then(function (list) {
         globalHiddenKeys = list || [];
+        // an owner's local community hides are curation meant for everyone —
+        // push any that never reached the shared list up now (same reconcile
+        // the archive does), so a hide made while not in owner mode still
+        // catches up to every visitor the next time Mor opens this as owner
+        if (window.isOwnerDevice && window.isOwnerDevice() && window.RemoteCaptures) {
+          var localHidden = [];
+          try { localHidden = JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []; } catch (e) {}
+          localHidden.forEach(function (key) {
+            if (globalHiddenKeys.indexOf(key) === -1) {
+              globalHiddenKeys.push(key);
+              RemoteCaptures.hideShowcaseGlobally(key);
+            }
+          });
+        }
         // reconcile the local items already built above, in case one of
         // them is now globally hidden too
         globalHiddenKeys.forEach(function (key) {
