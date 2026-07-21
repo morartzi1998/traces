@@ -12,7 +12,7 @@
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
 import * as THREE from "three";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260724c";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260724d";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
@@ -356,7 +356,11 @@ export function serializeGeometry(geometry) {
 
 export function deserializeGeometry(arrayBuffer) {
   var header = new Uint32Array(arrayBuffer, 0, 2);
-  var hasColor = header[0] === 1;
+  // header[0]: 0 = no colour, 1 = colour, 2 = colour + DERIVED-from-mesh —
+  // the flag lets the viewer auto-size ONLY machine-made clouds while a
+  // person's own uploaded scan keeps exactly the size they chose
+  var hasColor = header[0] >= 1;
+  var derived = header[0] === 2;
   var count = header[1];
   var offset = 8;
   var positions = new Float32Array(arrayBuffer.slice(offset, offset + count * 3 * 4));
@@ -367,6 +371,7 @@ export function deserializeGeometry(arrayBuffer) {
     var colors = new Float32Array(arrayBuffer.slice(offset, offset + count * 3 * 4));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
+  if (derived) geometry.userData.derived = true;
   // A blanket "Luma is Z-up" rotation was tried here and guessed wrong
   // twice in a row (still upside down after -90°, and a fresh upload came
   // in wrong too) — there's no single fixed convention worth guessing a

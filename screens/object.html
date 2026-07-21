@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724c">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724c">
-<link rel="stylesheet" href="../css/object.css?v=20260724c">
-<script src="../js/cursor.js?v=20260724c" defer></script>
-<script src="../js/grain.js?v=20260724c" defer></script>
-<script src="../js/tilt3d.js?v=20260724c" defer></script>
-<script src="../js/owner.js?v=20260724c"></script>
-<script src="../js/config.js?v=20260724c"></script>
-<script src="../js/archive.js?v=20260724c"></script>
-<script src="../js/blobstore.js?v=20260724c"></script>
-<script src="../js/particle-loader.js?v=20260724c"></script>
-<script src="../js/remote-captures.js?v=20260724c"></script>
-<script src="../js/community-seed.js?v=20260724c"></script>
-<script src="../js/flow.js?v=20260724c" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724c"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724d">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724d">
+<link rel="stylesheet" href="../css/object.css?v=20260724d">
+<script src="../js/cursor.js?v=20260724d" defer></script>
+<script src="../js/grain.js?v=20260724d" defer></script>
+<script src="../js/tilt3d.js?v=20260724d" defer></script>
+<script src="../js/owner.js?v=20260724d"></script>
+<script src="../js/config.js?v=20260724d"></script>
+<script src="../js/archive.js?v=20260724d"></script>
+<script src="../js/blobstore.js?v=20260724d"></script>
+<script src="../js/particle-loader.js?v=20260724d"></script>
+<script src="../js/remote-captures.js?v=20260724d"></script>
+<script src="../js/community-seed.js?v=20260724d"></script>
+<script src="../js/flow.js?v=20260724d" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724d"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724c" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724c";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724c";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724d";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724d";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -569,16 +569,18 @@
     <header class="obj-head">
       <!-- external switch between the two representations, shown only for a
            dual capture (mesh + point cloud). A visible pill, not a menu item. -->
-      <div class="obj-rep-toggle" id="objRepToggle" hidden>
-        <button class="obj-rep-switch" id="objRepSwitch" type="button" role="switch" aria-checked="false" aria-label="Switch between mesh and point cloud">
-          <span class="obj-rep-knob"></span>
-        </button>
-        <span class="obj-rep-label" id="objRepLabel">mesh</span>
+      <div class="obj-head-controls">
+        <div class="obj-rep-toggle" id="objRepToggle" hidden>
+          <button class="obj-rep-switch" id="objRepSwitch" type="button" role="switch" aria-checked="false" aria-label="Switch between mesh and point cloud">
+            <span class="obj-rep-knob"></span>
+          </button>
+          <span class="obj-rep-label" id="objRepLabel">mesh</span>
+        </div>
+        <!-- for a capture with 2+ merge-able dated scans: opens the combined
+             collage view. Visible to VISITORS too — it used to live only in
+             the owner's menu, so nobody else could ever see a collage. -->
+        <button class="obj-collage-btn" type="button" id="objCollageBtn" hidden>collage</button>
       </div>
-      <!-- for a capture with 2+ merge-able dated scans: opens the combined
-           collage view. Visible to VISITORS too — it used to live only in
-           the owner's menu, so nobody else could ever see a collage. -->
-      <button class="obj-collage-btn" type="button" id="objCollageBtn" hidden>collage</button>
       <p class="obj-updated" id="objUpdated">[updated 15 days ago]</p>
       <div class="obj-title-row">
         <!-- starts hidden: show() reveals it only for the owner / the capture's
@@ -1546,7 +1548,7 @@
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
                 { pointSize: space.pointSize || null, tilt: space.tilt || null,
-                  initialView: space.defaultView || null });
+                  initialView: (space.defaultView && space.defaultView.position) ? space.defaultView : null });
             }).catch(function () {});
           }
         } else if (space.model) {
@@ -2124,27 +2126,40 @@
           var pointsBlob = pointsKey && window.BlobStore
             ? window.BlobStore.get(pointsKey)
             : fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+          // a failed cloud fetch (flaky connection, a dropped request) used
+          // to end as a silently EMPTY stage — fall back to whatever else
+          // this capture has (its mesh, else its photo) instead
+          var pointsFailed = function () {
+            if (key !== k) return;
+            if (model || img) { swapScan(k, model, img, null, carriedView); }
+            else { endLoading(); }
+          };
           if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
             pointsBlob.then(function (blob) {
               // a fetch that simply resolved false/empty (a 404, a missing
               // idb blob) isn't a thrown error - it never reached .catch(),
               // which used to leave the loading placeholder stuck forever
-              if (!blob) { if (key === k) endLoading(); return null; }
+              if (!blob) { pointsFailed(); return null; }
               if (key !== k) return null;
               return blob.arrayBuffer();
             }).then(function (buf) {
-              if (!buf) { if (key === k) endLoading(); return; }
+              if (buf === null || buf === undefined) return;
               if (key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
+              // a saved view is only usable here if it's a CLOUD view
+              // ({position, target}) — a mesh-only saved angle ({cameraOrbit})
+              // belongs to the other representation and must be ignored
+              var pcv = function (v) { return v && v.position ? v : null; };
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: catalog[k].pointSize || null, initialView: carriedView || catalog[k].defaultView || null,
+                { pointSize: catalog[k].pointSize || null,
+                  initialView: pcv(carriedView) || pcv(catalog[k].defaultView),
                   tilt: catalog[k].tilt || null });
               endLoading();
               // once the cloud is ready, (re)draw annotations as 3D-anchored
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
               if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
-            }).catch(function () { if (key === k) endLoading(); });
+            }).catch(function () { pointsFailed(); });
           } else {
             endLoading();
           }
@@ -3296,12 +3311,19 @@
       }
       menuSetDefaultView.addEventListener("click", function () {
         menu.hidden = true;
+        // a dual capture has TWO framings — the cloud's ({position, target})
+        // and the mesh's ({cameraOrbit}) — living side by side in ONE saved
+        // object, so fixing the angle in one representation never wipes out
+        // the angle already saved for the other
         var view = null;
+        var prev = catalog[key].defaultView;
+        var base = (prev && typeof prev === "object") ? prev : {};
         if (pcViewer && !objPoints.hidden) {
-          view = pcViewer.getView();
+          view = Object.assign({}, base, pcViewer.getView());
         } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
           var orbit = modelViewer.getCameraOrbit();
-          view = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
+          view = Object.assign({}, base,
+            { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" });
         }
         if (!view) return;
         var vList = catalog[key].versions || [];

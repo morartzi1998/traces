@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724c";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724d";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -101,15 +101,17 @@ export function mountPointCloudViewer(container, geometry, opts) {
     return new THREE.Sphere(center, radius || 1);
   })();
 
-  // With sizeAttenuation on, a point's on-screen size is worldSize/distance,
-  // and the camera frames the scan at a distance proportional to its radius —
-  // so a FIXED world size does NOT read consistently across scales: a scan
-  // measured in tens of units renders sub-pixel (an "empty" stage), and a
-  // tiny-scale scan renders as giant blank squares. When no explicit size
-  // was saved for this capture, derive one from the scan's own radius
-  // (denser clouds can afford finer points).
+  // Sizing rules, in order:
+  // 1. an explicitly saved size always wins — a person's own choice;
+  // 2. a MACHINE-DERIVED cloud (flagged by deserializeGeometry — sampled off
+  //    a mesh by us, never hand-tuned) scales with its own radius, because
+  //    these arrive at wildly different coordinate scales: a fixed size
+  //    rendered one sub-pixel ("empty" stage) and another as giant squares;
+  // 3. a person's UPLOADED scan with no saved size keeps the original fixed
+  //    0.013 — exactly how their scans have always rendered. Do not touch.
   var hasColor = !!geometry.getAttribute("color");
-  var autoSize = sphere.radius * 0.012;
+  var isDerived = !!(geometry.userData && geometry.userData.derived);
+  var autoSize = isDerived ? sphere.radius * 0.007 : 0.013;
   var material = new THREE.PointsMaterial({
     size: opts.pointSize || autoSize || 0.01,
     sizeAttenuation: true,
