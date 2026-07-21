@@ -301,6 +301,35 @@ export default {
         return json({ fileId, url: `${url.origin}/captures/file/${fileId}` });
       }
 
+      // ---- chunked upload for files past Cloudflare's ~100MB per-request edge
+      // limit. The client generates a fileId, PUTs each <=20MB chunk to
+      // /captures/upload-chunk?fileId&index (raw body), then calls
+      // /captures/upload-finalize to write the meta. The GET handler below
+      // reassembles from the same chunk keys, so a big scan saves permanently
+      // just like a small one. ----
+      if (url.pathname === "/captures/upload-chunk" && request.method === "POST") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const fileId = url.searchParams.get("fileId");
+        const index = parseInt(url.searchParams.get("index"), 10);
+        if (!fileId || !/^[a-f0-9-]+$/i.test(fileId) || Number.isNaN(index)) return json({ error: "bad chunk" }, 400);
+        const buf = await request.arrayBuffer();
+        await env.CAPTURES.put("file:" + fileId + ":" + index, buf);
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/captures/upload-finalize" && request.method === "POST") {
+        if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
+        const fileId = url.searchParams.get("fileId");
+        const chunks = parseInt(url.searchParams.get("chunks"), 10);
+        const size = parseInt(url.searchParams.get("size"), 10);
+        const contentType = url.searchParams.get("type") || "application/octet-stream";
+        if (!fileId || !/^[a-f0-9-]+$/i.test(fileId) || Number.isNaN(chunks) || Number.isNaN(size)) {
+          return json({ error: "bad finalize" }, 400);
+        }
+        await env.CAPTURES.put("file:" + fileId + ":meta", JSON.stringify({ chunks, contentType, size }));
+        return json({ fileId, url: `${url.origin}/captures/file/${fileId}` });
+      }
+
       if (url.pathname.startsWith("/captures/file/") && request.method === "GET") {
         if (!env.CAPTURES) return json({ error: "CAPTURES KV namespace is not bound on this worker" }, 500);
         const fileId = url.pathname.slice("/captures/file/".length);

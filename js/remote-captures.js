@@ -53,15 +53,47 @@
     });
   }
 
+  // a file past Cloudflare's ~100MB per-request edge limit can't go up in one
+  // POST at all, so a big scan silently never saved. Send it in <=20MB pieces
+  // to the worker's chunked-upload endpoints instead (added in tripo-worker.js),
+  // which reassembles them under one fileId. If those endpoints aren't there
+  // yet (worker not redeployed), the fetches 404 and this resolves null, same
+  // as before — nothing else breaks.
+  function uploadBlobChunked(blob, onProgress) {
+    var base = api();
+    var CHUNK = 20 * 1024 * 1024;
+    var total = Math.ceil(blob.size / CHUNK);
+    var fileId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : ("f" + Date.now() + "-" + Math.random().toString(36).slice(2)).replace(/[^a-f0-9-]/gi, "");
+    var uploaded = 0;
+    function putChunk(i) {
+      if (i >= total) {
+        return fetch(base + "/captures/upload-finalize?fileId=" + fileId + "&chunks=" + total +
+          "&size=" + blob.size + "&type=" + encodeURIComponent(blob.type || "application/octet-stream"),
+          { method: "POST" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { if (onProgress) onProgress(1); return (d && d.url) ? d.url : null; })
+          .catch(function () { return null; });
+      }
+      var part = blob.slice(i * CHUNK, Math.min(blob.size, (i + 1) * CHUNK));
+      return fetch(base + "/captures/upload-chunk?fileId=" + fileId + "&index=" + i, { method: "POST", body: part })
+        .then(function (r) {
+          if (!r.ok) return null;
+          uploaded += part.size;
+          if (onProgress) onProgress(Math.min(0.99, uploaded / blob.size));
+          return putChunk(i + 1);
+        })
+        .catch(function () { return null; });
+    }
+    return putChunk(0);
+  }
+
   // one upload attempt, resolving to the worker's fetchable URL for the blob
   // (or null on any failure). onProgress (optional) gets a 0..1 fraction of
   // THIS blob's own bytes.
   function uploadBlobOnce(blob, onProgress) {
-    // Cloudflare rejects a request body over ~100MB at the edge, before
-    // the worker (or this upload) ever sees it - confirmed by hand: 100MB
-    // went through cleanly, 120MB came back a clean 413. Fail it here,
-    // instantly, instead of leaving it to a round-trip that never resolves.
-    if (blob.size > 100 * 1024 * 1024) { if (onProgress) onProgress(1); return Promise.resolve(null); }
+    // big files go up in chunks (single POST would be rejected at the edge)
+    if (blob.size > 90 * 1024 * 1024) return uploadBlobChunked(blob, onProgress);
     // XHR (not fetch) so upload progress is actually observable - a real
     // point-cloud file is tens of MB, and a flat "saving..." reads the same
     // whether it's about to finish or has silently stalled
