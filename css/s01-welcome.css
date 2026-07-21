@@ -244,10 +244,13 @@
 
   .main {
     flex-direction: column;
-    gap: 2.5rem;
-    padding-top: 7rem; /* clear the fixed logo */
-    padding-bottom: 5.5rem;
-    justify-content: flex-start;
+    gap: 1.5rem;
+    padding-top: 4.5rem; /* clear the fixed logo */
+    padding-bottom: 2.5rem;
+    /* spread the headline, scan and CTA down the screen so they fill it with
+       even breathing room instead of packing at the top and spilling past the
+       bottom into a scroll */
+    justify-content: space-between;
     align-items: flex-start;
   }
 
@@ -269,10 +272,10 @@
      offset peeks behind it (their captions hidden) - the rotation still
      swaps which capture is in front. */
   .polaroid-stack {
-    width: min(230px, 62vw);
+    width: min(215px, 55vw);
     height: auto;
     aspect-ratio: 1 / 1.12;
-    margin: 0.5rem auto 0;
+    margin: 0 auto;
     align-self: center;
     transform: none;
   }
