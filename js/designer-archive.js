@@ -5,7 +5,12 @@
   their first capture, and as the permanent "my archive" showcase linked from
   the About screen.
 */
-window.DESIGNER_ARCHIVE = [
+// Emptied at Mor's request so the archive shows only her real captures, not
+// this hardcoded placeholder set. Fully reversible — restore the array below
+// (kept here, and in git history) to bring the sample archive back.
+window.DESIGNER_ARCHIVE = [];
+
+window.DESIGNER_ARCHIVE_SAMPLE = [
   { key: "chandelier", title: "old living room lamp",  img: "../assets/images/photo-chandelier.png", meta: "2 days ago" },
   { key: "couch",      title: "father's couch",        img: "../assets/images/photo-couch.png",      meta: "16 days ago" },
   { key: "plant",      title: "mom's gifted plent",    img: "../assets/images/photo-orchid.png",     meta: "20 days ago" },

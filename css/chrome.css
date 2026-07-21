@@ -87,13 +87,10 @@
    desktop), so the fixed corners end up sitting over whatever content has
    scrolled underneath. A small scrim keeps the pinned chrome legible without
    changing its position or size. */
-@media (max-width: 640px) {
+@media (max-width: 720px) {
+  /* no box behind the corner links — it read as clutter. A soft dark halo
+     keeps them legible over a bright capture without any visible background. */
   .nav-corner {
-    background: rgba(22, 22, 22, 0.6);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-radius: 4px;
-    padding: 3px 7px;
-    margin: -3px -7px;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9);
   }
 }

@@ -325,15 +325,19 @@
   /* the CTA zone takes all the room left under the scan: the small invitation
      line sits at its top (just below the photo), and the oversized plus drops
      to the very bottom of the screen — the plus, not the words, is the tap */
+  /* the CTA zone fills the room under the scan and pushes its content to the
+     bottom: the small "add your capture" line sits right above the oversized
+     plus (close together), and the whole group is lifted clear of the bottom
+     Community/About nav */
   .cta {
     order: 2;
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     width: 100%;
-    min-height: 22vh;
+    padding-bottom: 3rem;
     margin-top: 1.25rem;
     text-decoration: none;
     font-size: inherit;
@@ -345,6 +349,7 @@
     text-transform: lowercase;
     text-decoration: underline;
     text-underline-offset: 3px;
+    margin-bottom: 0.3rem;
   }
 
   .cta-plus {
