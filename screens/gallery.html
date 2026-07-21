@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722u">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722u">
-<link rel="stylesheet" href="../css/gallery.css?v=20260722u">
-<script src="../js/cursor.js?v=20260722u" defer></script>
-<script src="../js/grain.js?v=20260722u" defer></script>
-<script src="../js/owner.js?v=20260722u"></script>
-<script src="../js/config.js?v=20260722u"></script>
-<script src="../js/archive.js?v=20260722u"></script>
-<script src="../js/blobstore.js?v=20260722u"></script>
-<script src="../js/remote-captures.js?v=20260722u"></script>
-<script src="../js/designer-archive.js?v=20260722u"></script>
-<script src="../js/gallery-title.js?v=20260722u" defer></script>
-<script src="../js/flow.js?v=20260722u" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722v">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722v">
+<link rel="stylesheet" href="../css/gallery.css?v=20260722v">
+<script src="../js/cursor.js?v=20260722v" defer></script>
+<script src="../js/grain.js?v=20260722v" defer></script>
+<script src="../js/owner.js?v=20260722v"></script>
+<script src="../js/config.js?v=20260722v"></script>
+<script src="../js/archive.js?v=20260722v"></script>
+<script src="../js/blobstore.js?v=20260722v"></script>
+<script src="../js/remote-captures.js?v=20260722v"></script>
+<script src="../js/designer-archive.js?v=20260722v"></script>
+<script src="../js/gallery-title.js?v=20260722v" defer></script>
+<script src="../js/flow.js?v=20260722v" defer></script>
 </head>
 <body>
 
@@ -605,7 +605,17 @@
             if (!remote) return; // not on the server yet — syncMissing covers it
             var localV = (cap.versions || []).length;
             var remoteV = (remote.versions || []).length;
-            if (localV >= 2 && remoteV < localV) RemoteCaptures.publish(cap, "archive");
+            if (localV >= 2 && remoteV < localV) {
+              var el = grid.querySelector('.gal-sync-status[data-cap-id="' + cap.id + '"]');
+              RemoteCaptures.publish(cap, "archive", function (pct) {
+                if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
+              }).then(function (res) {
+                if (el) {
+                  el.textContent = res ? "☁ synced — visible on your other devices" : "only on this device";
+                  el.className = "gal-sync-status gal-sync-status--" + (res ? "synced" : "local-only");
+                }
+              });
+            }
           });
         }
       });

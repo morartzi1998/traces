@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722u">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722u">
-<link rel="stylesheet" href="../css/upload.css?v=20260722u">
-<script src="../js/owner.js?v=20260722u"></script>
-<script src="../js/config.js?v=20260722u"></script>
-<script src="../js/cursor.js?v=20260722u" defer></script>
-<script src="../js/grain.js?v=20260722u" defer></script>
-<script src="../js/blobstore.js?v=20260722u"></script>
-<script src="../js/flow.js?v=20260722u" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260722u" defer></script>
-<script src="../js/normalize-image.js?v=20260722u" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260722u"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722u"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722v">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722v">
+<link rel="stylesheet" href="../css/upload.css?v=20260722v">
+<script src="../js/owner.js?v=20260722v"></script>
+<script src="../js/config.js?v=20260722v"></script>
+<script src="../js/cursor.js?v=20260722v" defer></script>
+<script src="../js/grain.js?v=20260722v" defer></script>
+<script src="../js/blobstore.js?v=20260722v"></script>
+<script src="../js/flow.js?v=20260722v" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260722v" defer></script>
+<script src="../js/normalize-image.js?v=20260722v" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260722v"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722v"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -26,12 +26,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722u" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722v" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260722u";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260722u";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260722v";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260722v";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -458,7 +458,12 @@
         // parse the .ply only to populate the raw geometry; the mesh the user
         // supplied is what's shown as the model.
         if (plyFile && meshFile) {
-          dropScan.hidden = true;
+          // keep the drop zone visible with a status while the .ply is parsed
+          // (it can take a few seconds) — hiding both it and the preview left a
+          // blank panel that read as broken
+          var dualLine = dropScan.querySelector(".up-drop-line");
+          if (dualLine) dualLine.textContent = "reading your scan… one moment";
+          dropScan.hidden = false;
           selectedScan.hidden = true;
           filenameScan.textContent = plyFile.name + " + " + meshFile.name + " — reading…";
           var dualReader = new FileReader();

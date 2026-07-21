@@ -12,7 +12,7 @@
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
 import * as THREE from "three";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260722u";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260722v";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
@@ -302,6 +302,40 @@ export function buildVoxelGlb(rawGeometry, targetCount) {
 // page navigation (upload.html -> processing.html) so the density slider
 // can keep working there — serialize it into one small binary blob instead
 // of re-parsing the original (possibly huge) source file on the next page.
+// "trim background": keep only the points within `frac` of the object's core
+// radius, measured from the cloud's centre — so pulling frac down peels the
+// surrounding room away and leaves the object in the middle. frac 1 keeps
+// everything. The radius reference is the 98th percentile (not the max) so a
+// handful of far stray points don't make the threshold meaninglessly large.
+export function cropCloudByRadius(geometry, frac) {
+  if (frac >= 0.999) return geometry;
+  var pos = geometry.getAttribute("position");
+  var col = geometry.getAttribute("color");
+  var n = pos.count;
+  if (!n) return geometry;
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < n; i++) { cx += pos.getX(i); cy += pos.getY(i); cz += pos.getZ(i); }
+  cx /= n; cy /= n; cz /= n;
+  var dist = new Float32Array(n);
+  for (var j = 0; j < n; j++) {
+    var dx = pos.getX(j) - cx, dy = pos.getY(j) - cy, dz = pos.getZ(j) - cz;
+    dist[j] = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+  var sorted = Float32Array.prototype.slice.call(dist).sort();
+  var r98 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.98))] || 1;
+  var thresh = frac * r98;
+  var positions = [], colors = [];
+  for (var k = 0; k < n; k++) {
+    if (dist[k] > thresh) continue;
+    positions.push(pos.getX(k), pos.getY(k), pos.getZ(k));
+    if (col) colors.push(col.getX(k), col.getY(k), col.getZ(k));
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  if (col && colors.length) g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  return g;
+}
+
 export function serializeGeometry(geometry) {
   var pos = geometry.getAttribute("position");
   var col = geometry.getAttribute("color");
