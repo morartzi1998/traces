@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722s">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722s">
-<link rel="stylesheet" href="../css/object.css?v=20260722s">
-<script src="../js/cursor.js?v=20260722s" defer></script>
-<script src="../js/grain.js?v=20260722s" defer></script>
-<script src="../js/tilt3d.js?v=20260722s" defer></script>
-<script src="../js/owner.js?v=20260722s"></script>
-<script src="../js/config.js?v=20260722s"></script>
-<script src="../js/archive.js?v=20260722s"></script>
-<script src="../js/blobstore.js?v=20260722s"></script>
-<script src="../js/particle-loader.js?v=20260722s"></script>
-<script src="../js/remote-captures.js?v=20260722s"></script>
-<script src="../js/community-seed.js?v=20260722s"></script>
-<script src="../js/flow.js?v=20260722s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722t">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722t">
+<link rel="stylesheet" href="../css/object.css?v=20260722t">
+<script src="../js/cursor.js?v=20260722t" defer></script>
+<script src="../js/grain.js?v=20260722t" defer></script>
+<script src="../js/tilt3d.js?v=20260722t" defer></script>
+<script src="../js/owner.js?v=20260722t"></script>
+<script src="../js/config.js?v=20260722t"></script>
+<script src="../js/archive.js?v=20260722t"></script>
+<script src="../js/blobstore.js?v=20260722t"></script>
+<script src="../js/particle-loader.js?v=20260722t"></script>
+<script src="../js/remote-captures.js?v=20260722t"></script>
+<script src="../js/community-seed.js?v=20260722t"></script>
+<script src="../js/flow.js?v=20260722t" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722t"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722s" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722t" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722s";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722s";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722t";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722t";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -139,6 +139,7 @@
         <li id="menuSetImageRow" hidden><button type="button" id="menuSetImage">Set a display image</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
         <li id="menuVisualMergeRow" hidden><button type="button" id="menuVisualMerge">Make a visual merge from object's history</button></li>
+        <li id="menuToggleRepRow" hidden><button type="button" id="menuToggleRep">Show as mesh</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
@@ -1708,6 +1709,14 @@
         // (it never had a handler at all). Hidden until there's real history.
         var menuVisualMergeRow = document.getElementById("menuVisualMergeRow");
         if (menuVisualMergeRow) menuVisualMergeRow.hidden = mergeableVersions(k).length < 2;
+        // a capture that carries BOTH a mesh (model) and a point cloud (points)
+        // can switch between the two representations; hidden otherwise
+        var menuToggleRepRow = document.getElementById("menuToggleRepRow");
+        if (menuToggleRepRow) {
+          menuToggleRepRow.hidden = !(catalog[k].model && catalog[k].points);
+          var repBtn = document.getElementById("menuToggleRep");
+          if (repBtn) repBtn.textContent = objPoints.hidden ? "Show as point cloud" : "Show as mesh";
+        }
         // switching captures (prev/next, a jump link, entering community
         // browsing) always lands on a fully closed menu - this used to only
         // hide it, leaving the hamburger icon's bars stuck in their
@@ -2374,6 +2383,20 @@
       });
       document.getElementById("objMergeClose").addEventListener("click", closeVisualMerge);
       document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeVisualMerge(); });
+
+      // switch a dual-representation capture (both a mesh and a point cloud)
+      // between its two views — re-renders the stage with one or the other
+      document.getElementById("menuToggleRep").addEventListener("click", function () {
+        menu.hidden = true;
+        var img = catalog[key].img;
+        if (!objPoints.hidden) {
+          swapScan(key, catalog[key].model, img, null);   // points → mesh
+          this.textContent = "Show as point cloud";
+        } else {
+          swapScan(key, null, img, catalog[key].points);  // mesh → points
+          this.textContent = "Show as mesh";
+        }
+      });
       function syncViewToServer() {
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
         var fields = { defaultView: catalog[key].defaultView || null };

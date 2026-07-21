@@ -38,7 +38,7 @@
   font-family: var(--font-display);
   /* Same display scale as the archive title; the navigation label above is
      intentionally metadata-sized, so the action owns the hierarchy. */
-  font-size: clamp(1.7rem, 2.6vw, 2.6rem);
+  font-size: var(--fs-title);
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 5px;
@@ -69,7 +69,7 @@
 }
 .gal-title {
   font-family: var(--font-display);
-  font-size: clamp(1.7rem, 2.6vw, 2.6rem);
+  font-size: var(--fs-title);
   font-weight: 400;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -132,7 +132,7 @@
   gap: 10px;
   cursor: pointer;
   text-transform: lowercase;
-  font-size: 0.95rem;
+  font-size: var(--fs-meta);
   color: var(--color-cream);
 }
 
@@ -322,7 +322,7 @@
   display: flex;
   align-items: center;
   font-family: var(--font-caption);
-  font-size: 1.15rem;
+  font-size: var(--fs-caption);
   line-height: 1;
   color: var(--color-caption-blue);
   white-space: nowrap;
@@ -334,7 +334,7 @@
    reached the shared server (so it's visible on Mor's other devices too),
    or is still sitting on this device alone */
 .gal-sync-status {
-  font-size: 0.68rem;
+  font-size: var(--fs-meta);
   letter-spacing: 0.02em;
   color: var(--color-cream);
   opacity: 0.55;

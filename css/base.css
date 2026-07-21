@@ -112,6 +112,11 @@
      polaroid — so that tier is identical on the archive, community and object
      screens instead of the several near-but-not-equal sizes that had crept in. */
   --fs-meta: 0.75rem;
+  /* the two larger tiers, so a screen reads as just three sizes — a big
+     display title (and the matching action link), a capture's name, and the
+     small metadata — instead of the several ad-hoc sizes that had crept in */
+  --fs-title: clamp(1.7rem, 2.6vw, 2.6rem);
+  --fs-caption: 1.15rem;
 }
 
 /* ---------- Reset ---------- */

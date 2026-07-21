@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722s">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722s">
-<link rel="stylesheet" href="../css/upload.css?v=20260722s">
-<script src="../js/owner.js?v=20260722s"></script>
-<script src="../js/config.js?v=20260722s"></script>
-<script src="../js/cursor.js?v=20260722s" defer></script>
-<script src="../js/grain.js?v=20260722s" defer></script>
-<script src="../js/blobstore.js?v=20260722s"></script>
-<script src="../js/flow.js?v=20260722s" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260722s" defer></script>
-<script src="../js/normalize-image.js?v=20260722s" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260722s"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722t">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722t">
+<link rel="stylesheet" href="../css/upload.css?v=20260722t">
+<script src="../js/owner.js?v=20260722t"></script>
+<script src="../js/config.js?v=20260722t"></script>
+<script src="../js/cursor.js?v=20260722t" defer></script>
+<script src="../js/grain.js?v=20260722t" defer></script>
+<script src="../js/blobstore.js?v=20260722t"></script>
+<script src="../js/flow.js?v=20260722t" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260722t" defer></script>
+<script src="../js/normalize-image.js?v=20260722t" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260722t"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722t"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -26,12 +26,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722s" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722t" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260722s";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260722s";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260722t";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260722t";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -170,8 +170,8 @@
                  UTType), which hid legitimate point-cloud files from the
                  picker entirely. The change handler validates the extension
                  instead, so any wrong pick is rejected with a message. -->
-            <input type="file" id="fileInputScan">
-            <span class="up-drop-line">click to browse &mdash; .ply, .glb or .gltf</span>
+            <input type="file" id="fileInputScan" multiple>
+            <span class="up-drop-line">click to browse &mdash; .ply, .glb or .gltf (pick a .ply + a .glb together to keep both)</span>
           </label>
 
           <div class="up-selected" id="upSelectedScan" hidden>
@@ -445,7 +445,45 @@
 
       function acceptScan(files) {
         if (!files || !files.length) return;
-        var f = files[0];
+        var arr = Array.prototype.slice.call(files);
+        var plyFile = null, meshFile = null;
+        arr.forEach(function (x) {
+          if (/\.ply$/i.test(x.name)) plyFile = plyFile || x;
+          else if (/\.(glb|gltf)$/i.test(x.name)) meshFile = meshFile || x;
+        });
+
+        // both a mesh AND a point cloud for the same object: keep both — the
+        // mesh (.glb) becomes the model, the .ply becomes the raw point cloud,
+        // and the object view can toggle between the two representations. We
+        // parse the .ply only to populate the raw geometry; the mesh the user
+        // supplied is what's shown as the model.
+        if (plyFile && meshFile) {
+          dropScan.hidden = true;
+          selectedScan.hidden = true;
+          filenameScan.textContent = plyFile.name + " + " + meshFile.name + " — reading…";
+          var dualReader = new FileReader();
+          dualReader.onload = function () {
+            var convert = window.__convertPlyToGlb;
+            if (!convert) { setTimeout(function () { acceptScan(files); }, 150); return; }
+            convert(dualReader.result).then(function () {
+              // __convertPlyToGlb set lastRawGeometry as a side effect (the raw
+              // points); show the user's mesh as the actual model
+              showSelectedScan(meshFile, meshFile.name + "  +  " + plyFile.name);
+            }).catch(function (err) {
+              filenameScan.textContent = plyFile.name + " — conversion failed";
+              selectedScan.hidden = false;
+              console.error("PLY conversion failed:", err);
+            });
+          };
+          dualReader.onerror = function () {
+            filenameScan.textContent = plyFile.name + " — could not read file";
+            selectedScan.hidden = false;
+          };
+          dualReader.readAsArrayBuffer(plyFile);
+          return;
+        }
+
+        var f = plyFile || meshFile || arr[0];
         if (!/\.ply$/i.test(f.name)) {
           showSelectedScan(f, f.name);
           return;
