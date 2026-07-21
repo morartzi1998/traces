@@ -84,10 +84,13 @@
 /* the cards underneath react to the top one being dealt away — each one
    advances up toward the spot the card ahead of it just vacated, then eases
    back as the new arrangement settles, so the whole stack moves as one deck
-   instead of only the top card moving in isolation. They also dim briefly
-   through the 52–56% window where their photo is swapped, so the underneath
-   photo eases over instead of hard-cutting mid-motion (which read as a jump) —
-   a soft partial dip, not all the way to a blank "flash". */
+   instead of only the top card moving in isolation.
+   The peak displacement and the opacity dip now land at the SAME moment
+   (52–56%, matching the front card's own invisible window) instead of the
+   card reaching furthest into the front card's spot while still fully
+   opaque and only fading afterward — that mismatch was the actual bug: two
+   fully-visible polaroids briefly overlapping in the same spot, with their
+   captions reading as jumbled, illegible double-exposed text. */
 .polaroid-back.polaroid--shuffling {
   will-change: transform, opacity;
   animation: polaroid-advance-back 1.5s cubic-bezier(0.45, 0.05, 0.3, 1);
@@ -100,19 +103,19 @@
 
 @keyframes polaroid-advance-back {
   0%   { transform: rotate(-5deg) translate(0, 0) scale(1); opacity: 1; }
-  38%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.02); opacity: 1; }
-  48%  { opacity: 0.18; }
-  60%  { opacity: 0.18; }
-  70%  { transform: rotate(-4.2deg) translate(-4%, -7%) scale(1.008); opacity: 1; }
+  38%  { transform: rotate(-3.4deg) translate(-7%, -10%) scale(1.01); opacity: 0.8; }
+  52%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.02); opacity: 0; }
+  56%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.02); opacity: 0; }
+  82%  { transform: rotate(-4.2deg) translate(-4%, -7%) scale(1.008); opacity: 1; }
   100% { transform: rotate(-5deg) translate(0, 0) scale(1); opacity: 1; }
 }
 
 @keyframes polaroid-advance-third {
   0%   { transform: rotate(4deg) translate(0, 0) scale(1); opacity: 1; }
-  42%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.014); opacity: 1; }
-  48%  { opacity: 0.15; }
-  60%  { opacity: 0.15; }
-  72%  { transform: rotate(3.4deg) translate(3%, -5%) scale(1.004); opacity: 1; }
+  38%  { transform: rotate(2.6deg) translate(5%, -8%) scale(1.007); opacity: 0.8; }
+  52%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.014); opacity: 0; }
+  56%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.014); opacity: 0; }
+  82%  { transform: rotate(3.4deg) translate(3%, -5%) scale(1.004); opacity: 1; }
   100% { transform: rotate(4deg) translate(0, 0) scale(1); opacity: 1; }
 }
 
