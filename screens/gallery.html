@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723e">
-<link rel="stylesheet" href="../css/gallery.css?v=20260723e">
-<script src="../js/cursor.js?v=20260723e" defer></script>
-<script src="../js/grain.js?v=20260723e" defer></script>
-<script src="../js/owner.js?v=20260723e"></script>
-<script src="../js/config.js?v=20260723e"></script>
-<script src="../js/archive.js?v=20260723e"></script>
-<script src="../js/blobstore.js?v=20260723e"></script>
-<script src="../js/remote-captures.js?v=20260723e"></script>
-<script src="../js/designer-archive.js?v=20260723e"></script>
-<script src="../js/gallery-title.js?v=20260723e" defer></script>
-<script src="../js/flow.js?v=20260723e" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723f">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723f">
+<link rel="stylesheet" href="../css/gallery.css?v=20260723f">
+<script src="../js/cursor.js?v=20260723f" defer></script>
+<script src="../js/grain.js?v=20260723f" defer></script>
+<script src="../js/owner.js?v=20260723f"></script>
+<script src="../js/config.js?v=20260723f"></script>
+<script src="../js/archive.js?v=20260723f"></script>
+<script src="../js/blobstore.js?v=20260723f"></script>
+<script src="../js/remote-captures.js?v=20260723f"></script>
+<script src="../js/designer-archive.js?v=20260723f"></script>
+<script src="../js/gallery-title.js?v=20260723f" defer></script>
+<script src="../js/flow.js?v=20260723f" defer></script>
 </head>
 <body>
 
@@ -246,8 +246,11 @@
         // heads-up that it's still sitting on this device alone
         if (entry.syncStatus) {
           var statusEl = art.querySelector(".gal-sync-status");
+          // spell out the timeline specifically for a capture that actually
+          // has one — a plain "synced" here left it genuinely unclear
+          // whether that meant just the latest scan or the whole history
           statusEl.textContent = entry.syncStatus === "synced"
-            ? "☁ synced — visible on your other devices"
+            ? (entry.hasTimeline ? "☁ synced — timeline visible to visitors too" : "☁ synced — visible on your other devices")
             : "only on this device";
         }
         // exposed so the hide/delete row (shown under whichever card was
@@ -403,6 +406,7 @@
             id: c.id, title: c.title, img: c.img, kind: c.kind,
             idx: idx, metaText: ago(c.created),
             syncStatus: showSyncStatus ? (remoteArchiveIds[c.id] ? "synced" : "local-only") : null,
+            hasTimeline: (c.versions || []).length >= 2,
             hide: function () {
               Archive.update(c.id, { hidden: true });
               // hiding one of Mor's real captures is curation, not just a
@@ -439,6 +443,7 @@
             idx: idx, metaText: ago(c.created),
             // by definition already came from the server fetch itself
             syncStatus: "synced",
+            hasTimeline: (c.versions || []).length >= 2,
             hide: function () { hideDesignerItem(c.id); },
             remove: function () {
               // optimistic: remoteArchiveItems is only fetched once at load,
@@ -585,7 +590,10 @@
               el.textContent = "uploading… " + Math.round(pct * 100) + "%";
               el.className = "gal-sync-status gal-sync-status--uploading";
             } else if (success) {
-              el.textContent = "☁ synced — visible on your other devices";
+              var capNow = (window.Archive ? Archive.get(capId) : null) || {};
+              el.textContent = (capNow.versions || []).length >= 2
+                ? "☁ synced — timeline visible to visitors too"
+                : "☁ synced — visible on your other devices";
               el.className = "gal-sync-status gal-sync-status--synced";
             } else {
               el.textContent = "only on this device";
@@ -619,7 +627,7 @@
                 if (el) { el.textContent = "uploading timeline… " + Math.round(pct * 100) + "%"; el.className = "gal-sync-status gal-sync-status--uploading"; }
               }).then(function (res) {
                 if (el) {
-                  el.textContent = res ? "☁ synced — visible on your other devices" : "only on this device";
+                  el.textContent = res ? "☁ synced — timeline visible to visitors too" : "only on this device";
                   el.className = "gal-sync-status gal-sync-status--" + (res ? "synced" : "local-only");
                 }
               });
