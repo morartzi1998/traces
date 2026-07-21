@@ -198,29 +198,29 @@
      (as on desktop), so it stays reachable while scrolling — it sits at the
      bottom-right above the nav, with a small dark chip behind it so it stays
      readable over whatever polaroid it happens to be floating over */
-  /* the Add-Capture action sits above the first polaroid, left-aligned with
-     the title and filters, and bigger — its own line between the filters and
-     the feed (flex order lifts it out of its end-of-DOM position) */
+  /* the Add-Capture action floats big, high up on the right — on the same
+     line as the object / space filters (its top is aligned to them in JS),
+     using the empty space beside them, and stays put over the feed on scroll */
   .gal-add {
-    position: static;
-    top: auto;
-    right: auto;
+    position: fixed;
     left: auto;
+    right: 6vw;
     bottom: auto;
-    order: 2;
-    display: block;
-    margin: 0 0 1.75rem;
-    max-width: none;
+    z-index: 30;
+    display: inline-block;
+    margin: 0;
+    max-width: 48vw;
     white-space: normal;
-    text-align: left;
-    font-size: 1.9rem;
-    line-height: 1.15;
+    text-align: right;
+    font-size: 2.3rem;
+    line-height: 1.1;
     background: none;
     padding: 0;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.95);
   }
   .gal-title-block { order: 0; }
   .gal-filters { order: 1; }
-  .gal-grid { order: 3; }
+  .gal-grid { order: 2; }
 }
 
 /* revealed under a capture on long-press — plain underlined text links,

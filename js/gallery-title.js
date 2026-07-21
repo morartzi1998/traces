@@ -34,7 +34,12 @@
        pins the bottom, stretching the chip down the whole screen. */
     if (addCapture && titleText) {
       if (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) {
-        addCapture.style.top = "";
+        // on a phone the CTA floats on the right, aligned to the object/space
+        // filter row (using the empty space beside it)
+        var filters = document.querySelector(".gal-filters");
+        if (filters) {
+          addCapture.style.top = Math.round(filters.getBoundingClientRect().top) + "px";
+        }
       } else {
         addCapture.style.top = Math.round(titleText.getBoundingClientRect().top) + "px";
       }
