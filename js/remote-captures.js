@@ -112,6 +112,14 @@
       // so it only gives up when the bytes actually stop flowing - a slow
       // but progressing upload is left to finish however long it needs.
       var STALL_MS = 45000;
+      // once the body is FULLY sent, no further progress events will ever
+      // fire while the worker stores the file — a big blob means several
+      // sequential storage writes server-side, which can genuinely take
+      // longer than the stall window. Re-arming the short stall timer on
+      // that last progress event was aborting perfectly good uploads AT
+      // 100% and restarting them from zero, over and over. After the last
+      // byte leaves, the server gets its own much more generous window.
+      var RESPONSE_MS = 240000;
       var stallTimer = null;
       var settled = false;
       function done(v) {
@@ -121,12 +129,16 @@
         if (onProgress) onProgress(1);
         resolve(v);
       }
-      function armStall() {
+      function armStall(ms) {
         if (stallTimer) clearTimeout(stallTimer);
-        stallTimer = setTimeout(function () { try { xhr.abort(); } catch (e) {} done(null); }, STALL_MS);
+        stallTimer = setTimeout(function () { try { xhr.abort(); } catch (e) {} done(null); }, ms || STALL_MS);
       }
       xhr.upload.addEventListener("progress", function (e) {
-        armStall();
+        if (e.lengthComputable && e.loaded >= e.total) {
+          armStall(RESPONSE_MS); // body sent — now we're waiting on the server, not the pipe
+        } else {
+          armStall();
+        }
         if (onProgress && e.lengthComputable) onProgress(e.loaded / e.total);
       });
       xhr.onload = function () {
