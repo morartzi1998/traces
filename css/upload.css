@@ -1,7 +1,7 @@
 /* Upload — choose how to capture (phone / video / image) */
 
 .up-screen {
-  min-height: 100vh;
+  min-height: 100vh;  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

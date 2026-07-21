@@ -46,9 +46,12 @@
   margin-left: clamp(-30px, -1.2vw, -10px);
   cursor: pointer;
   opacity: 0;
-  /* each card drops in from above and settles into its place in the row */
-  animation: load-fall 0.66s cubic-bezier(0.2, 0.75, 0.24, 1) forwards;
-  animation-delay: var(--delay, 0s);
+  /* each card drops in from above and settles into the row, then keeps a
+     gentle up-and-down float (starting right after it lands) so the finished
+     row stays alive instead of freezing static */
+  animation:
+    load-fall 0.66s cubic-bezier(0.2, 0.75, 0.24, 1) var(--delay, 0s) forwards,
+    load-float 4s ease-in-out calc(var(--delay, 0s) + 0.66s) infinite;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -62,8 +65,15 @@
   100% { opacity: 1; transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg)) scale(1); }
 }
 
+@keyframes load-float {
+  0%, 100% { transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg)); }
+  50%      { transform: translateY(calc(var(--y, 0px) - 8px)) rotate(var(--tilt, 0deg)); }
+}
+
 .load-polaroid:hover,
 .load-polaroid:focus-visible {
+  /* pause the float so the hover lift holds steady */
+  animation-play-state: paused, paused;
   transform: translateY(calc(var(--y, 0px) - 12px)) rotate(0deg) scale(1.05);
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.66);
   z-index: 20;

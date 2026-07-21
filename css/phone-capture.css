@@ -3,7 +3,7 @@
    centered, since it's meant for a single one-handed phone interaction. */
 
 .pc-screen {
-  min-height: 100vh;
+  min-height: 100vh;  min-height: 100dvh;
   min-height: 100dvh;
   background: var(--color-bg);
   color: var(--color-cream);

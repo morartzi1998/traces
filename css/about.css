@@ -8,7 +8,7 @@ body {
 }
 
 .ab-screen {
-  min-height: 100vh;
+  min-height: 100vh;  min-height: 100dvh;
   /* room top and bottom so content clears the fixed corner chrome */
   padding: 10vh 3.2vw 12vh;
 }

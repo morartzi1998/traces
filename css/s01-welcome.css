@@ -2,7 +2,7 @@
 
 .screen {
   position: relative;
-  min-height: 100vh;
+  min-height: 100vh;  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -64,19 +64,21 @@
 .polaroid-front.polaroid--flick {
   z-index: 6;
   transform-origin: 50% 120%; /* pivot low, so it swings like a dealt card */
-  animation: polaroid-card-shuffle 1.5s cubic-bezier(0.34, 0.03, 0.22, 1);
+  animation: polaroid-card-shuffle 1.7s cubic-bezier(0.36, 0.05, 0.2, 1);
 }
 
-/* a hand-dealt card shuffle: the top polaroid tips and rotates off the deck,
-   slips away as the next is revealed, and the new top card swings down and
-   settles nearly flat with a soft overshoot — organic, like flipping through
-   a stack of photos, not a mechanical flip */
+/* a hand-dealt card shuffle: the top polaroid tips up and holds at an angle
+   for a beat (a natural little pause), then slips away as the next is
+   revealed, and the new top card swings down and settles nearly flat with a
+   soft overshoot — organic, like flipping through a stack of photos */
 @keyframes polaroid-card-shuffle {
   0%   { transform: rotate(-0.1deg) translate(0, 0) scale(1); opacity: 1; }
-  20%  { transform: rotate(7deg) translate(3%, -2%) scale(1.02); opacity: 1; }
-  44%  { transform: rotate(19deg) translate(12%, 5%) scale(0.98); opacity: 0; }
-  50%  { transform: rotate(-13deg) translate(-9%, 4%) scale(0.95); opacity: 0; }
-  78%  { transform: rotate(-1.6deg) translate(0, 0) scale(1.012); opacity: 1; }
+  15%  { transform: rotate(6deg) translate(2%, -2%) scale(1.02); opacity: 1; }
+  32%  { transform: rotate(16deg) translate(9%, 3%) scale(1.01); opacity: 1; }
+  48%  { transform: rotate(16deg) translate(9%, 3%) scale(1.01); opacity: 1; }  /* held, still visible */
+  58%  { transform: rotate(22deg) translate(14%, 7%) scale(0.97); opacity: 0; } /* rotates off + fades (swap) */
+  62%  { transform: rotate(-12deg) translate(-9%, 4%) scale(0.94); opacity: 0; }/* next waits just below */
+  84%  { transform: rotate(-1.4deg) translate(0, 0) scale(1.012); opacity: 1; } /* rises + overshoots */
   100% { transform: rotate(-0.1deg) translate(0, 0) scale(1); opacity: 1; }
 }
 
@@ -85,11 +87,11 @@
    back as the new arrangement settles, so the whole stack moves as one deck
    instead of only the top card moving in isolation */
 .polaroid-back.polaroid--shuffling {
-  animation: polaroid-advance-back 1.5s cubic-bezier(0.34, 0.03, 0.22, 1);
+  animation: polaroid-advance-back 1.7s cubic-bezier(0.36, 0.05, 0.2, 1);
 }
 
 .polaroid-third.polaroid--shuffling {
-  animation: polaroid-advance-third 1.5s cubic-bezier(0.34, 0.03, 0.22, 1);
+  animation: polaroid-advance-third 1.7s cubic-bezier(0.36, 0.05, 0.2, 1);
 }
 
 @keyframes polaroid-advance-back {
