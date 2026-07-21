@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723s">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723s">
-<link rel="stylesheet" href="../css/object.css?v=20260723s">
-<script src="../js/cursor.js?v=20260723s" defer></script>
-<script src="../js/grain.js?v=20260723s" defer></script>
-<script src="../js/tilt3d.js?v=20260723s" defer></script>
-<script src="../js/owner.js?v=20260723s"></script>
-<script src="../js/config.js?v=20260723s"></script>
-<script src="../js/archive.js?v=20260723s"></script>
-<script src="../js/blobstore.js?v=20260723s"></script>
-<script src="../js/particle-loader.js?v=20260723s"></script>
-<script src="../js/remote-captures.js?v=20260723s"></script>
-<script src="../js/community-seed.js?v=20260723s"></script>
-<script src="../js/flow.js?v=20260723s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723t">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723t">
+<link rel="stylesheet" href="../css/object.css?v=20260723t">
+<script src="../js/cursor.js?v=20260723t" defer></script>
+<script src="../js/grain.js?v=20260723t" defer></script>
+<script src="../js/tilt3d.js?v=20260723t" defer></script>
+<script src="../js/owner.js?v=20260723t"></script>
+<script src="../js/config.js?v=20260723t"></script>
+<script src="../js/archive.js?v=20260723t"></script>
+<script src="../js/blobstore.js?v=20260723t"></script>
+<script src="../js/particle-loader.js?v=20260723t"></script>
+<script src="../js/remote-captures.js?v=20260723t"></script>
+<script src="../js/community-seed.js?v=20260723t"></script>
+<script src="../js/flow.js?v=20260723t" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723t"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723s" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723t" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723s";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723s";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260723t";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723t";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -71,14 +71,140 @@
     return merged;
   };
 
+  // ---- real scan-to-scan alignment (a light ICP) ---------------------------
+  // Two scans of the same object never share an origin, rotation, or extent —
+  // just stacking them on a common centre leaves every wall doubled a few
+  // degrees apart (the reported "mess"). This iteratively nudges a moving
+  // scan (rotation + shift) until its structure actually lies on the
+  // reference scan's structure, using a few thousand sampled points.
+  function __samplePts(g, n) {
+    var pos = g.getAttribute("position");
+    var step = Math.max(1, Math.floor(pos.count / n));
+    var out = [];
+    for (var i = 0; i < pos.count; i += step) out.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+    return out;
+  }
+  function __gridKey(x, y, z, cell) {
+    return Math.floor(x / cell) + "," + Math.floor(y / cell) + "," + Math.floor(z / cell);
+  }
+  function __buildGrid(pts, cell) {
+    var m = {};
+    for (var i = 0; i < pts.length; i += 3) {
+      var k = __gridKey(pts[i], pts[i + 1], pts[i + 2], cell);
+      (m[k] || (m[k] = [])).push(i);
+    }
+    return m;
+  }
+  function __nearest(grid, cell, pts, x, y, z, maxD2) {
+    var bi = -1, bd = maxD2;
+    var gx = Math.floor(x / cell), gy = Math.floor(y / cell), gz = Math.floor(z / cell);
+    for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) for (var dz = -1; dz <= 1; dz++) {
+      var b = grid[(gx + dx) + "," + (gy + dy) + "," + (gz + dz)];
+      if (!b) continue;
+      for (var j = 0; j < b.length; j++) {
+        var i = b[j];
+        var ddx = pts[i] - x, ddy = pts[i + 1] - y, ddz = pts[i + 2] - z;
+        var d = ddx * ddx + ddy * ddy + ddz * ddz;
+        if (d < bd) { bd = d; bi = i; }
+      }
+    }
+    return bi;
+  }
+  // best rotation aligning centred pairs (Horn's quaternion method); the
+  // dominant eigenvector of N is found with a shifted power iteration
+  function __rotFromS(S) {
+    var N = [
+      [S[0][0] + S[1][1] + S[2][2], S[1][2] - S[2][1], S[2][0] - S[0][2], S[0][1] - S[1][0]],
+      [S[1][2] - S[2][1], S[0][0] - S[1][1] - S[2][2], S[0][1] + S[1][0], S[2][0] + S[0][2]],
+      [S[2][0] - S[0][2], S[0][1] + S[1][0], -S[0][0] + S[1][1] - S[2][2], S[1][2] + S[2][1]],
+      [S[0][1] - S[1][0], S[2][0] + S[0][2], S[1][2] + S[2][1], -S[0][0] - S[1][1] + S[2][2]],
+    ];
+    var shift = 0;
+    for (var r = 0; r < 4; r++) {
+      var s = 0;
+      for (var c = 0; c < 4; c++) s += Math.abs(N[r][c]);
+      if (s > shift) shift = s;
+    }
+    var v = [1, 0.01, 0.01, 0.01];
+    for (var it = 0; it < 60; it++) {
+      var nv = [0, 0, 0, 0];
+      for (var r2 = 0; r2 < 4; r2++) {
+        nv[r2] = shift * v[r2];
+        for (var c2 = 0; c2 < 4; c2++) nv[r2] += N[r2][c2] * v[c2];
+      }
+      var len = Math.hypot(nv[0], nv[1], nv[2], nv[3]) || 1;
+      v = [nv[0] / len, nv[1] / len, nv[2] / len, nv[3] / len];
+    }
+    var w = v[0], x = v[1], y = v[2], z = v[3];
+    return [
+      [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+      [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+      [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+    ];
+  }
+  // returns {R, t} mapping the MOVING scan onto the REFERENCE scan (both
+  // already centre/scale-normalised, so points live within ~[-1,1])
+  function __icpAlign(refPts, movPts) {
+    var cell = 0.08;
+    var grid = __buildGrid(refPts, cell);
+    var mov = movPts.slice();
+    var R = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], T = [0, 0, 0];
+    for (var iter = 0; iter < 24; iter++) {
+      // matching radius tightens over iterations, shaking off bad pairs
+      var maxD = 0.35 - (0.23 * iter) / 23;
+      var maxD2 = maxD * maxD;
+      var ca = [0, 0, 0], cb = [0, 0, 0], pairs = [];
+      for (var i = 0; i < mov.length; i += 3) {
+        var ni = __nearest(grid, cell, refPts, mov[i], mov[i + 1], mov[i + 2], maxD2);
+        if (ni < 0) continue;
+        pairs.push(i, ni);
+        cb[0] += mov[i]; cb[1] += mov[i + 1]; cb[2] += mov[i + 2];
+        ca[0] += refPts[ni]; ca[1] += refPts[ni + 1]; ca[2] += refPts[ni + 2];
+      }
+      var n = pairs.length / 2;
+      if (n < 40) break;
+      ca[0] /= n; ca[1] /= n; ca[2] /= n; cb[0] /= n; cb[1] /= n; cb[2] /= n;
+      var S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      for (var p = 0; p < pairs.length; p += 2) {
+        var bi = pairs[p], ai = pairs[p + 1];
+        var b0 = mov[bi] - cb[0], b1 = mov[bi + 1] - cb[1], b2 = mov[bi + 2] - cb[2];
+        var a0 = refPts[ai] - ca[0], a1 = refPts[ai + 1] - ca[1], a2 = refPts[ai + 2] - ca[2];
+        S[0][0] += b0 * a0; S[0][1] += b0 * a1; S[0][2] += b0 * a2;
+        S[1][0] += b1 * a0; S[1][1] += b1 * a1; S[1][2] += b1 * a2;
+        S[2][0] += b2 * a0; S[2][1] += b2 * a1; S[2][2] += b2 * a2;
+      }
+      var Rs = __rotFromS(S);
+      var ts = [
+        ca[0] - (Rs[0][0] * cb[0] + Rs[0][1] * cb[1] + Rs[0][2] * cb[2]),
+        ca[1] - (Rs[1][0] * cb[0] + Rs[1][1] * cb[1] + Rs[1][2] * cb[2]),
+        ca[2] - (Rs[2][0] * cb[0] + Rs[2][1] * cb[1] + Rs[2][2] * cb[2]),
+      ];
+      // apply this step to the working samples and fold it into the total
+      for (var m2 = 0; m2 < mov.length; m2 += 3) {
+        var mx = mov[m2], my = mov[m2 + 1], mz = mov[m2 + 2];
+        mov[m2] = Rs[0][0] * mx + Rs[0][1] * my + Rs[0][2] * mz + ts[0];
+        mov[m2 + 1] = Rs[1][0] * mx + Rs[1][1] * my + Rs[1][2] * mz + ts[1];
+        mov[m2 + 2] = Rs[2][0] * mx + Rs[2][1] * my + Rs[2][2] * mz + ts[2];
+      }
+      var Rn = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      for (var r3 = 0; r3 < 3; r3++) for (var c3 = 0; c3 < 3; c3++)
+        Rn[r3][c3] = Rs[r3][0] * R[0][c3] + Rs[r3][1] * R[1][c3] + Rs[r3][2] * R[2][c3];
+      T = [
+        Rs[0][0] * T[0] + Rs[0][1] * T[1] + Rs[0][2] * T[2] + ts[0],
+        Rs[1][0] * T[0] + Rs[1][1] * T[1] + Rs[1][2] * T[2] + ts[1],
+        Rs[2][0] * T[0] + Rs[2][1] * T[1] + Rs[2][2] * T[2] + ts[2],
+      ];
+      R = Rn;
+    }
+    return { R: R, t: T };
+  }
+
   // the "Frankenstein" merge: ONE new unified object that combines every scan.
-  // A later re-scan isn't the same size or origin, so first each scan is
-  // registered to a common centre + scale (bounding-sphere normalised). Then
-  // ALL scans are laid on TOP of each other, sharing the exact same positions,
-  // and their points are combined into a single overlaid cloud. The result is
-  // the same object seen through all its scans at once — not sliced into halves
-  // with a seam down the middle, but co-located and blended, so it reads as one
-  // whole thing rather than two pieces stitched side by side.
+  // Each scan is centre/scale-normalised, then genuinely ALIGNED to the first
+  // (largest) scan with the ICP above — rotation and shift, not just a shared
+  // centre — and only then blended into a single overlaid cloud. Shared
+  // structure (walls, the object itself) lands on itself instead of ghosting
+  // a few degrees apart, so the result reads as one whole thing.
   window.__frankensteinMerge = function (geoms, opts) {
     opts = opts || {};
     geoms = (geoms || []).filter(Boolean);
@@ -87,7 +213,27 @@
       g.computeBoundingSphere();
       var c = (g.boundingSphere && g.boundingSphere.center) || { x: 0, y: 0, z: 0 };
       var r = (g.boundingSphere && g.boundingSphere.radius) || 1;
-      return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1) };
+      return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1), R: null, t: null };
+    });
+    // the densest scan anchors the shared space; everyone else aligns to it
+    var refIdx = 0;
+    norm.forEach(function (it, i) {
+      if (it.g.getAttribute("position").count > norm[refIdx].g.getAttribute("position").count) refIdx = i;
+    });
+    function normed(it, n) {
+      var raw = __samplePts(it.g, n);
+      for (var i = 0; i < raw.length; i += 3) {
+        raw[i] = (raw[i] - it.cx) * it.s;
+        raw[i + 1] = (raw[i + 1] - it.cy) * it.s;
+        raw[i + 2] = (raw[i + 2] - it.cz) * it.s;
+      }
+      return raw;
+    }
+    var refPts = normed(norm[refIdx], 7000);
+    norm.forEach(function (it, i) {
+      if (i === refIdx) return;
+      var fit = __icpAlign(refPts, normed(it, 5000));
+      it.R = fit.R; it.t = fit.t;
     });
     var positions = [], colors = [];
     var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
@@ -102,6 +248,12 @@
         var x = (pos.getX(i) - it.cx) * it.s;
         var y = (pos.getY(i) - it.cy) * it.s;
         var z = (pos.getZ(i) - it.cz) * it.s;
+        if (it.R) {
+          var nx = it.R[0][0] * x + it.R[0][1] * y + it.R[0][2] * z + it.t[0];
+          var ny = it.R[1][0] * x + it.R[1][1] * y + it.R[1][2] * z + it.t[1];
+          var nz = it.R[2][0] * x + it.R[2][1] * y + it.R[2][2] * z + it.t[2];
+          x = nx; y = ny; z = nz;
+        }
         positions.push(x, y, z);                            // same shared space
         if (hasColor && col) colors.push(col.getX(i), col.getY(i), col.getZ(i));
       }
@@ -2427,13 +2579,19 @@
           if (geoms.length < 2 || !window.__frankensteinMerge || !window.__mountPointCloudViewer) {
             label.textContent = "couldn't combine these scans"; return;
           }
-          // every scan co-located on the same spot and blended into one object
-          var merged = window.__frankensteinMerge(geoms);
-          if (!merged) { label.textContent = "couldn't combine these scans"; return; }
-          if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
-          view.innerHTML = "";
-          mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
-          label.textContent = "every scan of this object, combined into one — drag to turn";
+          // the alignment (ICP) is heavy and synchronous — let the label
+          // actually paint before it starts, or the screen just freezes on
+          // the previous text for a few seconds
+          label.textContent = "aligning " + geoms.length + " scans onto each other…";
+          setTimeout(function () {
+            // every scan genuinely aligned to the first, then blended into one
+            var merged = window.__frankensteinMerge(geoms);
+            if (!merged) { label.textContent = "couldn't combine these scans"; return; }
+            if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
+            view.innerHTML = "";
+            mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
+            label.textContent = "every scan of this object, aligned and combined into one — drag to turn";
+          }, 60);
         }).catch(function () { label.textContent = "couldn't combine these scans"; });
       }
       function closeVisualMerge() {
