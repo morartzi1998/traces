@@ -1200,9 +1200,21 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   flex: none;
 }
 
+/* same treatment as .obj-white-section--description: the section's box is
+   capped at its share of the panel, and only the feeling TEXT scrolls inside
+   it — without the flex column the paragraph painted straight over the
+   annotations/visibility sections below */
 .obj-link-card-section--description {
   flex: 1;
-  min-height: 0;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+}
+
+.obj-link-card-section--description > .obj-white-rule,
+.obj-link-card-section--description > .obj-link-card-img,
+.obj-link-card-section--description > .obj-white-label {
+  flex-shrink: 0;
 }
 
 .obj-link-card-section > .obj-white-rule:first-child {

@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723z">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723z">
-<link rel="stylesheet" href="../css/object.css?v=20260723z">
-<script src="../js/cursor.js?v=20260723z" defer></script>
-<script src="../js/grain.js?v=20260723z" defer></script>
-<script src="../js/tilt3d.js?v=20260723z" defer></script>
-<script src="../js/owner.js?v=20260723z"></script>
-<script src="../js/config.js?v=20260723z"></script>
-<script src="../js/archive.js?v=20260723z"></script>
-<script src="../js/blobstore.js?v=20260723z"></script>
-<script src="../js/particle-loader.js?v=20260723z"></script>
-<script src="../js/remote-captures.js?v=20260723z"></script>
-<script src="../js/community-seed.js?v=20260723z"></script>
-<script src="../js/flow.js?v=20260723z" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723z"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724a">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724a">
+<link rel="stylesheet" href="../css/object.css?v=20260724a">
+<script src="../js/cursor.js?v=20260724a" defer></script>
+<script src="../js/grain.js?v=20260724a" defer></script>
+<script src="../js/tilt3d.js?v=20260724a" defer></script>
+<script src="../js/owner.js?v=20260724a"></script>
+<script src="../js/config.js?v=20260724a"></script>
+<script src="../js/archive.js?v=20260724a"></script>
+<script src="../js/blobstore.js?v=20260724a"></script>
+<script src="../js/particle-loader.js?v=20260724a"></script>
+<script src="../js/remote-captures.js?v=20260724a"></script>
+<script src="../js/community-seed.js?v=20260724a"></script>
+<script src="../js/flow.js?v=20260724a" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724a"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723z" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724a" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723z";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723z";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724a";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724a";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -336,14 +336,16 @@
   }
   // returns {R, t} mapping the MOVING scan onto the REFERENCE scan (both
   // already centre/scale-normalised, so points live within ~[-1,1])
-  function __icpAlign(refPts, movPts) {
+  function __icpAlign(refPts, movPts, optsIn) {
+    var startD = (optsIn && optsIn.startD) || 0.35;
+    var endD = (optsIn && optsIn.endD) || 0.12;
     var cell = 0.08;
     var grid = __buildGrid(refPts, cell);
     var mov = movPts.slice();
     var R = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], T = [0, 0, 0];
     for (var iter = 0; iter < 24; iter++) {
       // matching radius tightens over iterations, shaking off bad pairs
-      var maxD = 0.35 - (0.23 * iter) / 23;
+      var maxD = startD - ((startD - endD) * iter) / 23;
       var maxD2 = maxD * maxD;
       var ca = [0, 0, 0], cb = [0, 0, 0], pairs = [];
       for (var i = 0; i < mov.length; i += 3) {
@@ -465,7 +467,9 @@
           mov[m + 2] = init.R[2][0] * x + init.R[2][1] * y + init.R[2][2] * z + init.t[2];
         }
       }
-      var fit = __icpAlign(refPts, mov);
+      // after hand-placed anchors the polish may only micro-adjust — a
+      // full-strength pass could rotate away from what the user lined up
+      var fit = __icpAlign(refPts, mov, init ? { startD: 0.1, endD: 0.04 } : null);
       if (init) {
         // total = fit ∘ init
         var Rt = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -2980,6 +2984,18 @@
           marksEl.appendChild(el);
         });
       }
+      // scale-free straightness test: |cross| is twice the triangle's area,
+      // compared against the longest side squared
+      function __anchorsCollinear(p) {
+        var ux = p[1][0] - p[0][0], uy = p[1][1] - p[0][1], uz = p[1][2] - p[0][2];
+        var vx = p[2][0] - p[0][0], vy = p[2][1] - p[0][1], vz = p[2][2] - p[0][2];
+        var cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+        var wx = p[2][0] - p[1][0], wy = p[2][1] - p[1][1], wz = p[2][2] - p[1][2];
+        var m2 = Math.max(ux * ux + uy * uy + uz * uz, vx * vx + vy * vy + vz * vz,
+          wx * wx + wy * wy + wz * wz);
+        if (!m2) return true;
+        return Math.sqrt(cx * cx + cy * cy + cz * cz) < 0.05 * m2;
+      }
       function manualAlignLabel() {
         var label = document.getElementById("objMergeLabel");
         var count = (manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b).length;
@@ -3019,6 +3035,14 @@
         if (!hit) return;
         var pts = manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b;
         pts.push([hit.x, hit.y, hit.z]);
+        if (pts.length === 3 && __anchorsCollinear(pts)) {
+          // 3 spots on (almost) one straight line leave the rotation around
+          // that line unpinned — the merge would come out tilted at random
+          pts.pop();
+          document.getElementById("objMergeLabel").textContent =
+            "those 3 spots sit almost on one line — pick a third spot farther off that line";
+          return;
+        }
         if (pts.length < 3) { manualAlignLabel(); return; }
         if (manualAlign.step === 0) {
           manualAlign.step = 1;
