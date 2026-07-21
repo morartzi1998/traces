@@ -1242,10 +1242,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   flex: none;
 }
 
-.obj-white-section--description {
-  flex: 1;
-  min-height: 0;
-}
+/* not flex:1 in read mode: forcing this section to shrink to leftover
+   space let a long description overflow its own (squeezed) box and spill
+   visually into the sections below instead of just taking its full natural
+   height — natural height here means the whole panel just scrolls (.obj-white
+   already has overflow-y: auto), which is what should happen for long text */
 
 /* Let the story prompt sit a touch farther from its divider, while lifting
    the annotations block slightly to balance the large flexible story area. */
