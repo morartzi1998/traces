@@ -80,8 +80,36 @@
   100% { transform: rotate(-0.1deg) translate(0, 0) scale(1); opacity: 1; }
 }
 
+/* the cards underneath react to the top one being dealt away — each one
+   advances up toward the spot the card ahead of it just vacated, then eases
+   back as the new arrangement settles, so the whole stack moves as one deck
+   instead of only the top card moving in isolation */
+.polaroid-back.polaroid--shuffling {
+  animation: polaroid-advance-back 1.5s cubic-bezier(0.34, 0.03, 0.22, 1);
+}
+
+.polaroid-third.polaroid--shuffling {
+  animation: polaroid-advance-third 1.5s cubic-bezier(0.34, 0.03, 0.22, 1);
+}
+
+@keyframes polaroid-advance-back {
+  0%   { transform: rotate(-5deg) translate(0, 0) scale(1); }
+  38%  { transform: rotate(-2.6deg) translate(-14%, -20%) scale(1.035); }
+  70%  { transform: rotate(-4.2deg) translate(-4%, -7%) scale(1.012); }
+  100% { transform: rotate(-5deg) translate(0, 0) scale(1); }
+}
+
+@keyframes polaroid-advance-third {
+  0%   { transform: rotate(4deg) translate(0, 0) scale(1); }
+  42%  { transform: rotate(1.6deg) translate(10%, -16%) scale(1.02); }
+  72%  { transform: rotate(3.4deg) translate(3%, -5%) scale(1.006); }
+  100% { transform: rotate(4deg) translate(0, 0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .polaroid-front.polaroid--flick { animation: none; }
+  .polaroid-front.polaroid--flick,
+  .polaroid-back.polaroid--shuffling,
+  .polaroid-third.polaroid--shuffling { animation: none; }
 }
 
 .polaroid img {

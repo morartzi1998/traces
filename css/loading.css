@@ -1,5 +1,6 @@
-/* Loading — the archive builds itself: polaroids drop one onto the next into
-   a growing pile at the centre, with the percentage counting up beneath it */
+/* Loading — the archive builds itself as polaroids drop in one after another.
+   On desktop they fall into a spread-out fanned row (the way the loader always
+   was); on a phone they gather into a centred pile. Percentage sits beneath. */
 
 .load-screen {
   min-height: 100vh;
@@ -26,63 +27,45 @@
   background-size: 340px 340px;
 }
 
-/* the pile lives in one centred box; every card is absolutely positioned on
-   top of it and drops in on a stagger */
+/* ---------- desktop: a fanned row that fills in card by card ---------- */
+
 .load-strip {
-  position: relative;
-  width: clamp(190px, 40vw, 300px);
-  height: clamp(210px, 44vw, 330px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .load-polaroid {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 100%;
+  position: relative;
   box-sizing: border-box;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
-  padding: 10px 10px 34px;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.62);
+  padding: 8px 8px 30px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.6);
+  width: clamp(120px, 12.5vw, 200px);
+  /* fan the cards with a light overlap — captions stay readable */
+  margin-left: clamp(-30px, -1.2vw, -10px);
   cursor: pointer;
   opacity: 0;
-  transform: translate(-50%, -50%);
-  /* drops from above and settles into the pile; `forwards` holds the
-     landed state so the finished stack stays put */
-  animation: load-drop 0.72s cubic-bezier(0.18, 0.72, 0.24, 1) forwards;
+  /* each card drops in from above and settles into its place in the row */
+  animation: load-fall 0.66s cubic-bezier(0.2, 0.75, 0.24, 1) forwards;
+  animation-delay: var(--delay, 0s);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* each card lands a beat after the previous one, and the later it lands the
-   higher it sits — so the pile visibly builds from the bottom up. The small
-   per-card offsets (--sx/--sy) keep it looking hand-stacked rather than a
-   perfectly square deck; --tilt comes from each figure's inline style. */
-.load-polaroid:nth-child(1)  { z-index: 1;  --sx: -6px;  --sy: 26px;  animation-delay: 0s;    }
-.load-polaroid:nth-child(2)  { z-index: 2;  --sx: 18px;  --sy: -20px; animation-delay: 0.13s; }
-.load-polaroid:nth-child(3)  { z-index: 3;  --sx: -22px; --sy: 6px;   animation-delay: 0.26s; }
-.load-polaroid:nth-child(4)  { z-index: 4;  --sx: 12px;  --sy: 22px;  animation-delay: 0.39s; }
-.load-polaroid:nth-child(5)  { z-index: 5;  --sx: -14px; --sy: -14px; animation-delay: 0.52s; }
-.load-polaroid:nth-child(6)  { z-index: 6;  --sx: 22px;  --sy: 10px;  animation-delay: 0.65s; }
-.load-polaroid:nth-child(7)  { z-index: 7;  --sx: -10px; --sy: -24px; animation-delay: 0.78s; }
-.load-polaroid:nth-child(8)  { z-index: 8;  --sx: 8px;   --sy: 18px;  animation-delay: 0.91s; }
-.load-polaroid:nth-child(9)  { z-index: 9;  --sx: -18px; --sy: -8px;  animation-delay: 1.04s; }
-.load-polaroid:nth-child(10) { z-index: 10; --sx: 4px;   --sy: 0px;   animation-delay: 1.17s; }
+.load-polaroid:first-child {
+  margin-left: 0;
+}
 
-@keyframes load-drop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 200px)) rotate(var(--tilt, 0deg)) scale(1.06);
-  }
-  60% { opacity: 1; }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg)) scale(1);
-  }
+@keyframes load-fall {
+  0%   { opacity: 0; transform: translateY(-48px) rotate(var(--tilt, 0deg)) scale(1.04); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg)) scale(1); }
 }
 
 .load-polaroid:hover,
 .load-polaroid:focus-visible {
-  /* only the top of the pile is really reachable; a small lift on hover */
-  transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 12px)) rotate(0deg) scale(1.04);
-  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.68);
+  transform: translateY(calc(var(--y, 0px) - 12px)) rotate(0deg) scale(1.05);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.66);
   z-index: 20;
 }
 
@@ -90,7 +73,7 @@
   .load-polaroid {
     animation: none;
     opacity: 1;
-    transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg));
+    transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg));
   }
 }
 
@@ -106,18 +89,23 @@
 .load-polaroid figcaption {
   position: absolute;
   bottom: 0;
-  left: 10px;
-  right: 10px;
-  height: 34px;
+  left: 8px;
+  right: 8px;
+  height: 30px;
   display: flex;
   align-items: center;
   box-sizing: border-box;
   font-family: var(--font-caption);
-  font-size: clamp(0.7rem, 1vw, 0.95rem);
+  font-size: clamp(0.55rem, 0.8vw, 0.85rem);
   color: var(--color-caption-blue);
   white-space: nowrap;
   overflow: hidden;
   line-height: 1;
+}
+
+.load-polaroid:nth-child(2) figcaption,
+.load-polaroid:nth-child(4) figcaption {
+  transform: translateY(-2px);
 }
 
 .load-status {
@@ -127,6 +115,8 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- phone: a centred pile that stacks up card by card ---------- */
+
 @media (max-width: 640px) {
   .load-screen {
     gap: 5vh;
@@ -134,8 +124,70 @@
   }
 
   .load-strip {
+    display: block;
+    position: relative;
     width: min(64vw, 280px);
     height: auto;
     aspect-ratio: 1 / 1.12;
+    margin: 0 auto;
+  }
+
+  .load-polaroid {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    margin-left: 0;
+    padding: 10px 10px 34px;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.62);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: load-drop 0.72s cubic-bezier(0.18, 0.72, 0.24, 1) forwards;
+  }
+
+  /* each card lands a beat after the previous one, and the later it lands the
+     higher it sits — so the pile visibly builds from the bottom up; the small
+     per-card offsets keep it looking hand-stacked. --tilt comes from inline. */
+  .load-polaroid:nth-child(1)  { z-index: 1;  --sx: -6px;  --sy: 26px;  animation-delay: 0s;    }
+  .load-polaroid:nth-child(2)  { z-index: 2;  --sx: 18px;  --sy: -20px; animation-delay: 0.13s; }
+  .load-polaroid:nth-child(3)  { z-index: 3;  --sx: -22px; --sy: 6px;   animation-delay: 0.26s; }
+  .load-polaroid:nth-child(4)  { z-index: 4;  --sx: 12px;  --sy: 22px;  animation-delay: 0.39s; }
+  .load-polaroid:nth-child(5)  { z-index: 5;  --sx: -14px; --sy: -14px; animation-delay: 0.52s; }
+  .load-polaroid:nth-child(6)  { z-index: 6;  --sx: 22px;  --sy: 10px;  animation-delay: 0.65s; }
+  .load-polaroid:nth-child(7)  { z-index: 7;  --sx: -10px; --sy: -24px; animation-delay: 0.78s; }
+  .load-polaroid:nth-child(8)  { z-index: 8;  --sx: 8px;   --sy: 18px;  animation-delay: 0.91s; }
+  .load-polaroid:nth-child(9)  { z-index: 9;  --sx: -18px; --sy: -8px;  animation-delay: 1.04s; }
+  .load-polaroid:nth-child(10) { z-index: 10; --sx: 4px;   --sy: 0px;   animation-delay: 1.17s; }
+
+  @keyframes load-drop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 200px)) rotate(var(--tilt, 0deg)) scale(1.06);
+    }
+    60% { opacity: 1; }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg)) scale(1);
+    }
+  }
+
+  .load-polaroid:hover,
+  .load-polaroid:focus-visible {
+    transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 12px)) rotate(0deg) scale(1.04);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .load-polaroid {
+      animation: none;
+      opacity: 1;
+      transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg));
+    }
+  }
+
+  .load-polaroid figcaption {
+    left: 10px;
+    right: 10px;
+    height: 34px;
+    font-size: clamp(0.7rem, 1vw, 0.95rem);
   }
 }
