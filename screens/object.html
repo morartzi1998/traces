@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260723w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260723w">
-<link rel="stylesheet" href="../css/object.css?v=20260723w">
-<script src="../js/cursor.js?v=20260723w" defer></script>
-<script src="../js/grain.js?v=20260723w" defer></script>
-<script src="../js/tilt3d.js?v=20260723w" defer></script>
-<script src="../js/owner.js?v=20260723w"></script>
-<script src="../js/config.js?v=20260723w"></script>
-<script src="../js/archive.js?v=20260723w"></script>
-<script src="../js/blobstore.js?v=20260723w"></script>
-<script src="../js/particle-loader.js?v=20260723w"></script>
-<script src="../js/remote-captures.js?v=20260723w"></script>
-<script src="../js/community-seed.js?v=20260723w"></script>
-<script src="../js/flow.js?v=20260723w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260723x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260723x">
+<link rel="stylesheet" href="../css/object.css?v=20260723x">
+<script src="../js/cursor.js?v=20260723x" defer></script>
+<script src="../js/grain.js?v=20260723x" defer></script>
+<script src="../js/tilt3d.js?v=20260723x" defer></script>
+<script src="../js/owner.js?v=20260723x"></script>
+<script src="../js/config.js?v=20260723x"></script>
+<script src="../js/archive.js?v=20260723x"></script>
+<script src="../js/blobstore.js?v=20260723x"></script>
+<script src="../js/particle-loader.js?v=20260723x"></script>
+<script src="../js/remote-captures.js?v=20260723x"></script>
+<script src="../js/community-seed.js?v=20260723x"></script>
+<script src="../js/flow.js?v=20260723x" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260723x"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723w" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260723x" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723w";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723w";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260723x";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260723x";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -70,16 +70,34 @@
         if (!CT || !comps) return null;
         var elemBytes = CT.BYTES_PER_ELEMENT * comps;
         var stride = bv.byteStride || elemBytes;
-        var base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+        var base = bin.byteOffset + (bv.byteOffset || 0) + (acc.byteOffset || 0);
         var out = new Float32Array(acc.count * comps);
         // KHR_mesh_quantization stores positions as normalized (u)ints, undone
         // here; the node matrices then rescale them into real space
         var norm = acc.normalized
           ? ({ 5121: 255, 5123: 65535, 5120: 127, 5122: 32767 })[acc.componentType] || 1
           : 1;
-        for (var i = 0; i < acc.count; i++) {
-          var arr = new CT(bin.buffer, bin.byteOffset + base + i * stride, comps);
-          for (var c = 0; c < comps; c++) out[i * comps + c] = arr[c] / norm;
+        if (stride === elemBytes && base % CT.BYTES_PER_ELEMENT === 0) {
+          // tightly packed (the overwhelmingly common case): ONE typed-array
+          // view over the whole run — the old per-vertex `new TypedArray`
+          // allocated millions of throwaway objects and froze the machine
+          // for seconds on a big scan
+          var view = new CT(bin.buffer, base, acc.count * comps);
+          if (norm === 1 && CT === Float32Array) {
+            out.set(view);
+          } else {
+            for (var i0 = 0; i0 < out.length; i0++) out[i0] = view[i0] / norm;
+          }
+        } else {
+          var dvw = new DataView(bin.buffer);
+          var readers = { 5126: dvw.getFloat32, 5121: dvw.getUint8, 5123: dvw.getUint16,
+                          5125: dvw.getUint32, 5120: dvw.getInt8, 5122: dvw.getInt16 };
+          var rd = readers[acc.componentType].bind(dvw);
+          var cb = CT.BYTES_PER_ELEMENT;
+          for (var i = 0; i < acc.count; i++) {
+            var o = base + i * stride;
+            for (var c = 0; c < comps; c++) out[i * comps + c] = rd(o + c * cb, true) / norm;
+          }
         }
         return { data: out, comps: comps, count: acc.count };
       }
@@ -158,15 +176,16 @@
         return mc.imgIdx != null ? imageData(mc.imgIdx) : Promise.resolve(null);
       });
 
-      return Promise.all(imgPromises).then(function (images) {
+      return Promise.all(imgPromises).then(async function (images) {
         var total = 0;
         prims.forEach(function (p) { total += gltf.accessors[p.prim.attributes.POSITION].count; });
         var step = Math.max(1, Math.floor(total / 600000));
         var positions = [], colors = [];
-        prims.forEach(function (p, pi) {
-          var prim = p.prim, world = p.world;
+        var sinceYield = 0;
+        for (var pi = 0; pi < prims.length; pi++) {
+          var prim = prims[pi].prim, world = prims[pi].world;
           var pos = accessorData(prim.attributes.POSITION);
-          if (!pos) return;
+          if (!pos) continue;
           var col = prim.attributes.COLOR_0 != null ? accessorData(prim.attributes.COLOR_0) : null;
           var mc = materialColour(prim);
           var uvAttr = "TEXCOORD_" + mc.uvSet;
@@ -193,8 +212,14 @@
             } else {
               colors.push(0.94 * mc.factor[0], 0.93 * mc.factor[1], 0.9 * mc.factor[2]);
             }
+            // breathe every ~60k points so the page (loader animation, the
+            // whole machine) never freezes for seconds on a huge mesh
+            if (++sinceYield >= 60000) {
+              sinceYield = 0;
+              await new Promise(function (r) { setTimeout(r, 0); });
+            }
           }
-        });
+        }
         if (!positions.length) return null;
         var g = new THREE.BufferGeometry();
         g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -2958,13 +2983,26 @@
       // sampled into a coloured cloud (textures included — see __glbToPoints)
       // the first time, then cached for instant switching after that
       var derivedPointsCache = {};
+      var derivingPoints = false; // an impatient second toggle mid-derivation must not tangle the state
       function showDerivedPoints(k) {
+        if (derivingPoints) return;
+        derivingPoints = true;
         stage.dataset.mode = "model";
         photo.hidden = true;
         modelViewer.hidden = true;
         objPoints.hidden = false;
         disposePcViewer();
         beginLoading();
+        function backToMesh() {
+          // NEVER strand the stage empty: any failure returns to the mesh view
+          endLoading();
+          derivingPoints = false;
+          swapScan(k, catalog[k].model, catalog[k].img, null);
+          var sw2 = document.getElementById("objRepSwitch");
+          var lbl2 = document.getElementById("objRepLabel");
+          if (sw2) sw2.setAttribute("aria-checked", "false");
+          if (lbl2) lbl2.textContent = "mesh";
+        }
         var ready = derivedPointsCache[k]
           ? Promise.resolve(derivedPointsCache[k])
           : (function () {
@@ -2977,12 +3015,13 @@
                 .then(function (g) { if (g) derivedPointsCache[k] = g; return g; });
             })();
         ready.then(function (g) {
-          if (key !== k) return;
-          if (!g) { endLoading(); swapScan(k, catalog[k].model, catalog[k].img, null); return; }
+          if (key !== k) { derivingPoints = false; return; }
+          if (!g) { backToMesh(); return; }
           pcViewer = window.__mountPointCloudViewer(objPoints, g,
             { pointSize: 0.006, tilt: catalog[k].tilt || null });
           endLoading();
-        }).catch(function () { if (key === k) endLoading(); });
+          derivingPoints = false;
+        }).catch(function () { if (key === k) backToMesh(); else derivingPoints = false; });
       }
       function toggleRepresentation() {
         var img = catalog[key].img;

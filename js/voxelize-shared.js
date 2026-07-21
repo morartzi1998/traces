@@ -12,7 +12,7 @@
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
 import * as THREE from "three";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260723w";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260723x";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
@@ -316,17 +316,25 @@ export function cropCloudByRadius(geometry, frac) {
   var cx = 0, cy = 0, cz = 0;
   for (var i = 0; i < n; i++) { cx += pos.getX(i); cy += pos.getY(i); cz += pos.getZ(i); }
   cx /= n; cy /= n; cz /= n;
-  var dist = new Float32Array(n);
+  // a BOX around the centre, not a sphere: the old radial cut sliced every
+  // room into an obvious ball with a circular silhouette. Trimming each
+  // axis independently (to frac of its own 98th-percentile half-extent)
+  // keeps walls straight and corners square while still peeling the far
+  // background away.
+  var ax = new Float32Array(n), ay = new Float32Array(n), az = new Float32Array(n);
   for (var j = 0; j < n; j++) {
-    var dx = pos.getX(j) - cx, dy = pos.getY(j) - cy, dz = pos.getZ(j) - cz;
-    dist[j] = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    ax[j] = Math.abs(pos.getX(j) - cx);
+    ay[j] = Math.abs(pos.getY(j) - cy);
+    az[j] = Math.abs(pos.getZ(j) - cz);
   }
-  var sorted = Float32Array.prototype.slice.call(dist).sort();
-  var r98 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.98))] || 1;
-  var thresh = frac * r98;
+  function p98(arr) {
+    var s = Float32Array.prototype.slice.call(arr).sort();
+    return s[Math.min(s.length - 1, Math.floor(s.length * 0.98))] || 1;
+  }
+  var tx = frac * p98(ax), ty = frac * p98(ay), tz = frac * p98(az);
   var positions = [], colors = [];
   for (var k = 0; k < n; k++) {
-    if (dist[k] > thresh) continue;
+    if (ax[k] > tx || ay[k] > ty || az[k] > tz) continue;
     positions.push(pos.getX(k), pos.getY(k), pos.getZ(k));
     if (col) colors.push(col.getX(k), col.getY(k), col.getZ(k));
   }
