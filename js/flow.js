@@ -24,7 +24,14 @@ function goTo(page) {
 }
 
 function openObject(item, target) {
-  try { sessionStorage.setItem("traces-item", item); } catch (e) {}
+  try {
+    sessionStorage.setItem("traces-item", item);
+    // opening through the normal path (home, archive, loading) is NOT
+    // community browsing — clear any leftover community flag so the object
+    // view's prev/next arrows stay within the archive set. community.html
+    // sets this flag itself, right before it navigates.
+    sessionStorage.removeItem("traces-from-community");
+  } catch (e) {}
   goTo(target || "object.html");
 }
 

@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721o">
-<link rel="stylesheet" href="../css/gallery.css?v=20260721o">
-<script src="../js/cursor.js?v=20260721o" defer></script>
-<script src="../js/grain.js?v=20260721o" defer></script>
-<script src="../js/owner.js?v=20260721o"></script>
-<script src="../js/config.js?v=20260721o"></script>
-<script src="../js/archive.js?v=20260721o"></script>
-<script src="../js/blobstore.js?v=20260721o"></script>
-<script src="../js/remote-captures.js?v=20260721o"></script>
-<script src="../js/designer-archive.js?v=20260721o"></script>
-<script src="../js/community-seed.js?v=20260721o"></script>
-<script src="../js/gallery-title.js?v=20260721o" defer></script>
-<script src="../js/flow.js?v=20260721o" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721p">
+<link rel="stylesheet" href="../css/gallery.css?v=20260721p">
+<script src="../js/cursor.js?v=20260721p" defer></script>
+<script src="../js/grain.js?v=20260721p" defer></script>
+<script src="../js/owner.js?v=20260721p"></script>
+<script src="../js/config.js?v=20260721p"></script>
+<script src="../js/archive.js?v=20260721p"></script>
+<script src="../js/blobstore.js?v=20260721p"></script>
+<script src="../js/remote-captures.js?v=20260721p"></script>
+<script src="../js/designer-archive.js?v=20260721p"></script>
+<script src="../js/community-seed.js?v=20260721p"></script>
+<script src="../js/gallery-title.js?v=20260721p" defer></script>
+<script src="../js/flow.js?v=20260721p" defer></script>
 </head>
 <body>
 
@@ -58,8 +58,13 @@
     // which carry no visibility flag of their own) should show the
     // community's blue-purple backdrop on the object view too
     window.openCommunityObject = function (key) {
-      try { sessionStorage.setItem("traces-from-community", "1"); } catch (e) {}
-      openObject(key);
+      // set the item + community flag directly and navigate — not via
+      // openObject(), which deliberately clears the community flag
+      try {
+        sessionStorage.setItem("traces-item", key);
+        sessionStorage.setItem("traces-from-community", "1");
+      } catch (e) {}
+      goTo("object.html");
     };
 
     (function () {
