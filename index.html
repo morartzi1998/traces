@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260723k">
-<link rel="stylesheet" href="css/chrome.css?v=20260723k">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260723k">
-<link rel="stylesheet" href="css/loading.css?v=20260723k">
+<link rel="stylesheet" href="css/base.css?v=20260723l">
+<link rel="stylesheet" href="css/chrome.css?v=20260723l">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260723l">
+<link rel="stylesheet" href="css/loading.css?v=20260723l">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,10 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260723k" defer></script>
-<script src="js/grain.js?v=20260723k" defer></script>
-<script src="js/owner.js?v=20260723k"></script>
-<script src="js/flow.js?v=20260723k" defer></script>
+<script src="js/cursor.js?v=20260723l" defer></script>
+<script src="js/grain.js?v=20260723l" defer></script>
+<script src="js/owner.js?v=20260723l"></script>
+<script src="js/flow.js?v=20260723l" defer></script>
 </head>
 <body>
 
@@ -170,7 +170,8 @@
         stack.querySelector(".polaroid-third"),
       ];
       var shown = [0, 1, 2]; // HERO_ITEMS index currently held by each slot
-      var nextUp = 3;
+      var parkedItem = 3;    // what the parked card is currently loaded with
+      var nextUp = 4;        // the first index the parked card will RELOAD to
       var paused = false;
       var timer = null;
 
@@ -180,6 +181,16 @@
       // caption. Warm every hero photo once up front (rotation only starts
       // 4s in, plenty of time), so every later swap is instant.
       HERO_ITEMS.forEach(function (it) { var im = new Image(); im.src = it.img; });
+
+      // the fourth card: parked invisibly beneath the stack, always holding
+      // the NEXT capture, so a deal can send it rising the instant the front
+      // card lifts off (see .polaroid-parked) instead of the pile waiting a
+      // full flight for its own dealt card to come back around
+      var parked = slots[2].cloneNode(true);
+      parked.classList.remove("polaroid-third");
+      parked.classList.add("polaroid-parked");
+      applyContent(parked, HERO_ITEMS[3]);
+      stack.appendChild(parked);
 
       function applyContent(el, item) {
         var img = el.querySelector("img");
@@ -207,23 +218,32 @@
         b.classList.add("polaroid-front");
         t.classList.remove("polaroid-third");
         t.classList.add("polaroid-back");
-        slots = [b, t, f];
-        shown = [shown[1], shown[2], nextUp % HERO_ITEMS.length];
-        nextUp++;
-        // once the dealt card has fully flown out and faded, recycle it:
-        // load the NEXT capture into it while it's invisible, park it low
-        // beneath the stack, and let it rise up into the third slot
+        // the parked card (already loaded with the next capture) rises into
+        // the third slot IN THE SAME MOMENT the front lifts off — because it
+        // was waiting ready, there is no dead beat where the pile just sits
+        // one card short waiting for the flight to finish
+        var h = parked;
+        h.classList.remove("polaroid-parked");
+        h.classList.add("polaroid-third");
+        h.style.pointerEvents = "";
+        slots = [b, t, h];
+        // the riser shows what the parked card was loaded with — track it
+        // from parkedItem, NOT from nextUp, or every deal skips one capture
+        shown = [shown[1], shown[2], parkedItem];
+        // the dealt card, once fully flown out and faded, becomes the new
+        // parked card: reloaded (invisibly) with the next capture in line
         setTimeout(function () {
-          applyContent(f, HERO_ITEMS[shown[2]]);
           f.classList.remove("polaroid-front", "polaroid--dealt");
-          f.classList.add("polaroid-third", "polaroid--pre-enter");
-          void f.offsetWidth; // paint the buried pose before releasing it
-          f.classList.remove("polaroid--pre-enter");
+          f.classList.add("polaroid-parked");
+          parkedItem = nextUp % HERO_ITEMS.length;
+          applyContent(f, HERO_ITEMS[parkedItem]);
+          parked = f;
+          nextUp++;
           setTimeout(function () {
             stack.classList.remove("dealing");
             dealing = false;
-          }, 1000);
-        }, 980);
+          }, 350);
+        }, 900);
       }
 
       function restartTimer() {
@@ -269,7 +289,7 @@
         restartTimer();
       }
 
-      slots.forEach(function (el) {
+      slots.concat([parked]).forEach(function (el) {
         el.addEventListener("click", function () { selectWelcomePolaroid(el); });
         el.addEventListener("keydown", function (e) {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectWelcomePolaroid(el); }
