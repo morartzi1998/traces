@@ -5,20 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722h">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722h">
-<link rel="stylesheet" href="../css/object.css?v=20260722h">
-<script src="../js/cursor.js?v=20260722h" defer></script>
-<script src="../js/grain.js?v=20260722h" defer></script>
-<script src="../js/tilt3d.js?v=20260722h" defer></script>
-<script src="../js/owner.js?v=20260722h"></script>
-<script src="../js/config.js?v=20260722h"></script>
-<script src="../js/archive.js?v=20260722h"></script>
-<script src="../js/blobstore.js?v=20260722h"></script>
-<script src="../js/remote-captures.js?v=20260722h"></script>
-<script src="../js/community-seed.js?v=20260722h"></script>
-<script src="../js/flow.js?v=20260722h" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722h"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722i">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722i">
+<link rel="stylesheet" href="../css/object.css?v=20260722i">
+<script src="../js/cursor.js?v=20260722i" defer></script>
+<script src="../js/grain.js?v=20260722i" defer></script>
+<script src="../js/tilt3d.js?v=20260722i" defer></script>
+<script src="../js/owner.js?v=20260722i"></script>
+<script src="../js/config.js?v=20260722i"></script>
+<script src="../js/archive.js?v=20260722i"></script>
+<script src="../js/blobstore.js?v=20260722i"></script>
+<script src="../js/particle-loader.js?v=20260722i"></script>
+<script src="../js/remote-captures.js?v=20260722i"></script>
+<script src="../js/community-seed.js?v=20260722i"></script>
+<script src="../js/flow.js?v=20260722i" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722i"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +28,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722h" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722i" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722h";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722h";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722i";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722i";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -125,6 +126,10 @@
       <model-viewer class="obj-model" id="objModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
       <div class="obj-points" id="objPoints" hidden></div>
+      <!-- a drifting particle cloud shown while a (often tens-of-MB) scan is
+           still fetching/parsing — reads as the space being built instead of
+           the empty placeholder square -->
+      <canvas class="obj-loading-particles" id="objLoadingParticles" hidden></canvas>
     </div>
 
     <div class="obj-tags" id="objTags">
@@ -1227,11 +1232,29 @@
       var modelViewer = document.getElementById("objModel");
       var objPoints = document.getElementById("objPoints");
 
+      // while a (often tens-of-MB) scan is still fetching/parsing, show a
+      // drifting particle cloud instead of the empty placeholder square, then
+      // clear it the moment there's something real to show. Centralised so the
+      // many "done loading" exit points can't leave the animation running.
+      var loadingParticles = null;
+      function beginLoading() {
+        stage.classList.add("obj-stage--loading");
+        if (loadingParticles) { loadingParticles.stop(); loadingParticles = null; }
+        if (window.ParticleLoader) {
+          stage.classList.add("obj-stage--particles");
+          loadingParticles = window.ParticleLoader.start(document.getElementById("objLoadingParticles"));
+        }
+      }
+      function endLoading() {
+        stage.classList.remove("obj-stage--loading", "obj-stage--particles");
+        if (loadingParticles) { loadingParticles.stop(); loadingParticles = null; }
+      }
+
       modelViewer.addEventListener("load", function () {
-        stage.classList.remove("obj-stage--loading");
+        endLoading();
       });
       modelViewer.addEventListener("error", function () {
-        stage.classList.remove("obj-stage--loading");
+        endLoading();
       });
 
       // the marker's screen position moves every frame while the model
@@ -1462,7 +1485,7 @@
         // fetching a real capture's photo/model/points can take real time -
         // an empty stage until it lands read as broken rather than loading.
         // Cleared as soon as each branch below actually has something to show.
-        stage.classList.add("obj-stage--loading");
+        beginLoading();
         if (points) {
           // a raw point cloud gets real per-point rendering instead of a
           // voxelized-mesh GLB — glTF/model-viewer has no notion of point
@@ -1487,24 +1510,24 @@
               // a fetch that simply resolved false/empty (a 404, a missing
               // idb blob) isn't a thrown error - it never reached .catch(),
               // which used to leave the loading placeholder stuck forever
-              if (!blob) { if (key === k) stage.classList.remove("obj-stage--loading"); return null; }
+              if (!blob) { if (key === k) endLoading(); return null; }
               if (key !== k) return null;
               return blob.arrayBuffer();
             }).then(function (buf) {
-              if (!buf) { if (key === k) stage.classList.remove("obj-stage--loading"); return; }
+              if (!buf) { if (key === k) endLoading(); return; }
               if (key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
                 { pointSize: catalog[k].pointSize || 0.013, initialView: carriedView || catalog[k].defaultView || null,
                   tilt: catalog[k].tilt || null });
-              stage.classList.remove("obj-stage--loading");
+              endLoading();
               // once the cloud is ready, (re)draw annotations as 3D-anchored
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
               if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
-            }).catch(function () { if (key === k) stage.classList.remove("obj-stage--loading"); });
+            }).catch(function () { if (key === k) endLoading(); });
           } else {
-            stage.classList.remove("obj-stage--loading");
+            endLoading();
           }
         } else if (model) {
           stage.dataset.mode = "model";
@@ -1535,11 +1558,11 @@
             window.BlobStore.url(img).then(function (u) {
               if (key !== k) return;
               photo.src = u || "";
-              stage.classList.remove("obj-stage--loading");
+              endLoading();
             });
           } else {
             photo.src = img;
-            stage.classList.remove("obj-stage--loading");
+            endLoading();
           }
           photo.alt = catalog[k].title;
         }
