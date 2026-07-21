@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722q">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722q">
-<link rel="stylesheet" href="../css/object.css?v=20260722q">
-<script src="../js/cursor.js?v=20260722q" defer></script>
-<script src="../js/grain.js?v=20260722q" defer></script>
-<script src="../js/tilt3d.js?v=20260722q" defer></script>
-<script src="../js/owner.js?v=20260722q"></script>
-<script src="../js/config.js?v=20260722q"></script>
-<script src="../js/archive.js?v=20260722q"></script>
-<script src="../js/blobstore.js?v=20260722q"></script>
-<script src="../js/particle-loader.js?v=20260722q"></script>
-<script src="../js/remote-captures.js?v=20260722q"></script>
-<script src="../js/community-seed.js?v=20260722q"></script>
-<script src="../js/flow.js?v=20260722q" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722q"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722r">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722r">
+<link rel="stylesheet" href="../css/object.css?v=20260722r">
+<script src="../js/cursor.js?v=20260722r" defer></script>
+<script src="../js/grain.js?v=20260722r" defer></script>
+<script src="../js/tilt3d.js?v=20260722r" defer></script>
+<script src="../js/owner.js?v=20260722r"></script>
+<script src="../js/config.js?v=20260722r"></script>
+<script src="../js/archive.js?v=20260722r"></script>
+<script src="../js/blobstore.js?v=20260722r"></script>
+<script src="../js/particle-loader.js?v=20260722r"></script>
+<script src="../js/remote-captures.js?v=20260722r"></script>
+<script src="../js/community-seed.js?v=20260722r"></script>
+<script src="../js/flow.js?v=20260722r" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722r"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722q" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722r" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722q";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722q";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722r";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722r";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -1339,8 +1339,12 @@
       modelViewer.addEventListener("load", function () {
         endLoading();
       });
+      // a model that can't load shouldn't drop to a blank black stage — keep
+      // the drifting particle cloud up so there's always the "still building"
+      // state on screen rather than nothing (the reported "where's the loading
+      // animation?" empty view)
       modelViewer.addEventListener("error", function () {
-        endLoading();
+        beginLoading();
       });
 
       // the marker's screen position moves every frame while the model
