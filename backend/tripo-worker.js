@@ -375,7 +375,16 @@ export default {
           model: body.model || null,
           points: body.points || null,
           annotations: Array.isArray(body.annotations) ? body.annotations : [],
+          // the capture's dated re-scan history, and the framing/render choices
+          // made in object.html — dropped here before, so every publish (and
+          // every "patch just this field" resave) silently lost the timeline
+          // and the visitor never saw the angle/point-size Mor picked
+          versions: Array.isArray(body.versions) ? body.versions : [],
         };
+        if (body.defaultView != null) record.defaultView = body.defaultView;
+        if (body.pointSize != null) record.pointSize = body.pointSize;
+        if (body.tilt != null) record.tilt = body.tilt;
+        if (body.dual) record.dual = true;
         await env.CAPTURES.put("capture:" + id, JSON.stringify(record));
         return json({ id });
       }

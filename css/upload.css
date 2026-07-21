@@ -79,7 +79,12 @@
   z-index: 6;
 }
 
-.up-option-head:hover .up-option-tip,
+/* a touch tap has no real hover-out, so :hover sticks after tapping and the
+   tip sits pinned over the text below — real hover only exists on a device
+   with an actual pointer, so gate it there; focus-visible (keyboard) stays */
+@media (hover: hover) and (pointer: fine) {
+  .up-option-head:hover .up-option-tip { opacity: 0.7; }
+}
 .up-option-head:focus-visible .up-option-tip {
   opacity: 0.7;
 }
