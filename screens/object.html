@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722l">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722l">
-<link rel="stylesheet" href="../css/object.css?v=20260722l">
-<script src="../js/cursor.js?v=20260722l" defer></script>
-<script src="../js/grain.js?v=20260722l" defer></script>
-<script src="../js/tilt3d.js?v=20260722l" defer></script>
-<script src="../js/owner.js?v=20260722l"></script>
-<script src="../js/config.js?v=20260722l"></script>
-<script src="../js/archive.js?v=20260722l"></script>
-<script src="../js/blobstore.js?v=20260722l"></script>
-<script src="../js/particle-loader.js?v=20260722l"></script>
-<script src="../js/remote-captures.js?v=20260722l"></script>
-<script src="../js/community-seed.js?v=20260722l"></script>
-<script src="../js/flow.js?v=20260722l" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722l"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722m">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722m">
+<link rel="stylesheet" href="../css/object.css?v=20260722m">
+<script src="../js/cursor.js?v=20260722m" defer></script>
+<script src="../js/grain.js?v=20260722m" defer></script>
+<script src="../js/tilt3d.js?v=20260722m" defer></script>
+<script src="../js/owner.js?v=20260722m"></script>
+<script src="../js/config.js?v=20260722m"></script>
+<script src="../js/archive.js?v=20260722m"></script>
+<script src="../js/blobstore.js?v=20260722m"></script>
+<script src="../js/particle-loader.js?v=20260722m"></script>
+<script src="../js/remote-captures.js?v=20260722m"></script>
+<script src="../js/community-seed.js?v=20260722m"></script>
+<script src="../js/flow.js?v=20260722m" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722m"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,13 +28,48 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722l" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722m" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722l";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722l";
+  import * as THREE from "three";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722m";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722m";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
+
+  // "Make a visual merge from object's history": a true 3D combination of the
+  // capture's dated scans — lay each version's point cloud side by side along X
+  // in one scene, so the object's evolution over time reads as a single 3D
+  // piece you can orbit as a whole. Returns one merged BufferGeometry (or null).
+  window.__mergeGeometriesInRow = function (geoms, gapFactor) {
+    gapFactor = gapFactor || 1.3;
+    geoms = (geoms || []).filter(Boolean);
+    if (!geoms.length) return null;
+    var infos = geoms.map(function (g) {
+      g.computeBoundingBox();
+      var bb = g.boundingBox;
+      return { g: g, w: Math.max(0.0001, bb.max.x - bb.min.x), cx: (bb.max.x + bb.min.x) / 2 };
+    });
+    var totalW = infos.reduce(function (s, it) { return s + it.w * gapFactor; }, 0);
+    var cursor = -totalW / 2;
+    var positions = [], colors = [];
+    var hasColor = geoms.every(function (g) { return !!g.getAttribute("color"); });
+    infos.forEach(function (it) {
+      var slot = it.w * gapFactor;
+      var offsetX = cursor + slot / 2 - it.cx; // center each scan in its slot
+      cursor += slot;
+      var pos = it.g.getAttribute("position");
+      var col = it.g.getAttribute("color");
+      for (var i = 0; i < pos.count; i++) {
+        positions.push(pos.getX(i) + offsetX, pos.getY(i), pos.getZ(i));
+        if (hasColor && col) colors.push(col.getX(i), col.getY(i), col.getZ(i));
+      }
+    });
+    var merged = new THREE.BufferGeometry();
+    merged.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    if (hasColor && colors.length) merged.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    return merged;
+  };
 </script>
 </head>
 <body>
@@ -60,7 +95,7 @@
         <li><button type="button" id="menuUpdateCapture">Update capture</button></li>
         <li id="menuSetImageRow" hidden><button type="button" id="menuSetImage">Set a display image</button></li>
         <li><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
-        <li><button type="button">Make a visual merge from object's history</button></li>
+        <li id="menuVisualMergeRow" hidden><button type="button" id="menuVisualMerge">Make a visual merge from object's history</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
@@ -130,6 +165,14 @@
            still fetching/parsing — reads as the space being built instead of
            the empty placeholder square -->
       <canvas class="obj-loading-particles" id="objLoadingParticles" hidden></canvas>
+    </div>
+
+    <!-- "visual merge": the capture's dated scans combined into one 3D scene,
+         laid side by side so the object's history reads as a single piece -->
+    <div class="obj-merge" id="objMerge" hidden>
+      <div class="obj-merge-view" id="objMergeView"></div>
+      <p class="obj-merge-label" id="objMergeLabel">a merge of this object's scans over time</p>
+      <button class="obj-merge-close" type="button" id="objMergeClose" aria-label="Close">&times;</button>
     </div>
 
     <div class="obj-tags" id="objTags">
@@ -1599,6 +1642,11 @@
         // view or not — so it's offered whenever the menu itself is
         var menuSetImageRow = document.getElementById("menuSetImageRow");
         if (menuSetImageRow) menuSetImageRow.hidden = !isOwnerHere && !ownedHere;
+        // a 3D "visual merge" only means something with at least two dated
+        // point-cloud scans to combine — otherwise the button read as broken
+        // (it never had a handler at all). Hidden until there's real history.
+        var menuVisualMergeRow = document.getElementById("menuVisualMergeRow");
+        if (menuVisualMergeRow) menuVisualMergeRow.hidden = mergeableVersions(k).length < 2;
         // switching captures (prev/next, a jump link, entering community
         // browsing) always lands on a fully closed menu - this used to only
         // hide it, leaving the hamburger icon's bars stuck in their
@@ -2211,6 +2259,59 @@
             });
           }).catch(function () {});
       }
+
+      // ----- "Make a visual merge from object's history" ---------------------
+      // a true 3D combination: every dated scan that carries a real point cloud
+      // is laid side by side along X in one scene, so the object's evolution
+      // over time reads as a single piece you orbit as a whole.
+      function mergeableVersions(k) {
+        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) { return v && v.points; });
+      }
+      var mergeViewer = null;
+      function loadVersionGeometry(v) {
+        var ref = v.points;
+        var pk = ref.indexOf("idb:") === 0 ? ref.slice(4) : null;
+        var blobP = pk && window.BlobStore ? window.BlobStore.get(pk)
+          : fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+        return blobP.then(function (b) { return b ? b.arrayBuffer() : null; })
+          .then(function (buf) { return (buf && window.__deserializeGeometry) ? window.__deserializeGeometry(buf) : null; })
+          .catch(function () { return null; });
+      }
+      function openVisualMerge() {
+        var overlay = document.getElementById("objMerge");
+        var view = document.getElementById("objMergeView");
+        var label = document.getElementById("objMergeLabel");
+        var vs = mergeableVersions(key);
+        if (vs.length < 2) return;
+        overlay.hidden = false;
+        label.textContent = "combining " + vs.length + " scans…";
+        Promise.all(vs.map(loadVersionGeometry)).then(function (geoms) {
+          geoms = geoms.filter(Boolean);
+          if (geoms.length < 2 || !window.__mergeGeometriesInRow || !window.__mountPointCloudViewer) {
+            label.textContent = "couldn't combine these scans"; return;
+          }
+          var merged = window.__mergeGeometriesInRow(geoms, 1.3);
+          if (!merged) { label.textContent = "couldn't combine these scans"; return; }
+          if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
+          view.innerHTML = "";
+          mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
+          label.textContent = "a merge of this object's scans over time — drag to turn";
+        }).catch(function () { label.textContent = "couldn't combine these scans"; });
+      }
+      function closeVisualMerge() {
+        var overlay = document.getElementById("objMerge");
+        if (!overlay || overlay.hidden) return;
+        if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
+        mergeViewer = null;
+        document.getElementById("objMergeView").innerHTML = "";
+        overlay.hidden = true;
+      }
+      document.getElementById("menuVisualMerge").addEventListener("click", function () {
+        menu.hidden = true;
+        openVisualMerge();
+      });
+      document.getElementById("objMergeClose").addEventListener("click", closeVisualMerge);
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeVisualMerge(); });
       function syncViewToServer() {
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
         var fields = { defaultView: catalog[key].defaultView || null };
