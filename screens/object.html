@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260722e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260722e">
-<link rel="stylesheet" href="../css/object.css?v=20260722e">
-<script src="../js/cursor.js?v=20260722e" defer></script>
-<script src="../js/grain.js?v=20260722e" defer></script>
-<script src="../js/tilt3d.js?v=20260722e" defer></script>
-<script src="../js/owner.js?v=20260722e"></script>
-<script src="../js/config.js?v=20260722e"></script>
-<script src="../js/archive.js?v=20260722e"></script>
-<script src="../js/blobstore.js?v=20260722e"></script>
-<script src="../js/remote-captures.js?v=20260722e"></script>
-<script src="../js/community-seed.js?v=20260722e"></script>
-<script src="../js/flow.js?v=20260722e" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722e"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260722f">
+<link rel="stylesheet" href="../css/chrome.css?v=20260722f">
+<link rel="stylesheet" href="../css/object.css?v=20260722f">
+<script src="../js/cursor.js?v=20260722f" defer></script>
+<script src="../js/grain.js?v=20260722f" defer></script>
+<script src="../js/tilt3d.js?v=20260722f" defer></script>
+<script src="../js/owner.js?v=20260722f"></script>
+<script src="../js/config.js?v=20260722f"></script>
+<script src="../js/archive.js?v=20260722f"></script>
+<script src="../js/blobstore.js?v=20260722f"></script>
+<script src="../js/remote-captures.js?v=20260722f"></script>
+<script src="../js/community-seed.js?v=20260722f"></script>
+<script src="../js/flow.js?v=20260722f" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260722f"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722e" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260722f" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722e";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722e";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260722f";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260722f";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -443,7 +443,12 @@
           if (window.Archive) {
             Archive.all().forEach(function (c) {
               addToCatalog(c);
-              order.push(c.id);
+              // a capture Mor has hidden is gone from the gallery grid, so it
+              // must likewise drop out of the prev/next browsing sequence —
+              // otherwise it "reappears from nowhere" when arrowing between
+              // objects even though the gallery never shows it. It stays in the
+              // catalog (so a direct link to it still opens) but not in `order`.
+              if (!c.hidden) order.push(c.id);
             });
           }
           if (window.Community) {

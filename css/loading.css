@@ -48,10 +48,13 @@
   opacity: 0;
   /* each card drops in from above and settles into the row, then keeps a
      gentle up-and-down float (starting right after it lands) so the finished
-     row stays alive instead of freezing static */
+     row stays alive instead of freezing static. Each card floats on its own
+     period (--float-dur) so they never all reach the top/bottom of the bob at
+     once — a synchronized bob eases to a stop together, which read as a slight
+     pause at the tail of the entrance. */
   animation:
     load-fall 0.66s cubic-bezier(0.2, 0.75, 0.24, 1) var(--delay, 0s) forwards,
-    load-float 4s ease-in-out calc(var(--delay, 0s) + 0.66s) infinite;
+    load-float var(--float-dur, 5.4s) ease-in-out calc(var(--delay, 0s) + 0.66s) infinite;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -59,15 +62,25 @@
   margin-left: 0;
 }
 
+/* stagger the float periods so the row breathes continuously instead of all
+   cards pausing at the top of the bob together */
+.load-polaroid:nth-child(3n)   { --float-dur: 6.2s; }
+.load-polaroid:nth-child(3n+1) { --float-dur: 5.0s; }
+.load-polaroid:nth-child(3n+2) { --float-dur: 5.7s; }
+
 @keyframes load-fall {
   0%   { opacity: 0; transform: translateY(-48px) rotate(var(--tilt, 0deg)) scale(1.04); }
   60%  { opacity: 1; }
   100% { opacity: 1; transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg)) scale(1); }
 }
 
+/* extra intermediate stops make the bob closer to a smooth sine than a
+   two-point ease-in-out, which visibly lingers at each extreme */
 @keyframes load-float {
   0%, 100% { transform: translateY(var(--y, 0px)) rotate(var(--tilt, 0deg)); }
-  50%      { transform: translateY(calc(var(--y, 0px) - 8px)) rotate(var(--tilt, 0deg)); }
+  25%      { transform: translateY(calc(var(--y, 0px) - 5px)) rotate(var(--tilt, 0deg)); }
+  50%      { transform: translateY(calc(var(--y, 0px) - 7px)) rotate(var(--tilt, 0deg)); }
+  75%      { transform: translateY(calc(var(--y, 0px) - 3px)) rotate(var(--tilt, 0deg)); }
 }
 
 .load-polaroid:hover,
