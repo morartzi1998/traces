@@ -51,18 +51,30 @@
   width: 78%;
 }
 
-/* rotation is a physical motion, not a cross-fade: the top card slides off to
-   the side (revealing the one behind it), the stack's contents shuffle while
-   it's out of view, then it settles back as the new front — so a real polaroid
-   appears to move and be replaced (see index.html's rotate()) */
+/* rotation is a physical motion, not a cross-fade: the top card lifts up and
+   off the stack (like the hover lift, but all the way out), the contents
+   shuffle while it's gone, then the next card rises up from below into its
+   place — so a real polaroid pulls away and a new one slides up (bottom→top).
+   See index.html's rotate(). */
 .polaroid-front {
-  transition: transform 0.34s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, opacity 0.34s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  z-index: 4;
 }
 
 .polaroid-front.polaroid--flick {
-  transform: rotate(-8deg) translate(-54%, 16%) scale(0.9);
-  opacity: 0;
   z-index: 6;
+  animation: polaroid-lift-swap 0.62s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes polaroid-lift-swap {
+  0%   { transform: translateY(0) rotate(-0.1deg) scale(1); opacity: 1; }
+  44%  { transform: translateY(-64%) rotate(-3deg) scale(1.04); opacity: 0; }
+  46%  { transform: translateY(58%) rotate(2deg) scale(0.95); opacity: 0; }
+  100% { transform: translateY(0) rotate(-0.1deg) scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .polaroid-front.polaroid--flick { animation: none; }
 }
 
 .polaroid img {

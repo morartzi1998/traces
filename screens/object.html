@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260721n">
-<link rel="stylesheet" href="../css/chrome.css?v=20260721n">
-<link rel="stylesheet" href="../css/object.css?v=20260721n">
-<script src="../js/cursor.js?v=20260721n" defer></script>
-<script src="../js/grain.js?v=20260721n" defer></script>
-<script src="../js/tilt3d.js?v=20260721n" defer></script>
-<script src="../js/owner.js?v=20260721n"></script>
-<script src="../js/config.js?v=20260721n"></script>
-<script src="../js/archive.js?v=20260721n"></script>
-<script src="../js/blobstore.js?v=20260721n"></script>
-<script src="../js/remote-captures.js?v=20260721n"></script>
-<script src="../js/community-seed.js?v=20260721n"></script>
-<script src="../js/flow.js?v=20260721n" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721n"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260721o">
+<link rel="stylesheet" href="../css/chrome.css?v=20260721o">
+<link rel="stylesheet" href="../css/object.css?v=20260721o">
+<script src="../js/cursor.js?v=20260721o" defer></script>
+<script src="../js/grain.js?v=20260721o" defer></script>
+<script src="../js/tilt3d.js?v=20260721o" defer></script>
+<script src="../js/owner.js?v=20260721o"></script>
+<script src="../js/config.js?v=20260721o"></script>
+<script src="../js/archive.js?v=20260721o"></script>
+<script src="../js/blobstore.js?v=20260721o"></script>
+<script src="../js/remote-captures.js?v=20260721o"></script>
+<script src="../js/community-seed.js?v=20260721o"></script>
+<script src="../js/flow.js?v=20260721o" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260721o"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -27,11 +27,11 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721n" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260721o" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260721n";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721n";
+  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260721o";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260721o";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 </script>
@@ -2182,15 +2182,27 @@
         menu.hidden = true;
         startUpdateFlow();
       });
-      // "Set a display image": pick a photo and use it as the polaroid
-      // thumbnail. saveThumbnail() already routes it to the right place — the
-      // local Archive/Community record, and/or the shared server record for a
-      // community item Mor owns — so this just reads the file and hands it over.
+      // "Set a display image": grab the object exactly as it's framed on screen
+      // right now and use that as the polaroid thumbnail — the way Mor's always
+      // set a display image. Only when there's no live 3D view to capture (a
+      // photo-only capture) does it fall back to picking a file. saveThumbnail()
+      // routes the result to the local record and/or the shared server record.
       var menuSetImageInput = document.getElementById("menuSetImageInput");
       document.getElementById("menuSetImage").addEventListener("click", function () {
         menu.hidden = true;
-        menuSetImageInput.value = "";
-        menuSetImageInput.click();
+        if (pcViewer && !objPoints.hidden) {
+          saveThumbnail(pcViewer.screenshot());
+        } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
+          modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
+            var reader = new FileReader();
+            reader.onload = function () { saveThumbnail(reader.result); };
+            reader.readAsDataURL(blob);
+          }).catch(function () {});
+        } else {
+          // nothing 3D to screenshot — let her choose a picture instead
+          menuSetImageInput.value = "";
+          menuSetImageInput.click();
+        }
       });
       menuSetImageInput.addEventListener("change", function (e) {
         var file = e.target.files && e.target.files[0];
