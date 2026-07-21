@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724a";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724b";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -101,16 +101,17 @@ export function mountPointCloudViewer(container, geometry, opts) {
     return new THREE.Sphere(center, radius || 1);
   })();
 
-  // pointSize is a plain absolute world-unit size, not scaled by the scan's
-  // bounding-sphere radius: the camera itself already backs off
-  // proportionally to that same radius (below), so a fixed size already
-  // reads consistently across scan scales without also scaling it —
-  // multiplying by radius on top of that double-counts the scale and
-  // oversizes badly on a large scan (looks like a solid blob up close,
-  // no per-point detail).
+  // With sizeAttenuation on, a point's on-screen size is worldSize/distance,
+  // and the camera frames the scan at a distance proportional to its radius —
+  // so a FIXED world size does NOT read consistently across scales: a scan
+  // measured in tens of units renders sub-pixel (an "empty" stage), and a
+  // tiny-scale scan renders as giant blank squares. When no explicit size
+  // was saved for this capture, derive one from the scan's own radius
+  // (denser clouds can afford finer points).
   var hasColor = !!geometry.getAttribute("color");
+  var autoSize = sphere.radius * 0.012;
   var material = new THREE.PointsMaterial({
-    size: opts.pointSize || 0.01,
+    size: opts.pointSize || autoSize || 0.01,
     sizeAttenuation: true,
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,

@@ -110,6 +110,25 @@
   color: var(--color-cream);
 }
 
+/* opens the combined history collage — visible to visitors, not only the
+   owner's menu; styled like the quiet on-stage pills around it */
+.obj-collage-btn {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 12px;
+  background: none;
+  border: 1px solid var(--color-cream);
+  border-radius: 12px;
+  color: var(--color-cream);
+  font-family: var(--font-caption);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.obj-collage-btn:hover { opacity: 1; }
+
 .obj-updated {
   font-size: var(--fs-meta);
   opacity: 0.65;
@@ -1136,6 +1155,23 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   border: 2px solid var(--color-ink-blue);
 }
 
+/* the connected capture's name rides next to the dot, in the same quiet
+   label strip annotations use — a bare square read as debris, not a marker */
+.obj-link-name {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: #ffffff;
+  color: var(--color-ink-blue);
+  font-family: var(--font-caption);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  pointer-events: none;
+}
+
 /* marks where the object you came from sits, while viewing its space */
 .obj-link-marker--highlight .obj-link-dot {
   background: var(--color-ink-blue);
@@ -1186,6 +1222,13 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   object-fit: contain;
   background: #000000;
   margin: 0;
+}
+
+/* the live turning preview replaces the flat photo when the connected
+   capture carries a real mesh — a touch taller so nothing reads cropped */
+.obj-link-card-model {
+  height: 240px;
+  --poster-color: #000000;
 }
 
 .obj-link-card-content {

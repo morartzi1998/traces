@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724a">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724a">
-<link rel="stylesheet" href="../css/object.css?v=20260724a">
-<script src="../js/cursor.js?v=20260724a" defer></script>
-<script src="../js/grain.js?v=20260724a" defer></script>
-<script src="../js/tilt3d.js?v=20260724a" defer></script>
-<script src="../js/owner.js?v=20260724a"></script>
-<script src="../js/config.js?v=20260724a"></script>
-<script src="../js/archive.js?v=20260724a"></script>
-<script src="../js/blobstore.js?v=20260724a"></script>
-<script src="../js/particle-loader.js?v=20260724a"></script>
-<script src="../js/remote-captures.js?v=20260724a"></script>
-<script src="../js/community-seed.js?v=20260724a"></script>
-<script src="../js/flow.js?v=20260724a" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724a"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724b">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724b">
+<link rel="stylesheet" href="../css/object.css?v=20260724b">
+<script src="../js/cursor.js?v=20260724b" defer></script>
+<script src="../js/grain.js?v=20260724b" defer></script>
+<script src="../js/tilt3d.js?v=20260724b" defer></script>
+<script src="../js/owner.js?v=20260724b"></script>
+<script src="../js/config.js?v=20260724b"></script>
+<script src="../js/archive.js?v=20260724b"></script>
+<script src="../js/blobstore.js?v=20260724b"></script>
+<script src="../js/particle-loader.js?v=20260724b"></script>
+<script src="../js/remote-captures.js?v=20260724b"></script>
+<script src="../js/community-seed.js?v=20260724b"></script>
+<script src="../js/flow.js?v=20260724b" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724b"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724a" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724b" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724a";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724a";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724b";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724b";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -410,13 +410,13 @@
       return { g: g, cx: c.x, cy: c.y, cz: c.z, s: 1 / (r || 1), R: null, t: null };
     });
     // the densest scan anchors the shared space; everyone else aligns to it.
-    // With hand-marked landmarks (opts.landmarks = {a, b}: matching spots
-    // clicked on scan 0 and scan 1, in each scan's own raw coordinates) the
-    // first scan is always the anchor, the anchors give the exact starting
-    // rotation+shift (Horn on the pairs), and ICP only fine-polishes.
-    var landmarks = opts.landmarks && geoms.length === 2
-      && opts.landmarks.a && opts.landmarks.b
-      && opts.landmarks.a.length >= 3 && opts.landmarks.a.length === opts.landmarks.b.length
+    // With hand-marked landmarks (opts.landmarks = one triplet of matching
+    // spots per scan, indexed like geoms, each in its scan's own raw
+    // coordinates) the first scan is always the anchor, the anchors give the
+    // exact starting scale+rotation+shift (Horn on the pairs), and ICP only
+    // fine-polishes.
+    var landmarks = Array.isArray(opts.landmarks) && opts.landmarks.length === geoms.length
+      && opts.landmarks.every(function (m) { return Array.isArray(m) && m.length >= 3; })
       ? opts.landmarks : null;
     var refIdx = 0;
     if (!landmarks) {
@@ -441,9 +441,22 @@
       var ca = [0, 0, 0], cb = [0, 0, 0];
       for (var i = 0; i < n; i++) for (var c = 0; c < 3; c++) { ca[c] += an[i][c] / n; cb[c] += bn[i][c] / n; }
       var S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-      for (var j = 0; j < n; j++) for (var r = 0; r < 3; r++) for (var c2 = 0; c2 < 3; c2++)
-        S[r][c2] += (bn[j][r] - cb[r]) * (an[j][c2] - ca[c2]);
+      // the anchors also reveal SCALE: two partial scans of the same object
+      // normalise to different unit sizes (each by its own spread), and a
+      // rotation+translation alone can never reconcile that — the ratio of
+      // the anchors' spreads around their centroids recovers it exactly
+      var da = 0, db = 0;
+      for (var j = 0; j < n; j++) for (var r = 0; r < 3; r++) {
+        da += (an[j][r] - ca[r]) * (an[j][r] - ca[r]);
+        db += (bn[j][r] - cb[r]) * (bn[j][r] - cb[r]);
+      }
+      var sc = db > 1e-12 ? Math.sqrt(da / db) : 1;
+      for (var j2 = 0; j2 < n; j2++) for (var r2 = 0; r2 < 3; r2++) for (var c2 = 0; c2 < 3; c2++)
+        S[r2][c2] += (bn[j2][r2] - cb[r2]) * (an[j2][c2] - ca[c2]);
       var R = __rotFromS(S);
+      // fold the scale straight into R so downstream composition (ICP polish,
+      // total = fit ∘ init) needs no separate scale bookkeeping
+      for (var r3 = 0; r3 < 3; r3++) for (var c3 = 0; c3 < 3; c3++) R[r3][c3] *= sc;
       var t = [
         ca[0] - (R[0][0] * cb[0] + R[0][1] * cb[1] + R[0][2] * cb[2]),
         ca[1] - (R[1][0] * cb[0] + R[1][1] * cb[1] + R[1][2] * cb[2]),
@@ -456,9 +469,13 @@
       if (i === refIdx) return;
       var mov = normed(it, 5000);
       var init = null;
-      if (landmarks) {
-        var an = landmarks.a.map(function (p) { return normPoint(norm[0], p); });
-        var bn = landmarks.b.map(function (p) { return normPoint(it, p); });
+      // landmarks: one triplet of hand-marked anchor points PER SCAN (indexed
+      // like geoms) — every non-reference scan is fitted onto the reference
+      // through the matching anchors, so any number of scans can join
+      if (landmarks && landmarks[i] && landmarks[i].length >= 3 &&
+          landmarks[refIdx] && landmarks[refIdx].length >= 3) {
+        var an = landmarks[refIdx].map(function (p) { return normPoint(norm[refIdx], p); });
+        var bn = landmarks[i].map(function (p) { return normPoint(it, p); });
         init = landmarkFit(an, bn);
         for (var m = 0; m < mov.length; m += 3) {
           var x = mov[m], y = mov[m + 1], z = mov[m + 2];
@@ -558,6 +575,10 @@
         </button>
         <span class="obj-rep-label" id="objRepLabel">mesh</span>
       </div>
+      <!-- for a capture with 2+ merge-able dated scans: opens the combined
+           collage view. Visible to VISITORS too — it used to live only in
+           the owner's menu, so nobody else could ever see a collage. -->
+      <button class="obj-collage-btn" type="button" id="objCollageBtn" hidden>collage</button>
       <p class="obj-updated" id="objUpdated">[updated 15 days ago]</p>
       <div class="obj-title-row">
         <!-- starts hidden: show() reveals it only for the owner / the capture's
@@ -707,6 +728,11 @@
           <div class="obj-link-card-section obj-link-card-section--description">
             <hr class="obj-white-rule">
             <img class="obj-link-card-img" id="linkCardImg" alt="">
+            <!-- when the connected capture has a real mesh, preview it live
+                 and slowly turning instead of a cropped flat photo -->
+            <model-viewer class="obj-link-card-img obj-link-card-model" id="linkCardModel"
+              auto-rotate auto-rotate-delay="0" rotation-per-second="25deg" camera-controls
+              interaction-prompt="none" shadow-intensity="0" disable-pan hidden></model-viewer>
             <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
             <p class="obj-white-feeling" id="linkCardFeeling"></p>
           </div>
@@ -929,9 +955,12 @@
           catalog[k] = {
             kind: d.kind || "object", title: d.title, img: d.img,
             model: d.model, points: d.points, dual: !!d.dual,
+            openOn: d.openOn || null,
             pointSize: d.pointSize || null, tilt: d.tilt || null,
             defaultView: d.defaultView || null,
-            feeling: d.feeling || "", annotations: d.annotations || [], links: [],
+            connected: d.connected || "", connectedKey: d.connectedKey || null,
+            feeling: d.feeling || "", annotations: d.annotations || [],
+            links: Array.isArray(d.links) ? d.links : [],
             // read the dated history from the server record so a visitor gets
             // the same timeline the owner sees — this runs after the one-time
             // version-defaulting pass above, so it sets versions itself
@@ -940,6 +969,7 @@
               ? d.versions.map(function (v) {
                   return { year: new Date(v.created || Date.now()).getFullYear(),
                     created: v.created, model: v.model, img: v.img, points: v.points,
+                    defaultView: v.defaultView || null,
                     title: v.title || d.title };
                 })
               : [{ year: new Date(d.created || Date.now()).getFullYear(),
@@ -961,6 +991,7 @@
             kind: c.kind || "object",
             title: c.title || "untitled capture",
             dual: !!c.dual, // a true mesh+cloud dual upload (opens on the mesh)
+            openOn: c.openOn || null,
             img: c.img || "../assets/images/photo-room.png",
             model: c.model || null,
             points: c.points || null,
@@ -979,6 +1010,7 @@
               ? c.versions.map(function (v) {
                   return { year: new Date(v.created || Date.now()).getFullYear(),
                     created: v.created, model: v.model, img: v.img, points: v.points,
+                    defaultView: v.defaultView || null,
                     title: v.title || c.title };
                 })
               : [{ year: new Date(c.created || Date.now()).getFullYear(),
@@ -1087,6 +1119,9 @@
       var remarkCard = document.getElementById("remarkCard");
       var menu = document.getElementById("objMenu");
       var key = "chandelier";
+      // per-session guard: each capture's links get pushed to the shared
+      // record at most once per page load (see show())
+      var linksBackfilled = {};
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
       // NOTE: catalog[key] isn't validated here — a community-showcase key
       // doesn't exist in catalog until mergeCommunitySeedIntoCatalog runs in
@@ -1214,6 +1249,29 @@
           ppos: spot.ppos || null, target: spot.target, title: catalog[spot.target].title,
         });
         persist(k);
+        syncLinksEverywhere(k);
+      }
+
+      // a link marker was added/moved/deleted: the change must reach (a) the
+      // local Archive/Community record, and (b) the SHARED server record —
+      // otherwise a visitor opening this space never sees the objects marked
+      // inside it (they only ever lived in this browser's overlay store)
+      function syncLinksEverywhere(k) {
+        var links = (catalog[k].links || []).map(function (l) {
+          return { x: l.x, y: l.y, target: l.target, title: l.title,
+            pos: l.pos || null, normal: l.normal || null, ppos: l.ppos || null };
+        });
+        var fields = { links: links };
+        if (catalog[k].connected) fields.connected = catalog[k].connected;
+        if (catalog[k].connectedKey) fields.connectedKey = catalog[k].connectedKey;
+        if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+        if (window.Community && Community.get(k)) Community.update(k, fields);
+        if (window.isOwnerDevice && window.isOwnerDevice()) {
+          var inArchive = window.Archive && Archive.get(k);
+          var inCommunity = window.Community && Community.get(k);
+          if (inArchive || !inCommunity) patchServerRecord(k, fields);
+          if (inCommunity) patchServerRecord(k + "-community", fields);
+        }
       }
 
       // "Connect previous captured object": if we're already looking at a
@@ -1242,12 +1300,19 @@
         el.appendChild(label);
       }
 
-      // a link marker = a small white square with a blue ring (no glow — a
-      // plain, quiet marker)
-      function buildLinkMarker(el) {
+      // a link marker = a small white square with a blue ring, PLUS the
+      // connected capture's name — a bare dot floating in a space didn't
+      // read as "an object is marked here" at all
+      function buildLinkMarker(el, title) {
         var dot = document.createElement("span");
         dot.className = "obj-link-dot";
         el.appendChild(dot);
+        if (title) {
+          var label = document.createElement("span");
+          label.className = "obj-link-name";
+          label.textContent = title;
+          el.appendChild(label);
+        }
       }
 
       function onAnnotationClick(a) {
@@ -1271,10 +1336,27 @@
         document.getElementById("linkCardObj").checked = item.kind !== "space";
         document.getElementById("linkCardSpace").checked = item.kind === "space";
         var linkImgEl = document.getElementById("linkCardImg");
-        if (window.BlobStore) {
-          window.BlobStore.url(item.img).then(function (u) { linkImgEl.src = u || ""; });
+        var linkMvEl = document.getElementById("linkCardModel");
+        if (item.model) {
+          // live, slowly-turning 3D preview of the connected capture
+          linkImgEl.hidden = true;
+          linkMvEl.hidden = false;
+          if (item.model.indexOf("idb:") === 0 && window.BlobStore) {
+            window.BlobStore.get(item.model.slice(4)).then(function (b) {
+              if (b && !linkMvEl.hidden) linkMvEl.src = URL.createObjectURL(b);
+            }).catch(function () {});
+          } else {
+            linkMvEl.src = item.model;
+          }
         } else {
-          linkImgEl.src = item.img || "";
+          linkMvEl.hidden = true;
+          linkMvEl.removeAttribute("src");
+          linkImgEl.hidden = false;
+          if (window.BlobStore) {
+            window.BlobStore.url(item.img).then(function (u) { linkImgEl.src = u || ""; });
+          } else {
+            linkImgEl.src = item.img || "";
+          }
         }
         document.getElementById("linkCardFeeling").textContent = item.feeling || "";
         document.getElementById("linkCardAnnCount").textContent = item.annotations.length;
@@ -1310,6 +1392,9 @@
         linkCard.hidden = true;
         openLinkTarget = null;
         openLinkRef = null;
+        // stop the preview's render loop when the card is away
+        var linkMvEl = document.getElementById("linkCardModel");
+        if (linkMvEl) linkMvEl.removeAttribute("src");
       }
 
       function renderLinks() {
@@ -1329,7 +1414,7 @@
               h.slot = "hotspot-link-" + i;
               h.dataset.position = l.pos;
               if (l.normal) h.dataset.normal = l.normal;
-              buildLinkMarker(h);
+              buildLinkMarker(h, l.title);
               h.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
               modelViewer.appendChild(h);
               return;
@@ -1344,7 +1429,7 @@
             var p = document.createElement("button");
             p.className = "obj-link-marker";
             p.type = "button";
-            buildLinkMarker(p);
+            buildLinkMarker(p, l.title);
             p.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
             tags.appendChild(p);
             var worldPos = strToVec3(l.ppos);
@@ -1363,7 +1448,7 @@
           b.type = "button";
           b.style.left = l.x * 100 + "%";
           b.style.top = l.y * 100 + "%";
-          buildLinkMarker(b);
+          buildLinkMarker(b, l.title);
           b.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
           tags.appendChild(b);
         });
@@ -1434,7 +1519,7 @@
               h.slot = "hotspot-space-highlight";
               h.dataset.position = link.pos;
               if (link.normal) h.dataset.normal = link.normal;
-              buildLinkMarker(h);
+              buildLinkMarker(h, link.title);
               modelViewer.appendChild(h);
               return;
             }
@@ -1444,7 +1529,7 @@
           b.type = "button";
           b.style.left = link.x * 100 + "%";
           b.style.top = link.y * 100 + "%";
-          buildLinkMarker(b);
+          buildLinkMarker(b, link.title);
           tags.appendChild(b);
         }
         // only wait for a model "load" when a model is actually what's being
@@ -1494,7 +1579,7 @@
               if (!buf || !SPACE_VIEW_ACTIVE) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: space.pointSize || 0.013, tilt: space.tilt || null,
+                { pointSize: space.pointSize || null, tilt: space.tilt || null,
                   initialView: space.defaultView || null });
             }).catch(function () {});
           }
@@ -1972,6 +2057,7 @@
             editing.normal = lspot.normal || null;
             editing.ppos = lspot.ppos || null;
             persist(placedIn);
+            syncLinksEverywhere(placedIn);
             renderLinks();
           } else if (t) {
             // came from the object side — target already chosen
@@ -1980,6 +2066,7 @@
               ppos: lspot.ppos || null, target: t, title: catalog[t].title,
             });
             persist(placedIn);
+            syncLinksEverywhere(placedIn);
             renderLinks();
           } else {
             // came from the space side — go choose which object this point is
@@ -2084,7 +2171,7 @@
               if (key !== k) return;
               var geometry = window.__deserializeGeometry(buf);
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
-                { pointSize: catalog[k].pointSize || 0.013, initialView: carriedView || catalog[k].defaultView || null,
+                { pointSize: catalog[k].pointSize || null, initialView: carriedView || catalog[k].defaultView || null,
                   tilt: catalog[k].tilt || null });
               endLoading();
               // once the cloud is ready, (re)draw annotations as 3D-anchored
@@ -2146,7 +2233,16 @@
           k = fallback;
         }
         key = k;
+        displayedVersionIndex = -1;
         try { sessionStorage.setItem("traces-item", k); } catch (e) {}
+        // links placed before link-syncing existed live only in this
+        // browser's overlay — opening the capture once as the owner pushes
+        // them to the shared record so visitors finally see them
+        if (window.isOwnerDevice && window.isOwnerDevice()
+            && (catalog[k].links || []).length && !linksBackfilled[k]) {
+          linksBackfilled[k] = 1;
+          syncLinksEverywhere(k);
+        }
         clearHotspots();
         document.getElementById("objTitle").textContent = catalog[k].title;
         // default to the point cloud when there is one — it's the crisp view.
@@ -2154,7 +2250,9 @@
         // .ply) opens on the mesh instead; a plain point-cloud capture also
         // carries a low-res voxel "model" derived from its own cloud, and that
         // must NOT be shown by default (it's the blocky blob that was reported).
-        var preferMesh = catalog[k].dual && catalog[k].model;
+        // openOn: "points" opens the light, instant cloud first even for a
+        // dual capture — its (often tens-of-MB) mesh loads only when toggled
+        var preferMesh = catalog[k].dual && catalog[k].model && catalog[k].openOn !== "points";
         swapScan(k, catalog[k].model, catalog[k].img, preferMesh ? null : catalog[k].points);
         // the blue-purple backdrop is about HOW you got here, not what the
         // capture itself is — opening the same shared capture from your own
@@ -2207,6 +2305,10 @@
           if (sw) sw.setAttribute("aria-checked", showingPoints ? "true" : "false");
           if (lbl) lbl.textContent = showingPoints ? "point cloud" : "mesh";
         }
+        // the collage of a capture's dated scans is for everyone, not just
+        // the owner's menu — visitors could never reach it before
+        var collageBtn = document.getElementById("objCollageBtn");
+        if (collageBtn) collageBtn.hidden = mergeableVersions(k).length < 2;
         // switching captures (prev/next, a jump link, entering community
         // browsing) always lands on a fully closed menu - this used to only
         // hide it, leaving the hamburger icon's bars stuck in their
@@ -2562,12 +2664,18 @@
           yearsWrap.appendChild(btn);
         });
       }
+      // which dated version is on stage right now (-1 = the capture's own
+      // latest view) — "Set this angle as default view" saves onto THIS
+      // version when an old one is showing, because each version's mesh can
+      // come in at a completely different baked orientation
+      var displayedVersionIndex = -1;
       // clicking a version dot scrubs to that dated scan: swap the model/photo
       // if the version carries its own, and filter annotations to that year
       function selectVersion(k, i) {
         var versions = catalog[k].versions || [];
         var v = versions[i];
         if (!v) return;
+        displayedVersionIndex = i === versions.length - 1 ? -1 : i;
         activeYear = v.year;
         objTimeline.querySelectorAll(".obj-year").forEach(function (el) {
           el.classList.toggle("obj-year--active", Number(el.dataset.index) === i);
@@ -2589,7 +2697,11 @@
             var orbit = modelViewer.getCameraOrbit();
             carriedView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
           }
-          swapScan(k, v.model, v.img, v.points, carriedView);
+          // an old version with its own saved angle wins over carrying the
+          // current angle — the whole point of saving it was that this
+          // version's scan comes in oriented differently
+          swapScan(k, v.model, v.img, v.points,
+            (displayedVersionIndex >= 0 && v.defaultView) || carriedView);
         }
         closeBlue();
         closeRemarkCard();
@@ -2808,6 +2920,11 @@
               if (!rec) return;
               rec.img = url;
               catalog[key].img = url;
+              // point the local record at the hosted copy too — if the idb
+              // write above failed quietly (storage full), the gallery card
+              // otherwise keeps showing the old picture forever
+              if (window.Archive && Archive.get(key)) Archive.update(key, { img: url });
+              if (window.Community && Community.get(key)) Community.update(key, { img: url });
               return fetch(api + "/captures", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(rec),
@@ -2916,7 +3033,7 @@
         if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
         view.innerHTML = "";
         clearMergeMarks();
-        mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: catalog[key].pointSize || 0.013 });
+        mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: null });
         label.textContent = doneText;
         lastMergedGeometry = merged;
         var tintBtn = document.getElementById("objMergeTint");
@@ -2955,15 +3072,15 @@
             mountMergedResult(window.__frankensteinMerge(geoms),
               "every scan of this object, aligned and combined into one — drag to turn");
             // hand-alignment works on exactly two scans
-            document.getElementById("objMergeManual").hidden = geoms.length !== 2;
+            document.getElementById("objMergeManual").hidden = geoms.length < 2;
           }, 60);
         }).catch(function () { label.textContent = "couldn't combine these scans"; });
       }
 
-      // ---- "align by hand": mark the same 3 spots on each of the two scans,
-      // and the merge is re-computed from those anchor pairs (plus a light
-      // automatic polish) instead of the fully automatic guess ---------------
-      var manualAlign = null; // { step: 0|1, pairs: {a:[],b:[]}, offFrame }
+      // ---- "align by hand": mark the same 3 spots on EVERY scan (any
+      // number), and the merge is re-computed from those anchors (plus a
+      // light automatic polish) instead of the fully automatic guess --------
+      var manualAlign = null; // { idx: current scan, marks: [triplet per scan] }
       function clearMergeMarks() {
         document.getElementById("objMergeMarks").innerHTML = "";
       }
@@ -2971,7 +3088,7 @@
         var view = document.getElementById("objMergeView");
         var marksEl = document.getElementById("objMergeMarks");
         if (!manualAlign || !mergeViewer || !mergeViewer.project) return;
-        var pts = manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b;
+        var pts = manualAlign.marks[manualAlign.idx];
         marksEl.innerHTML = "";
         var rect = view.getBoundingClientRect();
         pts.forEach(function (p, i) {
@@ -2998,9 +3115,10 @@
       }
       function manualAlignLabel() {
         var label = document.getElementById("objMergeLabel");
-        var count = (manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b).length;
-        label.textContent = (manualAlign.step === 0 ? "first scan" : "second scan (same spots, same order)")
-          + " — click matching spot " + (count + 1) + " of 3";
+        var count = manualAlign.marks[manualAlign.idx].length;
+        var name = "scan " + (manualAlign.idx + 1) + " of " + manualAlign.marks.length
+          + (manualAlign.idx > 0 ? " (same spots, same order)" : "");
+        label.textContent = name + " — click matching spot " + (count + 1) + " of 3";
       }
       function showManualScan(which) {
         var view = document.getElementById("objMergeView");
@@ -3013,13 +3131,13 @@
         document.getElementById("objMergeTint").hidden = true;
         document.getElementById("objMergeLegend").hidden = true;
         mergeViewer = window.__mountPointCloudViewer(view, lastMergeGeoms[which],
-          { pointSize: catalog[key].pointSize || 0.013 });
+          { pointSize: null });
         if (mergeViewer.onFrame) mergeViewer.onFrame(renderMergeMarks);
         manualAlignLabel();
       }
       document.getElementById("objMergeManual").addEventListener("click", function () {
-        if (!lastMergeGeoms || lastMergeGeoms.length !== 2) return;
-        manualAlign = { step: 0, pairs: { a: [], b: [] } };
+        if (!lastMergeGeoms || lastMergeGeoms.length < 2) return;
+        manualAlign = { idx: 0, marks: lastMergeGeoms.map(function () { return []; }) };
         document.getElementById("objMergeManual").hidden = true;
         showManualScan(0);
       });
@@ -3033,7 +3151,7 @@
         if (mergeDown && Math.abs(e.clientX - mergeDown.x) + Math.abs(e.clientY - mergeDown.y) > 6) return;
         var hit = mergeViewer.raycastFromScreen(e.clientX, e.clientY);
         if (!hit) return;
-        var pts = manualAlign.step === 0 ? manualAlign.pairs.a : manualAlign.pairs.b;
+        var pts = manualAlign.marks[manualAlign.idx];
         pts.push([hit.x, hit.y, hit.z]);
         if (pts.length === 3 && __anchorsCollinear(pts)) {
           // 3 spots on (almost) one straight line leave the rotation around
@@ -3044,18 +3162,18 @@
           return;
         }
         if (pts.length < 3) { manualAlignLabel(); return; }
-        if (manualAlign.step === 0) {
-          manualAlign.step = 1;
-          showManualScan(1);
+        if (manualAlign.idx < manualAlign.marks.length - 1) {
+          manualAlign.idx++;
+          showManualScan(manualAlign.idx);
           return;
         }
-        // both triplets collected — re-merge anchored on them
-        var pairs = manualAlign.pairs;
+        // every scan marked — re-merge anchored on the triplets
+        var marks = manualAlign.marks;
         manualAlign = null;
         clearMergeMarks();
         document.getElementById("objMergeLabel").textContent = "aligning by your anchor points…";
         setTimeout(function () {
-          mountMergedResult(window.__frankensteinMerge(lastMergeGeoms, { landmarks: pairs }),
+          mountMergedResult(window.__frankensteinMerge(lastMergeGeoms, { landmarks: marks }),
             "aligned by your anchors — drag to turn");
           document.getElementById("objMergeManual").hidden = false;
         }, 60);
@@ -3077,6 +3195,9 @@
         document.getElementById("objMergeView").innerHTML = "";
         overlay.hidden = true;
       }
+      document.getElementById("objCollageBtn").addEventListener("click", function () {
+        openVisualMerge();
+      });
       document.getElementById("menuVisualMerge").addEventListener("click", function () {
         menu.hidden = true;
         openVisualMerge();
@@ -3172,18 +3293,63 @@
           patchServerRecord((browsingCommunity || catalog[key].visibility === "community") ? key + "-community" : key, fields);
         }
       }
+      // the version being fixed is matched by its `created` stamp — index
+      // positions can differ between the local record and the server one
+      function syncVersionViewToServer(created, view) {
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api) return;
+        [key, key + "-community"].forEach(function (serverId) {
+          fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+            .then(function (d) {
+              var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
+              if (!rec || !Array.isArray(rec.versions)) return;
+              var hit = rec.versions.filter(function (v) { return v.created === created; })[0];
+              if (!hit) return;
+              hit.defaultView = view;
+              return fetch(api + "/captures", {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec),
+              });
+            }).catch(function () {});
+        });
+      }
+      function saveVersionViewLocally(store, created, view) {
+        if (!store || !store.get(key)) return;
+        var rec = store.get(key);
+        if (!Array.isArray(rec.versions)) return;
+        var hit = rec.versions.filter(function (v) { return v.created === created; })[0];
+        if (!hit) return;
+        hit.defaultView = view;
+        store.update(key, { versions: rec.versions });
+      }
       menuSetDefaultView.addEventListener("click", function () {
         menu.hidden = true;
+        var view = null;
         if (pcViewer && !objPoints.hidden) {
-          catalog[key].defaultView = pcViewer.getView();
-          persist(key);
-          syncViewToServer();
-          saveThumbnail(pcViewer.screenshot());
+          view = pcViewer.getView();
         } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
           var orbit = modelViewer.getCameraOrbit();
-          catalog[key].defaultView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
-          persist(key);
-          syncViewToServer();
+          view = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
+        }
+        if (!view) return;
+        var vList = catalog[key].versions || [];
+        if (displayedVersionIndex >= 0 && vList[displayedVersionIndex]) {
+          // an OLD dated scan is on stage: the angle belongs to that version
+          // alone (its mesh is baked in its own orientation) — and the
+          // capture's polaroid thumbnail must NOT be replaced by an old scan
+          var vSel = vList[displayedVersionIndex];
+          vSel.defaultView = view;
+          saveVersionViewLocally(window.Archive, vSel.created, view);
+          saveVersionViewLocally(window.Community, vSel.created, view);
+          syncVersionViewToServer(vSel.created, view);
+          return;
+        }
+        catalog[key].defaultView = view;
+        persist(key);
+        syncViewToServer();
+        if (pcViewer && !objPoints.hidden) {
+          saveThumbnail(pcViewer.screenshot());
+        } else {
           modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
             var reader = new FileReader();
             reader.onload = function () { saveThumbnail(reader.result); };
@@ -3305,6 +3471,7 @@
           var idx = catalog[key].links.indexOf(link);
           if (idx >= 0) catalog[key].links.splice(idx, 1);
           persist(key);
+          syncLinksEverywhere(key);
         }
         closeLinkCard();
         renderLinks();

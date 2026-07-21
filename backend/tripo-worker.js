@@ -385,6 +385,15 @@ export default {
         if (body.pointSize != null) record.pointSize = body.pointSize;
         if (body.tilt != null) record.tilt = body.tilt;
         if (body.dual) record.dual = true;
+        // link markers (where connected captures sit inside a space) and the
+        // object->space connection itself — without these a visitor opening a
+        // shared space never sees the objects marked inside it
+        if (Array.isArray(body.links)) record.links = body.links;
+        if (body.connected != null) record.connected = body.connected;
+        if (body.connectedKey != null) record.connectedKey = body.connectedKey;
+        // which representation the capture opens on ("points" = the light,
+        // fast cloud first; the heavy mesh only when toggled to)
+        if (body.openOn) record.openOn = body.openOn;
         await env.CAPTURES.put("capture:" + id, JSON.stringify(record));
         return json({ id });
       }
