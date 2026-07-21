@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260721x">
-<link rel="stylesheet" href="css/chrome.css?v=20260721x">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260721x">
-<link rel="stylesheet" href="css/loading.css?v=20260721x">
+<link rel="stylesheet" href="css/base.css?v=20260721y">
+<link rel="stylesheet" href="css/chrome.css?v=20260721y">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260721y">
+<link rel="stylesheet" href="css/loading.css?v=20260721y">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,10 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260721x" defer></script>
-<script src="js/grain.js?v=20260721x" defer></script>
-<script src="js/owner.js?v=20260721x"></script>
-<script src="js/flow.js?v=20260721x" defer></script>
+<script src="js/cursor.js?v=20260721y" defer></script>
+<script src="js/grain.js?v=20260721y" defer></script>
+<script src="js/owner.js?v=20260721y"></script>
+<script src="js/flow.js?v=20260721y" defer></script>
 </head>
 <body>
 
@@ -215,7 +215,7 @@
         // there, so swapping their photos/captions read as a jumbled flicker
         // rather than a clean rotation. Desktop (where they're spread out)
         // keeps rotating.
-        if (window.matchMedia && window.matchMedia("(max-width: 640px)").matches) return;
+        if (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) return;
         // a calm, unhurried cadence — the exchange itself now takes ~1.5s, so
         // give each capture a long, restful beat on top before the next
         timer = setInterval(rotate, 7000);

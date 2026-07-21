@@ -236,22 +236,29 @@
   opacity: 0.8;
 }
 
-/* Mobile */
+/* Mobile — widened to 720px so large phones get the single-card layout (and
+   its disabled auto-rotate) instead of the desktop fan animating over itself */
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .screen {
     padding: 2.5vw 6vw;
+    height: 100dvh;      /* exactly the visible area — never taller */
+    overflow: hidden;    /* guarantee no scroll on the home screen */
+  }
+
+  /* the shuffle animation is desktop-only; make sure it can never run here */
+  .polaroid-front.polaroid--flick,
+  .polaroid-back.polaroid--shuffling,
+  .polaroid-third.polaroid--shuffling {
+    animation: none;
   }
 
   .main {
     flex-direction: column;
-    gap: 1.5rem;
-    padding-top: 4.5rem; /* clear the fixed logo */
-    padding-bottom: 2.5rem;
-    /* spread the headline, scan and CTA down the screen so they fill it with
-       even breathing room instead of packing at the top and spilling past the
-       bottom into a scroll */
-    justify-content: space-between;
+    gap: 1.75rem;
+    padding-top: 5.5rem; /* clear the fixed logo with breathing room */
+    padding-bottom: 2rem;
+    justify-content: flex-start;
     align-items: flex-start;
   }
 
@@ -273,10 +280,10 @@
      offset peeks behind it (their captions hidden) - the rotation still
      swaps which capture is in front. */
   .polaroid-stack {
-    width: min(215px, 55vw);
+    width: min(210px, 54vw);
     height: auto;
     aspect-ratio: 1 / 1.12;
-    margin: 0 auto;
+    margin: 2.6rem auto 0; /* room above for the scan-meta line, off the headline */
     align-self: center;
     transform: none;
   }
@@ -311,16 +318,23 @@
 
   .headline {
     white-space: normal;
+    font-size: clamp(1.9rem, 6vw, 2.7rem);
+    line-height: 1;
   }
 
-  /* small, quiet invitation line with an oversized plus dropped to the far
-     edge beneath it — the plus, not the words, is the thing to tap */
+  /* the CTA zone takes all the room left under the scan: the small invitation
+     line sits at its top (just below the photo), and the oversized plus drops
+     to the very bottom of the screen — the plus, not the words, is the tap */
   .cta {
+    order: 2;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     width: 100%;
-    margin-top: 0.75rem;
+    min-height: 22vh;
+    margin-top: 1.25rem;
     text-decoration: none;
     font-size: inherit;
   }
@@ -334,9 +348,9 @@
   }
 
   .cta-plus {
-    font-size: 4.75rem;
+    font-size: 5.25rem;
     line-height: 0.9;
     font-weight: 300;
-    margin-top: 0.5rem;
+    margin-top: 0;
   }
 }
