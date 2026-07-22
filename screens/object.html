@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724w">
-<link rel="stylesheet" href="../css/object.css?v=20260724w">
-<script src="../js/cursor.js?v=20260724w" defer></script>
-<script src="../js/grain.js?v=20260724w" defer></script>
-<script src="../js/tilt3d.js?v=20260724w" defer></script>
-<script src="../js/owner.js?v=20260724w"></script>
-<script src="../js/config.js?v=20260724w"></script>
-<script src="../js/archive.js?v=20260724w"></script>
-<script src="../js/blobstore.js?v=20260724w"></script>
-<script src="../js/particle-loader.js?v=20260724w"></script>
-<script src="../js/remote-captures.js?v=20260724w"></script>
-<script src="../js/community-seed.js?v=20260724w"></script>
-<script src="../js/flow.js?v=20260724w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724x">
+<link rel="stylesheet" href="../css/object.css?v=20260724x">
+<script src="../js/cursor.js?v=20260724x" defer></script>
+<script src="../js/grain.js?v=20260724x" defer></script>
+<script src="../js/tilt3d.js?v=20260724x" defer></script>
+<script src="../js/owner.js?v=20260724x"></script>
+<script src="../js/config.js?v=20260724x"></script>
+<script src="../js/archive.js?v=20260724x"></script>
+<script src="../js/blobstore.js?v=20260724x"></script>
+<script src="../js/particle-loader.js?v=20260724x"></script>
+<script src="../js/remote-captures.js?v=20260724x"></script>
+<script src="../js/community-seed.js?v=20260724x"></script>
+<script src="../js/flow.js?v=20260724x" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724x"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724w" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724x" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260724w";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724w";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724w";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260724x";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724x";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724x";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -46,7 +46,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260724w";
+  import { glbToPoints } from "../js/glb-points.js?v=20260724x";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2546,10 +2546,15 @@
             var orbit = modelViewer.getCameraOrbit();
             carriedView = { cameraOrbit: orbit.theta + "rad " + orbit.phi + "rad " + orbit.radius + "m" };
           }
+          // scrubbing RESPECTS the representation currently on stage: on the
+          // mesh side each version shows its OWN mesh (they're genuinely
+          // different scans — as clouds they can look near-identical); on
+          // the cloud side each version shows its own cloud as before
+          var onMesh = objPoints.hidden && v.model;
           // an old version with its own saved angle wins over carrying the
           // current angle — the whole point of saving it was that this
           // version's scan comes in oriented differently
-          swapScan(k, v.model, v.img, v.points,
+          swapScan(k, v.model, v.img, onMesh ? null : v.points,
             (displayedVersionIndex >= 0 && v.defaultView) || carriedView);
         }
         closeBlue();
@@ -3108,12 +3113,19 @@
         }).catch(function () { if (key === k) backToMesh(); else derivingPoints = false; });
       }
       function toggleRepresentation() {
-        var img = catalog[key].img;
+        // when an old dated version is on stage, the switch flips THAT
+        // version's own mesh/cloud — every scan in the timeline has its own
+        // mesh, not just the capture's latest one
+        var vSel = displayedVersionIndex >= 0
+          ? (catalog[key].versions || [])[displayedVersionIndex] : null;
+        var mdl = (vSel && vSel.model) || catalog[key].model;
+        var pts = vSel ? (vSel.points || null) : catalog[key].points;
+        var img = (vSel && vSel.img) || catalog[key].img;
         var toPoints = !objPoints.hidden ? false : true; // currently showing points? then go to mesh
         if (!objPoints.hidden) {
-          swapScan(key, catalog[key].model, img, null);   // points → mesh
-        } else if (catalog[key].dual && catalog[key].points) {
-          swapScan(key, null, img, catalog[key].points);  // mesh → its real cloud
+          swapScan(key, mdl, img, null);                 // points → mesh
+        } else if (pts && (vSel || catalog[key].dual)) {
+          swapScan(key, null, img, pts);                 // mesh → its real cloud
         } else {
           showDerivedPoints(key);                          // mesh → derived cloud
         }
