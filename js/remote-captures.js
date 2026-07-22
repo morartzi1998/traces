@@ -307,11 +307,39 @@
           if (cap.tilt != null) record.tilt = cap.tilt;
           if (cap.dual) record.dual = true; // open on the mesh, not the voxel cloud
           if (cap.openOn) record.openOn = cap.openOn; // heavy mesh: open on the light cloud
-          return fetch(api() + "/captures", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(record),
-          }).then(function (r) { return r.ok ? r.json() : null; });
+          // a re-publish must never silently ERASE what the shared record
+          // already carries but this device's local copy predates: the
+          // server-computed cloud, the dual flag, the fast-open choice, a
+          // saved angle, per-version clouds. (Exactly this wiped the old
+          // television's toggle after a re-scan.) Inherit whatever the
+          // outgoing record is missing before overwriting.
+          return fetch(api() + "/captures")
+            .then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+            .catch(function () { return { captures: [] }; })
+            .then(function (d) {
+              var prev = (d.captures || []).filter(function (x) { return x.id === record.id; })[0];
+              if (prev) {
+                if (!record.points && prev.points) record.points = prev.points;
+                if (!record.dual && prev.dual) record.dual = true;
+                if (!record.openOn && prev.openOn) record.openOn = prev.openOn;
+                if (record.defaultView == null && prev.defaultView != null) record.defaultView = prev.defaultView;
+                if (record.pointSize == null && prev.pointSize != null) record.pointSize = prev.pointSize;
+                if (record.tilt == null && prev.tilt != null) record.tilt = prev.tilt;
+                if (Array.isArray(prev.versions) && Array.isArray(record.versions)) {
+                  record.versions.forEach(function (rv) {
+                    var pv = prev.versions.filter(function (v) { return v.created === rv.created; })[0];
+                    if (!pv) return;
+                    if (!rv.points && pv.points) rv.points = pv.points;
+                    if (rv.defaultView == null && pv.defaultView != null) rv.defaultView = pv.defaultView;
+                  });
+                }
+              }
+              return fetch(api() + "/captures", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(record),
+              }).then(function (r) { return r.ok ? r.json() : null; });
+            });
         });
       });
     }).then(function (r) { done(); return r; }, function () { done(); return null; });
