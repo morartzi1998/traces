@@ -1254,7 +1254,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    annotations/visibility sections below */
 .obj-link-card-section--description {
   flex: 1;
-  min-height: 80px;
+  /* min-height auto, same reasoning as .obj-white-section--description */
   display: flex;
   flex-direction: column;
 }
@@ -1392,7 +1392,12 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    annotations/visibility/edit button below it. */
 .obj-white-section--description {
   flex: 1;
-  min-height: 80px;
+  /* min-height stays AUTO (= the section's own min-content): an explicit
+     pixel minimum let flex shrink the box BELOW its fixed parts (image,
+     labels), so the text painted over the annotations section below it.
+     With auto, the section can only shrink until the feeling text hits its
+     own 3-line minimum (it scrolls internally past that), and if the whole
+     column still doesn't fit, the panel itself scrolls — never an overlap. */
   display: flex;
   flex-direction: column;
 }
