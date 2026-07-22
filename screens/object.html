@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724m">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724m">
-<link rel="stylesheet" href="../css/object.css?v=20260724m">
-<script src="../js/cursor.js?v=20260724m" defer></script>
-<script src="../js/grain.js?v=20260724m" defer></script>
-<script src="../js/tilt3d.js?v=20260724m" defer></script>
-<script src="../js/owner.js?v=20260724m"></script>
-<script src="../js/config.js?v=20260724m"></script>
-<script src="../js/archive.js?v=20260724m"></script>
-<script src="../js/blobstore.js?v=20260724m"></script>
-<script src="../js/particle-loader.js?v=20260724m"></script>
-<script src="../js/remote-captures.js?v=20260724m"></script>
-<script src="../js/community-seed.js?v=20260724m"></script>
-<script src="../js/flow.js?v=20260724m" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724m"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724n">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724n">
+<link rel="stylesheet" href="../css/object.css?v=20260724n">
+<script src="../js/cursor.js?v=20260724n" defer></script>
+<script src="../js/grain.js?v=20260724n" defer></script>
+<script src="../js/tilt3d.js?v=20260724n" defer></script>
+<script src="../js/owner.js?v=20260724n"></script>
+<script src="../js/config.js?v=20260724n"></script>
+<script src="../js/archive.js?v=20260724n"></script>
+<script src="../js/blobstore.js?v=20260724n"></script>
+<script src="../js/particle-loader.js?v=20260724n"></script>
+<script src="../js/remote-captures.js?v=20260724n"></script>
+<script src="../js/community-seed.js?v=20260724n"></script>
+<script src="../js/flow.js?v=20260724n" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724n"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724m" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724n" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724m";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724m";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724n";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724n";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -2153,9 +2153,26 @@
             : fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
           // a failed cloud fetch (flaky connection, a dropped request) used
           // to end as a silently EMPTY stage — fall back to whatever else
-          // this capture has (its mesh, else its photo) instead
-          var pointsFailed = function () {
+          // this capture has (its mesh, else its photo) instead. The reason
+          // is SHOWN, quietly: a silent swap made "no particles on that
+          // machine" impossible to tell apart from "there are none"
+          var pointsFailed = function (why) {
             if (key !== k) return;
+            try {
+              var note = document.getElementById("cloudFailNote");
+              if (!note) {
+                note = document.createElement("p");
+                note.id = "cloudFailNote";
+                note.style.cssText = "position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);" +
+                  "z-index:60;color:rgba(240,234,220,0.75);font-size:0.78rem;letter-spacing:0.05em;" +
+                  "background:rgba(12,11,10,0.75);padding:6px 12px;max-width:80vw;text-align:center";
+                document.body.appendChild(note);
+              }
+              note.textContent = "point cloud couldn't load here (" + (why || "download failed") + ") — showing the mesh";
+              note.hidden = false;
+              clearTimeout(note.__t);
+              note.__t = setTimeout(function () { note.hidden = true; }, 12000);
+            } catch (e) {}
             if (model || img) { swapScan(k, model, img, null, carriedView); }
             else { endLoading(); }
           };
@@ -2164,7 +2181,7 @@
               // a fetch that simply resolved false/empty (a 404, a missing
               // idb blob) isn't a thrown error - it never reached .catch(),
               // which used to leave the loading placeholder stuck forever
-              if (!blob) { pointsFailed(); return null; }
+              if (!blob) { pointsFailed("download failed"); return null; }
               if (key !== k) return null;
               return blob.arrayBuffer();
             }).then(function (buf) {
@@ -2184,7 +2201,7 @@
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
               if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
-            }).catch(function () { pointsFailed(); });
+            }).catch(function (e) { pointsFailed(e && e.message ? String(e.message).slice(0, 120) : "render failed"); });
           } else {
             endLoading();
           }
