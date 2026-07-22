@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
-<link rel="stylesheet" href="css/base.css?v=20260724n">
-<link rel="stylesheet" href="css/chrome.css?v=20260724n">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260724n">
-<link rel="stylesheet" href="css/loading.css?v=20260724n">
+<link rel="stylesheet" href="css/base.css?v=20260724o">
+<link rel="stylesheet" href="css/chrome.css?v=20260724o">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260724o">
+<link rel="stylesheet" href="css/loading.css?v=20260724o">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -20,10 +20,11 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260724n" defer></script>
-<script src="js/grain.js?v=20260724n" defer></script>
-<script src="js/owner.js?v=20260724n"></script>
-<script src="js/flow.js?v=20260724n" defer></script>
+<script src="js/cursor.js?v=20260724o" defer></script>
+<script src="js/grain.js?v=20260724o" defer></script>
+<script src="js/config.js?v=20260724o"></script>
+<script src="js/owner.js?v=20260724o"></script>
+<script src="js/flow.js?v=20260724o" defer></script>
 </head>
 <body>
 
@@ -245,6 +246,46 @@
           }, 350);
         }, 900);
       }
+
+      // the hardcoded demo cards above are only the instant FIRST PAINT —
+      // the moment the real shared archive list arrives, the whole stack
+      // reloads with Mor's actual captures (their real polaroids, opening
+      // the real records). Waits out an in-flight deal to avoid mid-motion
+      // photo swaps.
+      window.__setHeroItems = function (items) {
+        if (dealing) { setTimeout(function () { window.__setHeroItems(items); }, 1200); return; }
+        HERO_ITEMS.length = 0;
+        items.forEach(function (it) {
+          HERO_ITEMS.push(it);
+          var im = new Image(); im.src = it.img;
+        });
+        var n = HERO_ITEMS.length;
+        shown = [0, 1 % n, 2 % n];
+        applyContent(slots[0], HERO_ITEMS[shown[0]]);
+        applyContent(slots[1], HERO_ITEMS[shown[1]]);
+        applyContent(slots[2], HERO_ITEMS[shown[2]]);
+        parkedItem = 3 % n;
+        nextUp = 4 % n;
+        applyContent(parked, HERO_ITEMS[parkedItem]);
+      };
+
+      (function realHero() {
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api) return;
+        Promise.all([
+          fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; }),
+          fetch(api + "/hidden-showcase").then(function (r) { return r.ok ? r.json() : { hidden: [] }; }).catch(function () { return { hidden: [] }; }),
+        ]).then(function (res) {
+          var hidden = res[1].hidden || [];
+          var list = (res[0].captures || []).filter(function (c) {
+            return c.scope === "archive" && c.img && hidden.indexOf(c.id) === -1;
+          });
+          if (list.length < 4) return;
+          window.__setHeroItems(list.map(function (c) {
+            return { key: c.id, img: c.img, title: (c.title || "untitled").toLowerCase() };
+          }));
+        }).catch(function () {});
+      })();
 
       function restartTimer() {
         clearInterval(timer);
