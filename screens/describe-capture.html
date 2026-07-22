@@ -5,32 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724t">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260724t">
-<script src="../js/cursor.js?v=20260724t" defer></script>
-<script src="../js/grain.js?v=20260724t" defer></script>
-<script src="../js/tilt3d.js?v=20260724t" defer></script>
-<script src="../js/annotations.js?v=20260724t" defer></script>
-<script src="../js/owner.js?v=20260724t"></script>
-<script src="../js/config.js?v=20260724t"></script>
-<script src="../js/archive.js?v=20260724t"></script>
-<script src="../js/blobstore.js?v=20260724t"></script>
-<script src="../js/remote-captures.js?v=20260724t"></script>
-<script src="../js/flow.js?v=20260724t" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724t"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724u">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260724u">
+<script src="../js/cursor.js?v=20260724u" defer></script>
+<script src="../js/grain.js?v=20260724u" defer></script>
+<script src="../js/tilt3d.js?v=20260724u" defer></script>
+<script src="../js/annotations.js?v=20260724u" defer></script>
+<script src="../js/owner.js?v=20260724u"></script>
+<script src="../js/config.js?v=20260724u"></script>
+<script src="../js/archive.js?v=20260724u"></script>
+<script src="../js/blobstore.js?v=20260724u"></script>
+<script src="../js/remote-captures.js?v=20260724u"></script>
+<script src="../js/flow.js?v=20260724u" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724u"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724t" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724u" } }
 </script>
 <script type="module">
-  import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260724t";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724t";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260724u";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724u";
+  import { glbToPoints } from "../js/glb-points.js?v=20260724u";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
+
+  // EVERY new mesh capture gets its point cloud generated right here at
+  // save time (surface-sampled, colours from the textures, noise-trimmed)
+  // and stored alongside the mesh — so particles exist for every capture,
+  // on every device, without each visitor's browser re-deriving them.
+  // Resolves to true when a cloud was produced, false when not applicable.
+  window.__ensureDerivedCloud = function () {
+    if (!window.BlobStore) return Promise.resolve(false);
+    return Promise.all([
+      window.BlobStore.get("capture-pending-raw").catch(function () { return null; }),
+      window.BlobStore.get("capture-pending-model").catch(function () { return null; }),
+    ]).then(function (r) {
+      var rawCloud = r[0], modelBlob = r[1];
+      if (rawCloud || !modelBlob) return false; // already has a real cloud / no mesh
+      return modelBlob.arrayBuffer()
+        .then(function (buf) { return glbToPoints(buf); })
+        .then(function (g) {
+          if (!g || !g.getAttribute("position") || !g.getAttribute("position").count) return false;
+          var cleaned = removeOutliers(g);
+          return window.BlobStore.set("capture-pending-raw", serializeGeometry(cleaned, { derived: true }))
+            .then(function () {
+              // a heavy mesh should OPEN on its light cloud; the mesh loads
+              // only when someone actually toggles to it
+              return { derived: true, big: modelBlob.size > 8 * 1024 * 1024 };
+            });
+        });
+    }).catch(function () { return false; });
+  };
 </script>
 </head>
 <body>
@@ -226,9 +255,10 @@
     // object.html can re-render it later with real per-point detail instead
     // of a voxelized mesh
     function movePointsBlob(base) {
-      var isCloud = false;
-      try { isCloud = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
-      if (!isCloud || !window.BlobStore) return Promise.resolve("");
+      // no is-cloud gate: a MESH capture now also carries a pending cloud
+      // (the one __ensureDerivedCloud generated) — when the key is empty
+      // this resolves "" exactly as before
+      if (!window.BlobStore) return Promise.resolve("");
       var permKey = "points:" + base;
       return window.BlobStore.get("capture-pending-raw").then(function (blob) {
         if (!blob) return "";
@@ -382,6 +412,10 @@
               // photo re-upload on an existing capture) has no fresh choice
               // to apply here - leave whatever size the capture already had
               if (chosenPointSize !== null) patch.pointSize = chosenPointSize;
+              if (window.__derivedMeshInfo) {
+                patch.dual = true;
+                if (window.__derivedMeshInfo.big) patch.openOn = "points";
+              }
               // only touch whichever store actually holds this capture — a
               // sterile community-only item was never in Archive to begin
               // with, and shouldn't be re-added to it by an update
@@ -429,6 +463,11 @@
         // a true mesh+cloud dual upload opens on the mesh in the object view;
         // a plain point cloud (which also has a voxel model) opens on its cloud
         try { if (sessionStorage.getItem("traces-capture-dual") === "1") payload.dual = true; } catch (e) {}
+        // a mesh capture whose cloud we just generated is a dual capture too
+        if (window.__derivedMeshInfo) {
+          payload.dual = true;
+          if (window.__derivedMeshInfo.big) payload.openOn = "points";
+        }
         var cap = window.Archive ? Archive.add(payload) : null;
         if (!cap) { clearSession(); goTo("gallery.html"); return; }
 
@@ -471,13 +510,21 @@
 
       var isCloudSave = false;
       try { isCloudSave = sessionStorage.getItem("traces-capture-is-cloud") === "1"; } catch (e) {}
-      if (isCloudSave) {
-        capturePointCloudThumbnail().then(function (thumb) { afterThumb(thumb || img); });
-      } else if (!tripoThumb && model) {
-        captureModelThumbnail().then(function (thumb) { afterThumb(thumb || img); });
-      } else {
-        afterThumb(img);
-      }
+      // a MESH capture with no real cloud gets one generated right now (see
+      // __ensureDerivedCloud in the module script above) — every capture
+      // leaves this screen with particles of its own, saved and published
+      var cloudReady = (!isCloudSave && model && window.__ensureDerivedCloud)
+        ? window.__ensureDerivedCloud() : Promise.resolve(false);
+      cloudReady.then(function (derived) {
+        if (derived) window.__derivedMeshInfo = derived;
+        if (isCloudSave) {
+          capturePointCloudThumbnail().then(function (thumb) { afterThumb(thumb || img); });
+        } else if (!tripoThumb && model) {
+          captureModelThumbnail().then(function (thumb) { afterThumb(thumb || img); });
+        } else {
+          afterThumb(img);
+        }
+      });
     }
   </script>
 

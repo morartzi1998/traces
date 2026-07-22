@@ -306,6 +306,7 @@
           if (cap.pointSize != null) record.pointSize = cap.pointSize;
           if (cap.tilt != null) record.tilt = cap.tilt;
           if (cap.dual) record.dual = true; // open on the mesh, not the voxel cloud
+          if (cap.openOn) record.openOn = cap.openOn; // heavy mesh: open on the light cloud
           return fetch(api() + "/captures", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

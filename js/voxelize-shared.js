@@ -11,8 +11,8 @@
 // look that reads as artificial; a rounder shape breaks that up. (2) each
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
-import * as THREE from "./vendor/three/three.module.js?v=20260724t";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260724t";
+import * as THREE from "./vendor/three/three.module.js?v=20260724u";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260724u";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
@@ -344,11 +344,15 @@ export function cropCloudByRadius(geometry, frac) {
   return g;
 }
 
-export function serializeGeometry(geometry) {
+export function serializeGeometry(geometry, opts) {
   var pos = geometry.getAttribute("position");
   var col = geometry.getAttribute("color");
   var count = pos.count;
-  var header = new Uint32Array([col ? 1 : 0, count]);
+  // header flag 2 marks a MACHINE-DERIVED cloud (sampled off a mesh) — the
+  // viewer auto-sizes those by radius while hand-uploaded scans keep their
+  // fixed size (see deserializeGeometry)
+  var flag = col ? ((opts && opts.derived) ? 2 : 1) : 0;
+  var header = new Uint32Array([flag, count]);
   var parts = [header, pos.array];
   if (col) parts.push(col.array);
   return new Blob(parts);
