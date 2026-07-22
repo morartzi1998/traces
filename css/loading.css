@@ -58,6 +58,22 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* same whisper-subtle depth gradient as the hero polaroids: the photo's
+   centre a touch darker, gone before it reaches the edges */
+.load-polaroid::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  bottom: 30px;
+  background: radial-gradient(ellipse at center,
+    rgba(0, 0, 0, 0.07) 0%,
+    rgba(0, 0, 0, 0.025) 45%,
+    rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
+}
+
 .load-polaroid:first-child {
   margin-left: 0;
 }

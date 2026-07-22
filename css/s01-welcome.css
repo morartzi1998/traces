@@ -112,6 +112,23 @@
   background: var(--photo-backdrop);
 }
 
+/* a whisper of a radial gradient inside the photo — the centre a touch
+   darker, fading to nothing well before the edges — so the print reads as
+   having a slight depth instead of sitting perfectly flat */
+.polaroid::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 14px;
+  bottom: 46px;
+  background: radial-gradient(ellipse at center,
+    rgba(0, 0, 0, 0.07) 0%,
+    rgba(0, 0, 0, 0.025) 45%,
+    rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
+}
+
 .polaroid-back {
   top: 9%;
   left: 28%;
