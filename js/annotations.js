@@ -166,12 +166,25 @@
     }
   }
 
+  // story / remark are either-or: exactly one is always picked. Checking
+  // one clears the other; clicking the one already picked keeps it on
+  // (they're checkboxes in the markup, but they behave like radios).
+  var daStoryBox = document.getElementById("daStory");
+  var daRemarkBox = document.getElementById("daRemark");
+  function setAnnotationType(type) {
+    daStoryBox.checked = type !== "remark";
+    daRemarkBox.checked = type === "remark";
+  }
+  daStoryBox.addEventListener("change", function () { setAnnotationType("story"); });
+  daRemarkBox.addEventListener("change", function () { setAnnotationType("remark"); });
+
   function openBlue(spot) {
     editingIndex = -1;
     pendingSpot = spot;
     showPendingMarker(spot);
     document.getElementById("daName").value = "";
     document.getElementById("daText").value = "";
+    setAnnotationType("story");
     defaultSidebar.hidden = true;
     blueSidebar.hidden = false;
     document.getElementById("daName").focus();
@@ -184,6 +197,7 @@
     showPendingMarker(pendingSpot);
     document.getElementById("daName").value = a.title || "";
     document.getElementById("daText").value = a.text || "";
+    setAnnotationType(a.type || "story");
     defaultSidebar.hidden = true;
     blueSidebar.hidden = false;
     document.getElementById("daName").focus();
@@ -232,15 +246,19 @@
     var title = document.getElementById("daName").value.trim();
     var text = document.getElementById("daText").value.trim();
     if (title && pendingSpot) {
+      // the picked type used to be ignored entirely — everything saved as
+      // "story" no matter what was ticked
+      var type = daRemarkBox.checked ? "remark" : "story";
       if (editingIndex >= 0 && annotations[editingIndex]) {
         annotations[editingIndex].title = title;
         annotations[editingIndex].text = text;
+        annotations[editingIndex].type = type;
       } else {
         annotations.push({
           x: pendingSpot.x, y: pendingSpot.y,
           pos: pendingSpot.pos || null, normal: pendingSpot.normal || null,
           ppos: pendingSpot.ppos || null,
-          title: title, text: text
+          title: title, text: text, type: type
         });
       }
       render();
