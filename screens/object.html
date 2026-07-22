@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724g">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724g">
-<link rel="stylesheet" href="../css/object.css?v=20260724g">
-<script src="../js/cursor.js?v=20260724g" defer></script>
-<script src="../js/grain.js?v=20260724g" defer></script>
-<script src="../js/tilt3d.js?v=20260724g" defer></script>
-<script src="../js/owner.js?v=20260724g"></script>
-<script src="../js/config.js?v=20260724g"></script>
-<script src="../js/archive.js?v=20260724g"></script>
-<script src="../js/blobstore.js?v=20260724g"></script>
-<script src="../js/particle-loader.js?v=20260724g"></script>
-<script src="../js/remote-captures.js?v=20260724g"></script>
-<script src="../js/community-seed.js?v=20260724g"></script>
-<script src="../js/flow.js?v=20260724g" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724g"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724h">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724h">
+<link rel="stylesheet" href="../css/object.css?v=20260724h">
+<script src="../js/cursor.js?v=20260724h" defer></script>
+<script src="../js/grain.js?v=20260724h" defer></script>
+<script src="../js/tilt3d.js?v=20260724h" defer></script>
+<script src="../js/owner.js?v=20260724h"></script>
+<script src="../js/config.js?v=20260724h"></script>
+<script src="../js/archive.js?v=20260724h"></script>
+<script src="../js/blobstore.js?v=20260724h"></script>
+<script src="../js/particle-loader.js?v=20260724h"></script>
+<script src="../js/remote-captures.js?v=20260724h"></script>
+<script src="../js/community-seed.js?v=20260724h"></script>
+<script src="../js/flow.js?v=20260724h" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724h"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724g" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724h" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724g";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724g";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724h";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724h";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -906,6 +906,10 @@
           if (catalog[d.key]) return;
           catalog[d.key] = {
             kind: d.kind || "object", title: d.title, img: d.img, model: d.model,
+            // precomputed cloud + which side opens first — the biggest seed
+            // meshes run to ~65MB, so those open on the light cloud and only
+            // fetch the mesh when someone actually toggles to it
+            points: d.points || null, dual: !!d.points, openOn: d.openOn || null,
             feeling: d.feeling || "", annotations: d.annotations || [], links: [],
           };
         });

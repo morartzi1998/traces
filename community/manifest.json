@@ -10,8 +10,16 @@
     "meta": "5 days ago",
     "feeling": "found this at a flea market outside porto and could not leave without it - the smell of old wood still gets me every time i open it.",
     "annotations": [
-      { "x": 0.4, "y": 0.55, "title": "carved doors", "type": "story", "since": 2022, "text": "the carving on the doors took the restorer three weeks - said it was some of the finest joinery he'd seen from that era." }
-    ]
+      {
+        "x": 0.4,
+        "y": 0.55,
+        "title": "carved doors",
+        "type": "story",
+        "since": 2022,
+        "text": "the carving on the doors took the restorer three weeks - said it was some of the finest joinery he'd seen from that era."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/305f91d5-f61e-4f2d-823a-c6fc4433cdda"
   },
   {
     "key": "communityAntiqueSideTable",
@@ -24,8 +32,16 @@
     "meta": "11 days ago",
     "feeling": "my great-grandfather built this table by hand - it's outlived three house moves and two countries.",
     "annotations": [
-      { "x": 0.5, "y": 0.6, "title": "water ring", "type": "remark", "since": 2020, "text": "there's a faint water ring on the corner from a glass someone left there in the 80s. we never sanded it out on purpose." }
-    ]
+      {
+        "x": 0.5,
+        "y": 0.6,
+        "title": "water ring",
+        "type": "remark",
+        "since": 2020,
+        "text": "there's a faint water ring on the corner from a glass someone left there in the 80s. we never sanded it out on purpose."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/ff93be0a-6e14-4043-91c0-8a493f04ed32"
   },
   {
     "key": "communityPatternedRug",
@@ -38,8 +54,16 @@
     "meta": "19 days ago",
     "feeling": "my mother wove this one herself the winter before i was born. it's been under every dining table i've ever owned.",
     "annotations": [
-      { "x": 0.5, "y": 0.5, "title": "faded corner", "type": "story", "since": 2019, "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan." }
-    ]
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "title": "faded corner",
+        "type": "story",
+        "since": 2019,
+        "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/9698c1d8-1f60-4794-bb19-967b3e9a6e25"
   },
   {
     "key": "communityAntiqueBookcase",
@@ -52,8 +76,17 @@
     "meta": "6 days ago",
     "feeling": "inherited from my grandfather's study - every shelf still smells faintly of pipe tobacco.",
     "annotations": [
-      { "x": 0.62, "y": 0.35, "title": "top shelf", "type": "story", "since": 2021, "text": "he kept the books he never actually read up there, just the ones with the nicest spines. i've kept the same rule." }
-    ]
+      {
+        "x": 0.62,
+        "y": 0.35,
+        "title": "top shelf",
+        "type": "story",
+        "since": 2021,
+        "text": "he kept the books he never actually read up there, just the ones with the nicest spines. i've kept the same rule."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/c07ecbf5-d4ae-493c-a203-03f5b91c19e3",
+    "openOn": "points"
   },
   {
     "key": "communityBearShapedWickerBed",
@@ -66,8 +99,17 @@
     "meta": "9 days ago",
     "feeling": "handwoven for our first cat - she outgrew it in a year but refuses to sleep anywhere else.",
     "annotations": [
-      { "x": 0.48, "y": 0.68, "title": "chewed ear", "type": "remark", "since": 2023, "text": "she's worked one of the wicker ears down to almost nothing over the years. we've stopped trying to stop her." }
-    ]
+      {
+        "x": 0.48,
+        "y": 0.68,
+        "title": "chewed ear",
+        "type": "remark",
+        "since": 2023,
+        "text": "she's worked one of the wicker ears down to almost nothing over the years. we've stopped trying to stop her."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/c39a0e8e-eb2c-4ff9-b0d9-e0b611842f19",
+    "openOn": "points"
   },
   {
     "key": "communityComputerDesk",
@@ -80,8 +122,17 @@
     "meta": "3 days ago",
     "feeling": "built this the summer i got my first computer - still has the same wobble in the left leg.",
     "annotations": [
-      { "x": 0.3, "y": 0.72, "title": "left leg", "type": "story", "since": 2019, "text": "cut it a centimeter short and never fixed it - folded paper under it instead. the fold's still there, just thinner now." }
-    ]
+      {
+        "x": 0.3,
+        "y": 0.72,
+        "title": "left leg",
+        "type": "story",
+        "since": 2019,
+        "text": "cut it a centimeter short and never fixed it - folded paper under it instead. the fold's still there, just thinner now."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/d72ed280-2670-493d-8778-dd4e1adccccc",
+    "openOn": "points"
   },
   {
     "key": "communityHangingPodChair",
@@ -94,8 +145,17 @@
     "meta": "2 days ago",
     "feeling": "reads every book i own in this chair now - the whole porch was rearranged around it.",
     "annotations": [
-      { "x": 0.55, "y": 0.42, "title": "worn spot", "type": "remark", "since": 2024, "text": "the cushion's gone flat exactly where my head rests - i can find the right angle for reading without even looking." }
-    ]
+      {
+        "x": 0.55,
+        "y": 0.42,
+        "title": "worn spot",
+        "type": "remark",
+        "since": 2024,
+        "text": "the cushion's gone flat exactly where my head rests - i can find the right angle for reading without even looking."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/1d5fd481-4ff5-48a4-873a-198e752518f8",
+    "openOn": "points"
   },
   {
     "key": "communityHighChair",
@@ -108,7 +168,16 @@
     "meta": "1 day ago",
     "feeling": "all three of my kids ate their first solid food in this exact chair.",
     "annotations": [
-      { "x": 0.5, "y": 0.6, "title": "tray scratches", "type": "story", "since": 2020, "text": "three sets of tiny fork scratches on the tray, layered over each other. i can almost tell whose is whose by now." }
-    ]
+      {
+        "x": 0.5,
+        "y": 0.6,
+        "title": "tray scratches",
+        "type": "story",
+        "since": 2020,
+        "text": "three sets of tiny fork scratches on the tray, layered over each other. i can almost tell whose is whose by now."
+      }
+    ],
+    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/1ee706ec-1a23-4c41-bdc2-e4c7f002bb0b",
+    "openOn": "points"
   }
 ]
