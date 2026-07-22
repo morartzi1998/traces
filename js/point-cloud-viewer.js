@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260724x";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724x";
+import * as THREE from "./vendor/three/three.module.js?v=20260724y";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724y";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -341,6 +341,20 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // progressively draw fewer points. The buffer's order spreads points
   // across the whole object, so drawing a prefix still covers it evenly —
   // the cloud gets a little lighter, never a hole.
+  // ---- build-in: the scan RESOLVES on arrival ----
+  // instead of popping in finished, the cloud starts as a sparse, oversized
+  // blur of itself and sharpens into full precision over ~1.6s — the object
+  // visibly "builds" out of its own points as it loads
+  var introStart = 0;
+  var INTRO_MS = opts.buildIn === false ? 0 : 2200;
+  var introBaseSize = material.size;
+  var introTotal = geometry.getAttribute("position").count;
+  if (INTRO_MS && introTotal > 20000) {
+    geometry.setDrawRange(0, Math.max(1, Math.floor(introTotal * 0.05)));
+    material.size = introBaseSize * 3.6;
+  } else {
+    INTRO_MS = 0;
+  }
   var qStep = 0, slowStreak = 0, lastT = 0, checked = 0;
   function stepQualityDown() {
     qStep++;
@@ -355,7 +369,18 @@ export function mountPointCloudViewer(container, geometry, opts) {
   }
   (function frame(t) {
     if (disposed) return;
-    if (lastT && checked < 240 && qStep < 4) {
+    if (INTRO_MS) {
+      if (!introStart) introStart = t;
+      var ik = Math.min(1, (t - introStart) / INTRO_MS);
+      var ease = ik * ik * (3 - 2 * ik); // smoothstep: gentle start and landing
+      geometry.setDrawRange(0, Math.max(1, Math.floor(introTotal * (0.05 + 0.95 * ease))));
+      material.size = introBaseSize * (3.6 - 2.6 * ease);
+      if (ik >= 1) {
+        geometry.setDrawRange(0, Infinity);
+        material.size = introBaseSize;
+        INTRO_MS = 0;
+      }
+    } else if (lastT && checked < 240 && qStep < 4) {
       checked++;
       var dt = t - lastT;
       // ~<15fps sustained means genuinely struggling, not a one-off hitch
