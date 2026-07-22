@@ -112,3 +112,32 @@ function locationPrefix() {
   setTimeout(check, 4000);
   setInterval(check, 4 * 60 * 1000);
 })();
+
+// ----- fullscreen for exhibition machines ------------------------------
+// a quiet corner button that takes the whole site fullscreen (no browser
+// tabs). Browser-level fullscreen (F11 on Windows) survives navigation too.
+(function fullscreenButton() {
+  if (window.__artifactGo) return;
+  function mount() {
+    if (document.getElementById("fsBtn")) return;
+    var btn = document.createElement("button");
+    btn.id = "fsBtn";
+    btn.type = "button";
+    btn.title = "full screen";
+    btn.setAttribute("aria-label", "Enter full screen");
+    btn.textContent = "⛶";
+    btn.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9998;background:none;" +
+      "border:none;color:rgba(240,234,220,0.45);font-size:18px;cursor:pointer;padding:4px;line-height:1";
+    btn.addEventListener("click", function () {
+      var el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    });
+    function sync() { btn.hidden = !!document.fullscreenElement; }
+    document.addEventListener("fullscreenchange", sync);
+    sync();
+    document.body.appendChild(btn);
+  }
+  if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", mount);
+  else mount();
+})();

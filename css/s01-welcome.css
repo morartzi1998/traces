@@ -345,3 +345,25 @@
     margin-top: 0;
   }
 }
+
+/* Short laptop screens (a 1366x768 panel with browser chrome, or Windows
+   display scaling) squeezed the hero until the polaroid stack climbed over
+   the small scan-meta caption and the logo. Scale the stack down and give
+   the content real top clearance so the proportions hold. */
+@media (max-height: 760px) and (min-width: 721px) {
+  .main {
+    padding: 7vh 0 2vh;
+  }
+  .polaroid-stack {
+    width: min(300px, 30vw);
+    height: min(360px, 50vh);
+    transform: translateY(2.5vh);
+  }
+  .scan-meta {
+    top: -2.4rem;
+    font-size: 0.8rem;
+  }
+  .hero-text h1 {
+    font-size: clamp(1.9rem, 4.2vw, 3.4rem);
+  }
+}

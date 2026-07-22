@@ -18,15 +18,48 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724h";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724i";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
 
+  // a low-powered exhibition laptop (weak integrated GPU, little RAM) can
+  // refuse an antialiased context outright — which used to throw and leave
+  // a blank stage. Retry without the frills before giving up.
   // preserveDrawingBuffer so screenshot() below can read back a frame
   // on demand instead of racing the render loop's own buffer swaps
-  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  } catch (e) {
+    renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true,
+      powerPreference: "low-power" });
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+  // on a machine that reports little memory, thin an extra-dense cloud —
+  // half the points still read as a full surface at these densities, and
+  // it halves both the GPU upload and the frame cost
+  var mem = navigator.deviceMemory || 8;
+  var posCount = geometry.getAttribute("position") ? geometry.getAttribute("position").count : 0;
+  if (mem <= 4 && posCount > 240000) {
+    var srcPos = geometry.getAttribute("position").array;
+    var srcCol = geometry.getAttribute("color") ? geometry.getAttribute("color").array : null;
+    var stride = Math.ceil(posCount / 220000);
+    var kept = Math.floor(posCount / stride);
+    var np = new Float32Array(kept * 3);
+    var nc = srcCol ? new Float32Array(kept * 3) : null;
+    for (var i = 0; i < kept; i++) {
+      var s = i * stride * 3;
+      np[i * 3] = srcPos[s]; np[i * 3 + 1] = srcPos[s + 1]; np[i * 3 + 2] = srcPos[s + 2];
+      if (nc) { nc[i * 3] = srcCol[s]; nc[i * 3 + 1] = srcCol[s + 1]; nc[i * 3 + 2] = srcCol[s + 2]; }
+    }
+    var thin = new THREE.BufferGeometry();
+    thin.setAttribute("position", new THREE.BufferAttribute(np, 3));
+    if (nc) thin.setAttribute("color", new THREE.BufferAttribute(nc, 3));
+    thin.userData = geometry.userData;
+    geometry = thin;
+  }
   renderer.domElement.style.width = "100%";
   renderer.domElement.style.height = "100%";
   renderer.domElement.style.display = "block";
