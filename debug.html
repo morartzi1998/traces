@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — diagnostics</title>
 <script type="importmap">
-  { "imports": { "three": "./js/vendor/three/three.module.js?v=20260724r" } }
+  { "imports": { "three": "./js/vendor/three/three.module.js?v=20260724t" } }
 </script>
 <style>
   body { background: #14120f; color: #f0eadc; font-family: monospace; font-size: 15px;
@@ -13,12 +13,14 @@
   .ok { color: #7fd48a; } .fail { color: #ff7d6b; } .warn { color: #ffcf6b; }
   h1 { font-size: 18px; letter-spacing: 0.1em; }
   #cloudBox { width: 320px; height: 240px; border: 1px solid #444; margin-top: 10px; }
+  #cloudBox2 { width: 90vw; height: 46vh; border: 1px solid #444; margin-top: 10px; }
 </style>
 </head>
 <body>
 <h1>TRACES DIAGNOSTICS</h1>
 <div id="log">starting…</div>
 <div id="cloudBox"></div>
+<div id="cloudBox2"></div>
 <script>
   var log = document.getElementById("log");
   log.textContent = "";
@@ -67,8 +69,8 @@
   .then(function (buf) {
     if (!buf) { line("cloud render", "fail", "no data to try rendering"); return; }
     // mount through the site's own modules — the exact production path
-    import("./js/voxelize-shared.js?v=20260724r").then(function (vx) {
-      return import("./js/point-cloud-viewer.js?v=20260724r").then(function (pcv) {
+    import("./js/voxelize-shared.js?v=20260724t").then(function (vx) {
+      return import("./js/point-cloud-viewer.js?v=20260724t").then(function (pcv) {
         var g = vx.deserializeGeometry(buf);
         line("deserialize", "ok", g.getAttribute("position").count + " points");
         var pv = pcv.mountPointCloudViewer(document.getElementById("cloudBox"), g, {});
@@ -80,6 +82,29 @@
           line("cloud render", fps > 5 ? "ok" : "warn", fps.toFixed(0) + " fps" +
             (fps <= 5 ? " — too slow to be usable" : ""));
         }, 3000);
+        // second test: the CHANDELIER record cloud, mounted full-size with
+        // the record's exact saved options — the site's real production path
+        fetch("https://traces-tripo.traces-morartzi.workers.dev/captures")
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var rec = (d.captures || []).filter(function (c) { return c.id === "cap-1784486205414"; })[0];
+            if (!rec || !rec.points) { line("record cloud", "fail", "record/points missing"); return; }
+            line("record opts", "ok", "pointSize=" + JSON.stringify(rec.pointSize) +
+              " tilt=" + JSON.stringify(rec.tilt) + " view=" + String(JSON.stringify(rec.defaultView)).slice(0, 80));
+            return fetch(rec.points).then(function (r) { return r.arrayBuffer(); }).then(function (b2) {
+              var g2 = vx.deserializeGeometry(b2);
+              var dv = rec.defaultView && rec.defaultView.position ? rec.defaultView : null;
+              var pv2 = pcv.mountPointCloudViewer(document.getElementById("cloudBox2"), g2,
+                { pointSize: rec.pointSize || null, initialView: dv, tilt: rec.tilt || null });
+              var f2 = 0, t2 = performance.now();
+              var u2 = pv2.onFrame(function () { f2++; });
+              setTimeout(function () {
+                u2();
+                line("record cloud full-size", "ok",
+                  (f2 / ((performance.now() - t2) / 1000)).toFixed(0) + " fps — do you SEE the chandelier below?");
+              }, 3000);
+            });
+          }).catch(function (e) { line("record cloud", "fail", String(e && e.message || e).slice(0, 100)); });
       });
     }).catch(function (e) { line("cloud render", "fail", String(e && e.message || e).slice(0, 120)); });
   });
