@@ -72,7 +72,11 @@
 
     if (ctx) points.push({ x: mouseX, y: mouseY, t: performance.now() });
 
+    // over some targets (the page itself, text nodes inside shadow trees)
+    // there is no .closest — walk up to the nearest real element instead
     var target = e.target;
+    if (target && typeof target.closest !== "function") target = target.parentElement;
+    if (!target || typeof target.closest !== "function") return;
 
     // Blue square (and smear) over anything selectable.
     isActive = !!target.closest(INTERACTIVE);

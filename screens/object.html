@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725a">
-<link rel="stylesheet" href="../css/chrome.css?v=20260725a">
-<link rel="stylesheet" href="../css/object.css?v=20260725a">
-<script src="../js/cursor.js?v=20260725a" defer></script>
-<script src="../js/grain.js?v=20260725a" defer></script>
-<script src="../js/tilt3d.js?v=20260725a" defer></script>
-<script src="../js/owner.js?v=20260725a"></script>
-<script src="../js/config.js?v=20260725a"></script>
-<script src="../js/archive.js?v=20260725a"></script>
-<script src="../js/blobstore.js?v=20260725a"></script>
-<script src="../js/particle-loader.js?v=20260725a"></script>
-<script src="../js/remote-captures.js?v=20260725a"></script>
-<script src="../js/community-seed.js?v=20260725a"></script>
-<script src="../js/flow.js?v=20260725a" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725a"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725b">
+<link rel="stylesheet" href="../css/chrome.css?v=20260725b">
+<link rel="stylesheet" href="../css/object.css?v=20260725b">
+<script src="../js/cursor.js?v=20260725b" defer></script>
+<script src="../js/grain.js?v=20260725b" defer></script>
+<script src="../js/tilt3d.js?v=20260725b" defer></script>
+<script src="../js/owner.js?v=20260725b"></script>
+<script src="../js/config.js?v=20260725b"></script>
+<script src="../js/archive.js?v=20260725b"></script>
+<script src="../js/blobstore.js?v=20260725b"></script>
+<script src="../js/particle-loader.js?v=20260725b"></script>
+<script src="../js/remote-captures.js?v=20260725b"></script>
+<script src="../js/community-seed.js?v=20260725b"></script>
+<script src="../js/flow.js?v=20260725b" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725b"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725a" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725b" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260725a";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725a";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725a";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260725b";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725b";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725b";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -46,7 +46,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260725a";
+  import { glbToPoints } from "../js/glb-points.js?v=20260725b";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -420,6 +420,7 @@
         <li id="menuVisualMergeRow" hidden><button type="button" id="menuVisualMerge">Make a visual merge from object's history</button></li>
         <li id="menuToggleRepRow" hidden><button type="button" id="menuToggleRep">Show as mesh</button></li>
         <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
+        <li id="menuConnectedRow" hidden><button type="button" id="menuConnectedList">Show connected captures</button></li>
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
         <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
@@ -935,6 +936,7 @@
       // per-session guard: each capture's links get pushed to the shared
       // record at most once per page load (see show())
       var linksBackfilled = {};
+      var annotationsBackfilled = {};
       try { key = sessionStorage.getItem("traces-item") || key; } catch (e) {}
       // NOTE: catalog[key] isn't validated here — a community-showcase key
       // doesn't exist in catalog until mergeCommunitySeedIntoCatalog runs in
@@ -1087,6 +1089,92 @@
         }
       }
 
+      // annotations follow the exact same path as links: local stores first,
+      // then (owner only) the shared record, so visitors read the same notes
+      function syncAnnotationsEverywhere(k) {
+        var annotations = (catalog[k].annotations || []).map(function (a) {
+          return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
+            since: a.since || 2021, pos: a.pos || null, normal: a.normal || null,
+            ppos: a.ppos || null };
+        });
+        var fields = { annotations: annotations };
+        if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+        if (window.Community && Community.get(k)) Community.update(k, fields);
+        if (window.isOwnerDevice && window.isOwnerDevice()) {
+          var inArchive = window.Archive && Archive.get(k);
+          var inCommunity = window.Community && Community.get(k);
+          if (inArchive || !inCommunity) patchServerRecord(k, fields);
+          if (inCommunity) patchServerRecord(k + "-community", fields);
+        }
+      }
+
+      // every capture attached to this space — through a placed link marker
+      // OR through a plain connection that never got a marker placed (those
+      // used to be completely invisible in the space)
+      function connectedCaptures(k) {
+        var seen = {};
+        var out = [];
+        ((catalog[k] && catalog[k].links) || []).forEach(function (l) {
+          if (!l.target || seen[l.target] || !catalog[l.target]) return;
+          seen[l.target] = 1;
+          out.push({ key: l.target, title: catalog[l.target].title, link: l });
+        });
+        Object.keys(catalog).forEach(function (c) {
+          if (c === k || seen[c]) return;
+          if (catalog[c].connectedKey === k) {
+            seen[c] = 1;
+            out.push({ key: c, title: catalog[c].title, link: null });
+          }
+        });
+        return out;
+      }
+
+      // "Show connected captures": the space's menu lists everything attached
+      // to it; picking one opens that capture's preview card (and, when it
+      // has a placed marker, flashes the marker in the space as well)
+      var menuConnectedRow = document.getElementById("menuConnectedRow");
+      var menuConnectedOpen = false;
+      function clearConnectedMenuItems() {
+        menuConnectedOpen = false;
+        Array.prototype.slice.call(menu.querySelectorAll("li[data-connected-item]"))
+          .forEach(function (li) { li.remove(); });
+      }
+      document.getElementById("menuConnectedList").addEventListener("click", function () {
+        if (menuConnectedOpen) { clearConnectedMenuItems(); return; }
+        clearConnectedMenuItems();
+        menuConnectedOpen = true;
+        var after = menuConnectedRow;
+        connectedCaptures(key).forEach(function (c) {
+          var li = document.createElement("li");
+          li.setAttribute("data-connected-item", "1");
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = "→ " + c.title;
+          b.addEventListener("click", function () {
+            menu.hidden = true;
+            clearConnectedMenuItems();
+            if (c.link && c.link.__btn) {
+              c.link.__btn.classList.add("obj-link-marker--highlight");
+              setTimeout(function () {
+                if (c.link.__btn) c.link.__btn.classList.remove("obj-link-marker--highlight");
+              }, 4000);
+            }
+            openLinkCard(c.link || { target: c.key, title: c.title });
+          });
+          li.appendChild(b);
+          after.parentNode.insertBefore(li, after.nextSibling);
+          after = li;
+        });
+      });
+
+      // who may change this capture's annotations/links on THIS device:
+      // the designer's own device, or a visitor viewing their own capture.
+      // Everyone else gets a strictly read-only view.
+      function canEditCapture(k) {
+        if (window.isOwnerDevice && window.isOwnerDevice()) return true;
+        return !!((window.Archive && Archive.get(k)) || (window.Community && Community.get(k)));
+      }
+
       // "Connect previous captured object": if we're already looking at a
       // space, place the point right here first, then go choose the object;
       // otherwise (looking at an object) go pick the space to connect it to.
@@ -1229,6 +1317,7 @@
               if (l.normal) h.dataset.normal = l.normal;
               buildLinkMarker(h, l.title);
               h.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+              l.__btn = h;
               modelViewer.appendChild(h);
               return;
             }
@@ -1244,6 +1333,7 @@
             p.type = "button";
             buildLinkMarker(p, l.title);
             p.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+            l.__btn = p;
             tags.appendChild(p);
             var worldPos = strToVec3(l.ppos);
             var updateProjection = function () {
@@ -1602,6 +1692,10 @@
         document.getElementById("remarkText").textContent = annotation.text;
         document.getElementById("remarkStoryBox").checked = false;
         document.getElementById("remarkRemarkBox").checked = true;
+        // visitors read the remark; edit/delete stay the curator's
+        var remarkMayEdit = canEditCapture(key);
+        document.getElementById("remarkEdit").hidden = !remarkMayEdit;
+        document.getElementById("remarkDelete").hidden = !remarkMayEdit;
         remarkCard.hidden = false;
         openRemarkAnnotation = annotation;
         // the marker stays put but simplifies to a white square with a blue
@@ -1645,25 +1739,33 @@
         var ul = document.getElementById("whiteAnnotations");
         ul.innerHTML = "";
         if (item.annotations.length) {
+          var mayEdit = canEditCapture(key);
           item.annotations.forEach(function (a) {
             var li = document.createElement("li");
             var text = document.createElement("span");
             text.textContent = a.title;
             text.style.cursor = "pointer";
-            text.setAttribute("aria-label", "Edit annotation");
-            text.addEventListener("click", function () { white.hidden = true; openBlueEdit(a); });
-            var dash = document.createElement("button");
-            dash.type = "button";
-            dash.className = "obj-white-list-dash";
-            dash.setAttribute("aria-label", "Delete annotation");
-            dash.textContent = "−";
-            dash.addEventListener("click", function (e) {
-              e.stopPropagation();
-              deleteAnnotation(a);
-              fillWhite(catalog[key]);
-            });
-            li.appendChild(text);
-            li.appendChild(dash);
+            if (mayEdit) {
+              text.setAttribute("aria-label", "Edit annotation");
+              text.addEventListener("click", function () { white.hidden = true; openBlueEdit(a); });
+              var dash = document.createElement("button");
+              dash.type = "button";
+              dash.className = "obj-white-list-dash";
+              dash.setAttribute("aria-label", "Delete annotation");
+              dash.textContent = "−";
+              dash.addEventListener("click", function (e) {
+                e.stopPropagation();
+                deleteAnnotation(a);
+                fillWhite(catalog[key]);
+              });
+              li.appendChild(text);
+              li.appendChild(dash);
+            } else {
+              // a visitor reads the story, never the edit form
+              text.setAttribute("aria-label", "Read annotation");
+              text.addEventListener("click", function () { white.hidden = true; openBlueView(a); });
+              li.appendChild(text);
+            }
             ul.appendChild(li);
           });
         } else {
@@ -1902,6 +2004,7 @@
             a.pos = spot.pos || null; a.normal = spot.normal || null;
             a.ppos = spot.ppos || null;
             persist(key);
+            syncAnnotationsEverywhere(key);
             renderAnnotations();
           }
           openBlueEdit(a);
@@ -2086,6 +2189,13 @@
           linksBackfilled[k] = 1;
           syncLinksEverywhere(k);
         }
+        // same for annotations: edits used to stop at this browser's overlay,
+        // so the shared record kept serving visitors the stale set
+        if (window.isOwnerDevice && window.isOwnerDevice()
+            && (catalog[k].annotations || []).length && !annotationsBackfilled[k]) {
+          annotationsBackfilled[k] = 1;
+          syncAnnotationsEverywhere(k);
+        }
         clearHotspots();
         document.getElementById("objTitle").textContent = catalog[k].title;
         // default to the point cloud when there is one — it's the crisp view.
@@ -2127,6 +2237,12 @@
         // (it never had a handler at all). Hidden until there's real history.
         var menuVisualMergeRow = document.getElementById("menuVisualMergeRow");
         if (menuVisualMergeRow) menuVisualMergeRow.hidden = mergeableVersions(k).length < 2;
+        // a space with anything attached (placed markers or plain
+        // connections) offers the connected-captures list in its menu
+        if (menuConnectedRow) {
+          clearConnectedMenuItems();
+          menuConnectedRow.hidden = !(catalog[k].kind === "space" && connectedCaptures(k).length);
+        }
         // a capture that carries BOTH a mesh (model) and a point cloud (points)
         // can switch between the two — shown as an external pill toggle, not a
         // menu item, so the menu row stays hidden.
@@ -2360,6 +2476,8 @@
         var viewText = document.getElementById("blueViewText");
         viewText.textContent = annotation.text || "no story written yet";
         viewText.classList.toggle("obj-blue-view-text--empty", !annotation.text);
+        // reading is for everyone; the Edit button is not
+        document.getElementById("blueEdit").hidden = !canEditCapture(key);
       }
 
       function openBlue(annotation, spot) {
@@ -3277,6 +3395,7 @@
         var i = list.indexOf(annotation);
         if (i >= 0) list.splice(i, 1);
         persist(key);
+        syncAnnotationsEverywhere(key);
         renderAnnotations();
       }
 
@@ -3321,6 +3440,7 @@
             });
           }
           persist(key);
+          syncAnnotationsEverywhere(key);
           renderAnnotations();
         }
         closeBlue();
