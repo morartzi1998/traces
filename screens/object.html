@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260724d">
-<link rel="stylesheet" href="../css/chrome.css?v=20260724d">
-<link rel="stylesheet" href="../css/object.css?v=20260724d">
-<script src="../js/cursor.js?v=20260724d" defer></script>
-<script src="../js/grain.js?v=20260724d" defer></script>
-<script src="../js/tilt3d.js?v=20260724d" defer></script>
-<script src="../js/owner.js?v=20260724d"></script>
-<script src="../js/config.js?v=20260724d"></script>
-<script src="../js/archive.js?v=20260724d"></script>
-<script src="../js/blobstore.js?v=20260724d"></script>
-<script src="../js/particle-loader.js?v=20260724d"></script>
-<script src="../js/remote-captures.js?v=20260724d"></script>
-<script src="../js/community-seed.js?v=20260724d"></script>
-<script src="../js/flow.js?v=20260724d" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724d"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260724e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260724e">
+<link rel="stylesheet" href="../css/object.css?v=20260724e">
+<script src="../js/cursor.js?v=20260724e" defer></script>
+<script src="../js/grain.js?v=20260724e" defer></script>
+<script src="../js/tilt3d.js?v=20260724e" defer></script>
+<script src="../js/owner.js?v=20260724e"></script>
+<script src="../js/config.js?v=20260724e"></script>
+<script src="../js/archive.js?v=20260724e"></script>
+<script src="../js/blobstore.js?v=20260724e"></script>
+<script src="../js/particle-loader.js?v=20260724e"></script>
+<script src="../js/remote-captures.js?v=20260724e"></script>
+<script src="../js/community-seed.js?v=20260724e"></script>
+<script src="../js/flow.js?v=20260724e" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260724e"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724e" } }
 </script>
 <script type="module">
   import * as THREE from "three";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724d";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724d";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260724e";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260724e";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -922,7 +922,28 @@
       function mergeRemoteCapturesIntoCatalog(list) {
         (list || []).forEach(function (d) {
           var k = d.id.replace(/-community$/, "");
-          if (catalog[k]) return;
+          if (catalog[k]) {
+            // the capture already exists LOCALLY (owner device) — the local
+            // copy wins for content, but the shared record may carry
+            // server-computed extras the local one predates: the derived
+            // point cloud, the fast-open preference, per-version clouds.
+            // Without lifting these, the OWNER never saw what visitors see.
+            var loc = catalog[k];
+            if (!loc.points && d.points) loc.points = d.points;
+            if (d.dual) loc.dual = true;
+            if (!loc.openOn && d.openOn) loc.openOn = d.openOn;
+            if (loc.pointSize == null && d.pointSize != null) loc.pointSize = d.pointSize;
+            if (Array.isArray(d.versions) && Array.isArray(loc.versions)) {
+              d.versions.forEach(function (sv) {
+                loc.versions.forEach(function (lv) {
+                  if (lv.created !== sv.created) return;
+                  if (!lv.points && sv.points) lv.points = sv.points;
+                  if (!lv.defaultView && sv.defaultView) lv.defaultView = sv.defaultView;
+                });
+              });
+            }
+            return;
+          }
           catalog[k] = {
             kind: d.kind || "object", title: d.title, img: d.img,
             model: d.model, points: d.points, dual: !!d.dual,
