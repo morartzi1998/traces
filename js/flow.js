@@ -51,7 +51,8 @@ function locationPrefix() {
   in-progress scan, which is the opposite of helpful.
 */
 (function idleReset() {
-  var IDLE_MS = 10 * 60 * 1000;
+  // 4 minutes for the exhibition — ten felt like the reset never happened
+  var IDLE_MS = 4 * 60 * 1000;
   var path = window.location.pathname;
   var skip = /\/(upload|processing|describe-capture|phone-capture)\.html$/.test(path);
   if (skip || window.__artifactGo) return; // single-file preview has no pages to reset to

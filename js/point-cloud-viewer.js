@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260725f";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725f";
+import * as THREE from "./vendor/three/three.module.js?v=20260725g";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725g";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -248,6 +248,11 @@ export function mountPointCloudViewer(container, geometry, opts) {
   controls.maxDistance = (sphere.radius || 1) * 15;
   controls.enableDamping = true;
   controls.dampingFactor = 0.12;
+  // TEMPORARY (exhibition, at Mor's request — remove when she says so):
+  // every cloud turns slowly on its own; touching it pauses the turn,
+  // OrbitControls resumes it when the hand leaves
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.55;
   controls.update();
 
   // hold Space + drag to pan — orbit alone only spins around one fixed
