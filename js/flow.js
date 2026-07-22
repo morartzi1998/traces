@@ -74,3 +74,41 @@ function locationPrefix() {
   });
   reset();
 })();
+
+// ----- stale-page detector ---------------------------------------------
+// GitHub Pages caches each HTML page for up to ~10 minutes, and a long-lived
+// owner tab can keep serving an even older copy — which shows up as "works
+// in a private window (always fresh) but not in my normal one". Compare the
+// version this page was built with against the tiny always-fresh
+// version.txt, and offer a one-tap refresh when they differ.
+(function staleCheck() {
+  if (window.__artifactGo) return;
+  var script = document.querySelector('script[src*="?v="]');
+  var m = script && script.src.match(/\?v=([0-9a-z]+)/);
+  if (!m) return;
+  var mine = m[1];
+  var base = window.location.pathname.indexOf("/screens/") !== -1 ? "../" : "";
+  function check() {
+    fetch(base + "version.txt?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (latest) {
+        if (!latest) return;
+        latest = latest.trim();
+        if (!latest || latest === mine) return;
+        if (document.getElementById("staleToast")) return;
+        var toast = document.createElement("button");
+        toast.id = "staleToast";
+        toast.type = "button";
+        toast.textContent = "a newer version of traces is ready — tap to refresh";
+        toast.style.cssText = "position:fixed;left:50%;bottom:5vh;transform:translateX(-50%);" +
+          "z-index:9999;background:#0a25b4;color:#fff;border:none;padding:10px 18px;" +
+          "font-family:inherit;font-size:0.85rem;letter-spacing:0.05em;cursor:pointer;" +
+          "box-shadow:0 4px 18px rgba(0,0,0,0.35)";
+        toast.addEventListener("click", function () { window.location.reload(); });
+        document.body.appendChild(toast);
+      }).catch(function () {});
+  }
+  // once shortly after load, then every few minutes for long-lived tabs
+  setTimeout(check, 4000);
+  setInterval(check, 4 * 60 * 1000);
+})();
