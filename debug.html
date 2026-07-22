@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — diagnostics</title>
+<script type="importmap">
+  { "imports": { "three": "./js/vendor/three/three.module.js?v=20260724q" } }
+</script>
+<style>
+  body { background: #14120f; color: #f0eadc; font-family: monospace; font-size: 15px;
+         padding: 24px; line-height: 1.7; }
+  .ok { color: #7fd48a; } .fail { color: #ff7d6b; } .warn { color: #ffcf6b; }
+  h1 { font-size: 18px; letter-spacing: 0.1em; }
+  #cloudBox { width: 320px; height: 240px; border: 1px solid #444; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>TRACES DIAGNOSTICS</h1>
+<div id="log">starting…</div>
+<div id="cloudBox"></div>
+<script>
+  var log = document.getElementById("log");
+  log.textContent = "";
+  function line(label, status, detail) {
+    var d = document.createElement("div");
+    d.innerHTML = label + ": <span class='" + status + "'>" + status.toUpperCase() + "</span>" +
+      (detail ? " — " + detail : "");
+    log.appendChild(d);
+  }
+  line("browser", "ok", navigator.userAgent.slice(0, 90));
+  line("memory/cores/dpr", "ok", (navigator.deviceMemory || "?") + "GB / " +
+    (navigator.hardwareConcurrency || "?") + " cores / dpr " + window.devicePixelRatio);
+
+  // raw WebGL: which GPU actually renders?
+  try {
+    var c = document.createElement("canvas");
+    var gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (!gl) { line("webgl", "fail", "no context at all"); }
+    else {
+      var info = gl.getExtension("WEBGL_debug_renderer_info");
+      var name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "(masked)";
+      var soft = /swiftshader|software|llvmpipe/i.test(name);
+      line("webgl renderer", soft ? "warn" : "ok", name + (soft ? "  <-- SOFTWARE rendering (hardware acceleration is OFF in Chrome settings!)" : ""));
+    }
+  } catch (e) { line("webgl", "fail", e.message); }
+
+  function timedFetch(label, url) {
+    var t0 = Date.now();
+    return fetch(url).then(function (r) {
+      if (!r.ok) { line(label, "fail", "HTTP " + r.status); return null; }
+      return r.arrayBuffer().then(function (buf) {
+        line(label, "ok", (buf.byteLength / 1e6).toFixed(1) + "MB in " + ((Date.now() - t0) / 1000).toFixed(1) + "s");
+        return buf;
+      });
+    }).catch(function (e) { line(label, "fail", String(e).slice(0, 90)); return null; });
+  }
+
+  timedFetch("site file (github)", "community/points/communityPatternedRug.bin?d=" + Date.now())
+  .then(function (localBuf) {
+    return timedFetch("worker list", "https://traces-tripo.traces-morartzi.workers.dev/captures")
+      .then(function () {
+        return timedFetch("worker cloud file", "https://traces-tripo.traces-morartzi.workers.dev/captures/file/afeb1f22-aad1-465a-bf6a-a4306d5a3326");
+      })
+      .then(function (workerBuf) { return workerBuf || localBuf; });
+  })
+  .then(function (buf) {
+    if (!buf) { line("cloud render", "fail", "no data to try rendering"); return; }
+    // mount through the site's own modules — the exact production path
+    import("./js/voxelize-shared.js?v=20260724q").then(function (vx) {
+      return import("./js/point-cloud-viewer.js?v=20260724q").then(function (pcv) {
+        var g = vx.deserializeGeometry(buf);
+        line("deserialize", "ok", g.getAttribute("position").count + " points");
+        var pv = pcv.mountPointCloudViewer(document.getElementById("cloudBox"), g, {});
+        var frames = 0, t0 = performance.now();
+        var u = pv.onFrame(function () { frames++; });
+        setTimeout(function () {
+          u();
+          var fps = frames / ((performance.now() - t0) / 1000);
+          line("cloud render", fps > 5 ? "ok" : "warn", fps.toFixed(0) + " fps" +
+            (fps <= 5 ? " — too slow to be usable" : ""));
+        }, 3000);
+      });
+    }).catch(function (e) { line("cloud render", "fail", String(e && e.message || e).slice(0, 120)); });
+  });
+</script>
+</body>
+</html>

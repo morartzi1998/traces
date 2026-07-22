@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724p";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724q";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -169,6 +169,28 @@ export function mountPointCloudViewer(container, geometry, opts) {
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,
   });
+  // a managed/locked-down PC often runs Chrome with hardware acceleration
+  // disabled by policy — WebGL then renders in SOFTWARE (SwiftShader), which
+  // manages ~3fps on a dense cloud: reads as frozen/never-loading. Detect it
+  // and start in a light mode that software rendering can actually push;
+  // the adaptive governor below fine-tunes from there.
+  var softwareGL = false;
+  try {
+    var glc = renderer.getContext();
+    var dbgInfo = glc.getExtension("WEBGL_debug_renderer_info");
+    var gpuName = dbgInfo ? String(glc.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL)) : "";
+    softwareGL = /swiftshader|software|llvmpipe/i.test(gpuName);
+  } catch (e) {}
+  if (softwareGL) {
+    renderer.setPixelRatio(1);
+    var totalPts = geometry.getAttribute("position").count;
+    if (totalPts > 90000) {
+      // the buffer's order spreads points across the whole object, so a
+      // prefix still covers it evenly — lighter, never a hole
+      geometry.setDrawRange(0, 90000);
+      material.size = material.size * 1.7;
+    }
+  }
   var points = new THREE.Points(geometry, material);
   // a raw phone scan's own coordinate frame can come in at any tilt - there's
   // no single rotation that fixes every scan (see the note above
