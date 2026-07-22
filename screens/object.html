@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725e">
-<link rel="stylesheet" href="../css/chrome.css?v=20260725e">
-<link rel="stylesheet" href="../css/object.css?v=20260725e">
-<script src="../js/cursor.js?v=20260725e" defer></script>
-<script src="../js/grain.js?v=20260725e" defer></script>
-<script src="../js/tilt3d.js?v=20260725e" defer></script>
-<script src="../js/owner.js?v=20260725e"></script>
-<script src="../js/config.js?v=20260725e"></script>
-<script src="../js/archive.js?v=20260725e"></script>
-<script src="../js/blobstore.js?v=20260725e"></script>
-<script src="../js/particle-loader.js?v=20260725e"></script>
-<script src="../js/remote-captures.js?v=20260725e"></script>
-<script src="../js/community-seed.js?v=20260725e"></script>
-<script src="../js/flow.js?v=20260725e" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725e"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725f">
+<link rel="stylesheet" href="../css/chrome.css?v=20260725f">
+<link rel="stylesheet" href="../css/object.css?v=20260725f">
+<script src="../js/cursor.js?v=20260725f" defer></script>
+<script src="../js/grain.js?v=20260725f" defer></script>
+<script src="../js/tilt3d.js?v=20260725f" defer></script>
+<script src="../js/owner.js?v=20260725f"></script>
+<script src="../js/config.js?v=20260725f"></script>
+<script src="../js/archive.js?v=20260725f"></script>
+<script src="../js/blobstore.js?v=20260725f"></script>
+<script src="../js/particle-loader.js?v=20260725f"></script>
+<script src="../js/remote-captures.js?v=20260725f"></script>
+<script src="../js/community-seed.js?v=20260725f"></script>
+<script src="../js/flow.js?v=20260725f" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725f"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725e" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725f" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260725e";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725e";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725e";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260725f";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725f";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725f";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -46,7 +46,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260725e";
+  import { glbToPoints } from "../js/glb-points.js?v=20260725f";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1023,9 +1023,16 @@
       // the anchor lands at the picture's centre dot
       var objLinkGhost = document.getElementById("objLinkGhost");
       var objLinkGhostImg = document.getElementById("objLinkGhostImg");
+      var ghostW = 160; // px — scroll while placing to match the room's proportions
       function moveLinkGhost(e) {
         objLinkGhost.style.left = e.clientX + "px";
         objLinkGhost.style.top = e.clientY + "px";
+      }
+      function resizeLinkGhost(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        ghostW = Math.max(48, Math.min(window.innerHeight * 0.85, ghostW * (e.deltaY < 0 ? 1.07 : 0.935)));
+        objLinkGhost.style.width = ghostW + "px";
       }
       function showLinkGhost(targetKey) {
         var item = targetKey && catalog[targetKey];
@@ -1041,12 +1048,16 @@
         // parked mid-screen until the pointer first moves
         objLinkGhost.style.left = "50%";
         objLinkGhost.style.top = "50%";
+        objLinkGhost.style.width = ghostW + "px";
         objLinkGhost.hidden = false;
         window.addEventListener("pointermove", moveLinkGhost);
+        // scroll resizes the picture (capture-phase so the cloud doesn't zoom)
+        window.addEventListener("wheel", resizeLinkGhost, { capture: true, passive: false });
       }
       function hideLinkGhost() {
         objLinkGhost.hidden = true;
         window.removeEventListener("pointermove", moveLinkGhost);
+        window.removeEventListener("wheel", resizeLinkGhost, { capture: true });
       }
 
       function enterLinkMode(targetKey) {
@@ -1055,7 +1066,7 @@
         linkEditingLink = null;
         stage.setAttribute("data-crosshair", "");
         objLinkHint.textContent = targetKey
-          ? 'drag "' + catalog[targetKey].title + '" to its exact spot, then click to pin it'
+          ? 'drag "' + catalog[targetKey].title + '" to its exact spot (scroll to size it), then click to pin'
           : "click where the object you want to connect is located";
         objLinkHint.hidden = false;
         showLinkGhost(targetKey);
@@ -1067,7 +1078,7 @@
         linkTarget = null;
         linkEditingLink = link;
         stage.setAttribute("data-crosshair", "");
-        objLinkHint.textContent = 'drag "' + link.title + '" to its new spot, then click to pin it';
+        objLinkHint.textContent = 'drag "' + link.title + '" to its new spot (scroll to size it), then click to pin';
         objLinkHint.hidden = false;
         showLinkGhost(link.target);
       }
@@ -1374,11 +1385,48 @@
             p.className = "obj-link-marker";
             p.type = "button";
             buildLinkMarker(p, l.title);
-            p.addEventListener("click", function (e) { e.stopPropagation(); openLinkCard(l); });
+            var dragJustEnded = false;
+            p.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (dragJustEnded) { dragJustEnded = false; return; }
+              openLinkCard(l);
+            });
+            // the curator drags the marker itself to correct its spot — no
+            // separate mode needed; a small movement still counts as a click
+            p.addEventListener("pointerdown", function (ev) {
+              if (!canEditCapture(key)) return;
+              ev.preventDefault();
+              var startX = ev.clientX, startY = ev.clientY, moved = false;
+              function mv(e2) {
+                if (!moved && Math.hypot(e2.clientX - startX, e2.clientY - startY) < 6) return;
+                moved = true;
+                l.__dragging = true;
+                var r = tags.getBoundingClientRect();
+                p.style.left = ((e2.clientX - r.left) / r.width) * 100 + "%";
+                p.style.top = ((e2.clientY - r.top) / r.height) * 100 + "%";
+              }
+              function up(e2) {
+                window.removeEventListener("pointermove", mv);
+                window.removeEventListener("pointerup", up);
+                if (!moved) return;
+                dragJustEnded = true;
+                l.__dragging = false;
+                var spot = pickSpotFromEvent(e2);
+                l.x = spot.x; l.y = spot.y;
+                if (spot.ppos) l.ppos = spot.ppos;
+                if (spot.pos) { l.pos = spot.pos; l.normal = spot.normal || null; }
+                persist(key);
+                syncLinksEverywhere(key);
+                renderLinks();
+              }
+              window.addEventListener("pointermove", mv);
+              window.addEventListener("pointerup", up);
+            });
             l.__btn = p;
             tags.appendChild(p);
             var worldPos = strToVec3(l.ppos);
             var updateProjection = function () {
+              if (l.__dragging) return;
               var proj = pcViewer.project(worldPos);
               p.style.display = proj.behind ? "none" : "";
               p.style.left = proj.x * 100 + "%";

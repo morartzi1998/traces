@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260725e";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725e";
+import * as THREE from "./vendor/three/three.module.js?v=20260725f";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725f";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -305,8 +305,24 @@ export function mountPointCloudViewer(container, geometry, opts) {
       -((clientY - rect.top) / rect.height) * 2 + 1
     );
     raycaster.setFromCamera(ndc, camera);
+    // default Points threshold is 1 WORLD UNIT — in a room-sized scan that
+    // grabs the first point anywhere near the ray (usually the floor in
+    // front), which is how a pin ended up in a "random" spot. Scale the
+    // threshold to the scene and take the point most exactly UNDER the
+    // cursor (smallest distance to the ray), not the first along it.
+    raycaster.params.Points = raycaster.params.Points || {};
+    raycaster.params.Points.threshold = Math.max(sphere.radius * 0.015, 1e-4);
     var hits = raycaster.intersectObject(points);
-    return hits.length ? hits[0].point.clone() : null;
+    if (!hits.length) return null;
+    var best = hits[0];
+    for (var hi = 1; hi < hits.length; hi++) {
+      var h = hits[hi];
+      if (h.distanceToRay < best.distanceToRay - 1e-9 ||
+          (Math.abs(h.distanceToRay - best.distanceToRay) <= 1e-9 && h.distance < best.distance)) {
+        best = h;
+      }
+    }
+    return best.point.clone();
   }
 
   // 3D point -> its current screen position (fractional, 0..1 within the

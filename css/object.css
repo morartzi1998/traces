@@ -1174,7 +1174,10 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   padding: 2px 7px;
-  pointer-events: none;
+  /* the name is part of the marker: clicking it opens the same preview
+     card as the dot (it used to fall through and open the scan's details) */
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* marks where the object you came from sits, while viewing its space */
