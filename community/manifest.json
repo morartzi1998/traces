@@ -19,7 +19,7 @@
         "text": "the carving on the doors took the restorer three weeks - said it was some of the finest joinery he'd seen from that era."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/305f91d5-f61e-4f2d-823a-c6fc4433cdda"
+    "points": "../community/points/communityAntiqueCabinet.bin"
   },
   {
     "key": "communityAntiqueSideTable",
@@ -41,7 +41,7 @@
         "text": "there's a faint water ring on the corner from a glass someone left there in the 80s. we never sanded it out on purpose."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/ff93be0a-6e14-4043-91c0-8a493f04ed32"
+    "points": "../community/points/communityAntiqueSideTable.bin"
   },
   {
     "key": "communityPatternedRug",
@@ -63,7 +63,7 @@
         "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/9698c1d8-1f60-4794-bb19-967b3e9a6e25"
+    "points": "../community/points/communityPatternedRug.bin"
   },
   {
     "key": "communityAntiqueBookcase",
@@ -85,7 +85,7 @@
         "text": "he kept the books he never actually read up there, just the ones with the nicest spines. i've kept the same rule."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/c07ecbf5-d4ae-493c-a203-03f5b91c19e3",
+    "points": "../community/points/communityAntiqueBookcase.bin",
     "openOn": "points"
   },
   {
@@ -108,7 +108,7 @@
         "text": "she's worked one of the wicker ears down to almost nothing over the years. we've stopped trying to stop her."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/c39a0e8e-eb2c-4ff9-b0d9-e0b611842f19",
+    "points": "../community/points/communityBearShapedWickerBed.bin",
     "openOn": "points"
   },
   {
@@ -131,7 +131,7 @@
         "text": "cut it a centimeter short and never fixed it - folded paper under it instead. the fold's still there, just thinner now."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/d72ed280-2670-493d-8778-dd4e1adccccc",
+    "points": "../community/points/communityComputerDesk.bin",
     "openOn": "points"
   },
   {
@@ -154,7 +154,7 @@
         "text": "the cushion's gone flat exactly where my head rests - i can find the right angle for reading without even looking."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/1d5fd481-4ff5-48a4-873a-198e752518f8",
+    "points": "../community/points/communityHangingPodChair.bin",
     "openOn": "points"
   },
   {
@@ -177,7 +177,7 @@
         "text": "three sets of tiny fork scratches on the tray, layered over each other. i can almost tell whose is whose by now."
       }
     ],
-    "points": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/1ee706ec-1a23-4c41-bdc2-e4c7f002bb0b",
+    "points": "../community/points/communityHighChair.bin",
     "openOn": "points"
   }
 ]

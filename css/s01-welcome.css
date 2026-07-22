@@ -362,7 +362,7 @@
   /* a narrower card broke captions onto two lines and stacked them into
      each other — smaller type keeps every caption to one quiet line */
   .polaroid-caption {
-    font-size: 0.88rem;
+    font-size: 0.98rem;
     letter-spacing: 0.02em;
   }
   .scan-meta {
