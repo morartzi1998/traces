@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724o";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724p";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -35,7 +35,14 @@ export function mountPointCloudViewer(container, geometry, opts) {
     renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true,
       powerPreference: "low-power" });
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // overdraw is the killer here, not point count alone: an "opaque" cloud
+  // means every screen pixel is written dozens of times, and at Retina 2x
+  // that's 4x again — enough to saturate even a strong GPU and stutter the
+  // whole machine. A dense cloud caps the backing resolution; the sprites
+  // are soft-edged anyway, so the difference is invisible.
+  var cloudCount0 = geometry.getAttribute("position") ? geometry.getAttribute("position").count : 0;
+  var maxDpr = cloudCount0 > 300000 ? 1.25 : cloudCount0 > 120000 ? 1.5 : 2;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
 
   // on a machine that reports little memory, thin an extra-dense cloud —
   // half the points still read as a full surface at these densities, and
@@ -146,7 +153,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var isDerived = !!(geometry.userData && geometry.userData.derived);
   // derived clouds render OPAQUE — big enough that neighbouring points
   // overlap into a continuous surface rather than a speckled see-through one
-  var autoSize = isDerived ? sphere.radius * 0.011 : 0.013;
+  var autoSize = isDerived ? sphere.radius * 0.008 : 0.013;
   var chosenSize = opts.pointSize || autoSize || 0.01;
   // a size saved against a DIFFERENT representation of this capture (the
   // old voxel cloud, a mesh at another coordinate scale) can be so far off
@@ -330,8 +337,8 @@ export function mountPointCloudViewer(container, geometry, opts) {
       checked++;
       var dt = t - lastT;
       // ~<15fps sustained means genuinely struggling, not a one-off hitch
-      if (dt > 66) { slowStreak++; } else if (slowStreak > 0) { slowStreak--; }
-      if (slowStreak >= 20) { slowStreak = 0; stepQualityDown(); }
+      if (dt > 40) { slowStreak++; } else if (slowStreak > 0) { slowStreak--; }
+      if (slowStreak >= 12) { slowStreak = 0; stepQualityDown(); }
     }
     lastT = t;
     controls.update();
