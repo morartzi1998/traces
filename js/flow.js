@@ -113,3 +113,25 @@ function locationPrefix() {
   setInterval(check, 4 * 60 * 1000);
 })();
 
+
+// ----- visible crash reporting ----------------------------------------
+// exhibition machines have no devtools open — an uncaught error that kills
+// a page's boot must be visible on the screen itself, or it reads as
+// "nothing loads" with no clue why
+(function visibleErrors() {
+  if (window.__artifactGo) return;
+  var shown = 0;
+  window.addEventListener("error", function (e) {
+    if (shown >= 2) return;
+    shown++;
+    try {
+      var d = document.createElement("div");
+      d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:99999;background:#8a1f14;" +
+        "color:#fff;font-family:monospace;font-size:12px;padding:6px 10px;opacity:0.95";
+      d.textContent = "error: " + (e.message || "unknown") +
+        (e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : "");
+      (document.body || document.documentElement).appendChild(d);
+      setTimeout(function () { d.remove(); }, 30000);
+    } catch (x) {}
+  });
+})();
