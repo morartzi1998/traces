@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724j";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724l";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -304,13 +304,41 @@ export function mountPointCloudViewer(container, geometry, opts) {
 
   var raf = null;
   var disposed = false;
-  (function frame() {
+  // ---- adaptive quality ----
+  // a weak GPU (or Chrome running without hardware acceleration) can render
+  // the MESH fine yet choke on half a million attenuated point sprites.
+  // Watch the real frame time and step the load down until it's smooth:
+  // first drop the pixel ratio (fill-rate is the usual bottleneck), then
+  // progressively draw fewer points. The buffer's order spreads points
+  // across the whole object, so drawing a prefix still covers it evenly —
+  // the cloud gets a little lighter, never a hole.
+  var qStep = 0, slowStreak = 0, lastT = 0, checked = 0;
+  function stepQualityDown() {
+    qStep++;
+    if (qStep === 1) {
+      renderer.setPixelRatio(1);
+    } else {
+      var total = geometry.getAttribute("position").count;
+      var target = Math.max(120000, Math.floor(total / Math.pow(2, qStep - 1)));
+      geometry.setDrawRange(0, target);
+      material.size = material.size * 1.25; // fewer, slightly bigger points
+    }
+  }
+  (function frame(t) {
     if (disposed) return;
+    if (lastT && checked < 240 && qStep < 4) {
+      checked++;
+      var dt = t - lastT;
+      // ~<15fps sustained means genuinely struggling, not a one-off hitch
+      if (dt > 66) { slowStreak++; } else if (slowStreak > 0) { slowStreak--; }
+      if (slowStreak >= 20) { slowStreak = 0; stepQualityDown(); }
+    }
+    lastT = t;
     controls.update();
     renderer.render(scene, camera);
     frameCallbacks.forEach(function (cb) { cb(); });
     raf = requestAnimationFrame(frame);
-  })();
+  })(0);
 
   return {
     setPointSize: function (size) { material.size = size; },

@@ -355,9 +355,15 @@
     padding: 11vh 0 1vh;
   }
   .polaroid-stack {
-    width: min(300px, 30vw);
-    height: min(360px, 50vh);
+    width: min(345px, 34vw);
+    height: min(410px, 56vh);
     transform: translateY(2.5vh);
+  }
+  /* a narrower card broke captions onto two lines and stacked them into
+     each other — smaller type keeps every caption to one quiet line */
+  .polaroid-caption {
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
   }
   .scan-meta {
     top: -2.4rem;
