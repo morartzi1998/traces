@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725k">
-<link rel="stylesheet" href="../css/chrome.css?v=20260725k">
-<link rel="stylesheet" href="../css/object.css?v=20260725k">
-<script src="../js/cursor.js?v=20260725k" defer></script>
-<script src="../js/grain.js?v=20260725k" defer></script>
-<script src="../js/tilt3d.js?v=20260725k" defer></script>
-<script src="../js/owner.js?v=20260725k"></script>
-<script src="../js/config.js?v=20260725k"></script>
-<script src="../js/archive.js?v=20260725k"></script>
-<script src="../js/blobstore.js?v=20260725k"></script>
-<script src="../js/particle-loader.js?v=20260725k"></script>
-<script src="../js/remote-captures.js?v=20260725k"></script>
-<script src="../js/community-seed.js?v=20260725k"></script>
-<script src="../js/flow.js?v=20260725k" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725k"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725l">
+<link rel="stylesheet" href="../css/chrome.css?v=20260725l">
+<link rel="stylesheet" href="../css/object.css?v=20260725l">
+<script src="../js/cursor.js?v=20260725l" defer></script>
+<script src="../js/grain.js?v=20260725l" defer></script>
+<script src="../js/tilt3d.js?v=20260725l" defer></script>
+<script src="../js/owner.js?v=20260725l"></script>
+<script src="../js/config.js?v=20260725l"></script>
+<script src="../js/archive.js?v=20260725l"></script>
+<script src="../js/blobstore.js?v=20260725l"></script>
+<script src="../js/particle-loader.js?v=20260725l"></script>
+<script src="../js/remote-captures.js?v=20260725l"></script>
+<script src="../js/community-seed.js?v=20260725l"></script>
+<script src="../js/flow.js?v=20260725l" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725l"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,14 +28,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725k" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725l" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260725k";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260725k";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260725l";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260725l";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725k";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725l";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -48,7 +48,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260725k";
+  import { glbToPoints } from "../js/glb-points.js?v=20260725l";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -445,11 +445,11 @@
         </div>
         <div class="obj-adjust-row">
           <label for="menuTiltXSlider">tilt (forward/back)</label>
-          <input type="range" id="menuTiltXSlider" min="-45" max="45" value="0" step="1">
+          <input type="range" id="menuTiltXSlider" min="-180" max="180" value="0" step="1">
         </div>
         <div class="obj-adjust-row">
           <label for="menuTiltZSlider">tilt (side to side)</label>
-          <input type="range" id="menuTiltZSlider" min="-45" max="45" value="0" step="1">
+          <input type="range" id="menuTiltZSlider" min="-180" max="180" value="0" step="1">
         </div>
         <div class="obj-adjust-actions">
           <button type="button" id="menuSaveTilt">Save as upright</button>
