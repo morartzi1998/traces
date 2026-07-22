@@ -18,7 +18,7 @@
     pv.dispose();
 */
 import * as THREE from "three";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724e";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260724f";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -111,9 +111,20 @@ export function mountPointCloudViewer(container, geometry, opts) {
   //    0.013 — exactly how their scans have always rendered. Do not touch.
   var hasColor = !!geometry.getAttribute("color");
   var isDerived = !!(geometry.userData && geometry.userData.derived);
-  var autoSize = isDerived ? sphere.radius * 0.007 : 0.013;
+  // derived clouds render OPAQUE — big enough that neighbouring points
+  // overlap into a continuous surface rather than a speckled see-through one
+  var autoSize = isDerived ? sphere.radius * 0.011 : 0.013;
+  var chosenSize = opts.pointSize || autoSize || 0.01;
+  // a size saved against a DIFFERENT representation of this capture (the
+  // old voxel cloud, a mesh at another coordinate scale) can be so far off
+  // this cloud's scale that every point lands sub-pixel — an "empty" stage.
+  // A person's deliberate choice is never 20x off; that's stale data.
+  if (isDerived && opts.pointSize &&
+      (opts.pointSize < autoSize * 0.05 || opts.pointSize > autoSize * 20)) {
+    chosenSize = autoSize;
+  }
   var material = new THREE.PointsMaterial({
-    size: opts.pointSize || autoSize || 0.01,
+    size: chosenSize,
     sizeAttenuation: true,
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,
@@ -147,7 +158,17 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // angle that reads sensibly across every scan. A saved view (the person's
   // own hand-picked "this is the right way up/around" orbit) overrides the
   // generic centered/backed-off guess once they've set one for this capture.
-  if (opts.initialView) {
+  // sanity-check a saved view against THIS cloud: a view saved against a
+  // different representation of the capture (an old voxel cloud, a mesh at
+  // another coordinate scale) can park the camera absurdly far away or
+  // inside the cloud — either reads as a blank stage, not a framing choice
+  var ivOk = false;
+  if (opts.initialView && opts.initialView.position) {
+    var ivp = opts.initialView.position;
+    var dist = Math.hypot(ivp.x - sphere.center.x, ivp.y - sphere.center.y, ivp.z - sphere.center.z);
+    ivOk = dist > sphere.radius * 0.05 && dist < sphere.radius * 14;
+  }
+  if (ivOk) {
     camera.position.set(opts.initialView.position.x, opts.initialView.position.y, opts.initialView.position.z);
   } else {
     camera.position.copy(sphere.center).add(new THREE.Vector3(0, 0, sphere.radius * 2.4 || 3));
