@@ -352,7 +352,7 @@
    the content real top clearance so the proportions hold. */
 @media (max-height: 760px) and (min-width: 721px) {
   .main {
-    padding: 7vh 0 2vh;
+    padding: 11vh 0 1vh;
   }
   .polaroid-stack {
     width: min(300px, 30vw);
