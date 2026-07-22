@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725d">
-<link rel="stylesheet" href="../css/chrome.css?v=20260725d">
-<link rel="stylesheet" href="../css/object.css?v=20260725d">
-<script src="../js/cursor.js?v=20260725d" defer></script>
-<script src="../js/grain.js?v=20260725d" defer></script>
-<script src="../js/tilt3d.js?v=20260725d" defer></script>
-<script src="../js/owner.js?v=20260725d"></script>
-<script src="../js/config.js?v=20260725d"></script>
-<script src="../js/archive.js?v=20260725d"></script>
-<script src="../js/blobstore.js?v=20260725d"></script>
-<script src="../js/particle-loader.js?v=20260725d"></script>
-<script src="../js/remote-captures.js?v=20260725d"></script>
-<script src="../js/community-seed.js?v=20260725d"></script>
-<script src="../js/flow.js?v=20260725d" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725d"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725e">
+<link rel="stylesheet" href="../css/chrome.css?v=20260725e">
+<link rel="stylesheet" href="../css/object.css?v=20260725e">
+<script src="../js/cursor.js?v=20260725e" defer></script>
+<script src="../js/grain.js?v=20260725e" defer></script>
+<script src="../js/tilt3d.js?v=20260725e" defer></script>
+<script src="../js/owner.js?v=20260725e"></script>
+<script src="../js/config.js?v=20260725e"></script>
+<script src="../js/archive.js?v=20260725e"></script>
+<script src="../js/blobstore.js?v=20260725e"></script>
+<script src="../js/particle-loader.js?v=20260725e"></script>
+<script src="../js/remote-captures.js?v=20260725e"></script>
+<script src="../js/community-seed.js?v=20260725e"></script>
+<script src="../js/flow.js?v=20260725e" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725e"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -28,12 +28,12 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725d" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260725e" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260725d";
-  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725d";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725d";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260725e";
+  import { deserializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260725e";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725e";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -46,7 +46,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260725d";
+  import { glbToPoints } from "../js/glb-points.js?v=20260725e";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -590,6 +590,14 @@
       click where "<span id="objLinkHintTitle"></span>" is located
     </div>
 
+    <!-- while placing a connection, a ghost of the object's own photo rides
+         the cursor — Mor drags the actual picture to the exact spot in the
+         space and clicks; the anchor lands at the picture's centre dot -->
+    <div class="obj-link-ghost" id="objLinkGhost" hidden>
+      <img id="objLinkGhostImg" alt="">
+      <span class="obj-link-ghost-dot"></span>
+    </div>
+
     <!-- white details panel: read the capture, or edit it in place (no page change) -->
     <aside class="obj-white" id="objWhite" data-editable="whitePanel" data-editable-group="cards" hidden>
       <header class="obj-white-head">
@@ -1010,15 +1018,47 @@
       // targetKey known: we came from that object, just place its point here.
       // targetKey null: we started from the space — place the point first,
       // then go choose which object it represents.
+      // the ghost picture that rides the cursor while placing a link — the
+      // object's own photo, so "put it exactly where it sits" is literal:
+      // the anchor lands at the picture's centre dot
+      var objLinkGhost = document.getElementById("objLinkGhost");
+      var objLinkGhostImg = document.getElementById("objLinkGhostImg");
+      function moveLinkGhost(e) {
+        objLinkGhost.style.left = e.clientX + "px";
+        objLinkGhost.style.top = e.clientY + "px";
+      }
+      function showLinkGhost(targetKey) {
+        var item = targetKey && catalog[targetKey];
+        if (!item || !item.img) return;
+        objLinkGhostImg.removeAttribute("src");
+        if (item.img.indexOf("idb:") === 0 && window.BlobStore) {
+          window.BlobStore.url(item.img).then(function (u) { if (u && linkMode) objLinkGhostImg.src = u; });
+        } else if (window.BlobStore) {
+          window.BlobStore.url(item.img).then(function (u) { if (linkMode) objLinkGhostImg.src = u || item.img; });
+        } else {
+          objLinkGhostImg.src = item.img;
+        }
+        // parked mid-screen until the pointer first moves
+        objLinkGhost.style.left = "50%";
+        objLinkGhost.style.top = "50%";
+        objLinkGhost.hidden = false;
+        window.addEventListener("pointermove", moveLinkGhost);
+      }
+      function hideLinkGhost() {
+        objLinkGhost.hidden = true;
+        window.removeEventListener("pointermove", moveLinkGhost);
+      }
+
       function enterLinkMode(targetKey) {
         linkMode = true;
         linkTarget = targetKey;
         linkEditingLink = null;
         stage.setAttribute("data-crosshair", "");
         objLinkHint.textContent = targetKey
-          ? 'click where "' + catalog[targetKey].title + '" is located'
+          ? 'drag "' + catalog[targetKey].title + '" to its exact spot, then click to pin it'
           : "click where the object you want to connect is located";
         objLinkHint.hidden = false;
+        showLinkGhost(targetKey);
       }
 
       // reposition an existing link marker: the next click moves it in place
@@ -1027,8 +1067,9 @@
         linkTarget = null;
         linkEditingLink = link;
         stage.setAttribute("data-crosshair", "");
-        objLinkHint.textContent = 'click the new spot for "' + link.title + '"';
+        objLinkHint.textContent = 'drag "' + link.title + '" to its new spot, then click to pin it';
         objLinkHint.hidden = false;
+        showLinkGhost(link.target);
       }
 
       function exitLinkMode() {
@@ -1037,6 +1078,7 @@
         linkEditingLink = null;
         stage.removeAttribute("data-crosshair");
         objLinkHint.hidden = true;
+        hideLinkGhost();
       }
 
       // after connect.html hands off here, drop straight into link-mode once
