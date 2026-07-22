@@ -343,11 +343,20 @@
   // done=true reports whether it actually made it (success) or not.
   function syncMissing(localList, remoteList, scope, onItem) {
     if (!api()) return;
+    // a record can EXIST on the server yet be an empty shell — an early
+    // publish that got its thumbnail up but lost the scan itself (the old
+    // failing-upload era did exactly this). Existence alone showed "synced"
+    // forever while visitors saw a flat photo instead of the actual scan;
+    // a shell whose local copy has a real scan is treated as not-synced.
     var remoteIds = {};
     (remoteList || []).forEach(function (c) {
-      remoteIds[(c.id || "").replace(/-community$/, "")] = true;
+      var id = (c.id || "").replace(/-community$/, "");
+      remoteIds[id] = !!(c.model || c.points);
     });
-    var pending = (localList || []).filter(function (cap) { return !remoteIds[cap.id]; });
+    var pending = (localList || []).filter(function (cap) {
+      if (!(cap.id in remoteIds)) return true;
+      return !remoteIds[cap.id] && !!(cap.model || cap.points);
+    });
     pending.forEach(function (cap) {
       publish(cap, scope, onItem ? function (p) { onItem(cap.id, p, false); } : null)
         .then(function (result) {
