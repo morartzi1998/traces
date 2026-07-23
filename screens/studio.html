@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traces — Studio</title>
+<link rel="icon" type="image/png" href="../assets/images/favicon.png">
+<link rel="stylesheet" href="../css/base.css?v=20260725t">
+<script src="../js/config.js?v=20260725t"></script>
+<script type="importmap">
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
+</script>
+<script src="../js/grain.js?v=20260725t" defer></script>
+<style>
+  /* TEMPORARY page (video mode, at Mor's request — remove when she says):
+     a chrome-free stage for screen-recording beautiful moments: captures
+     building side by side, slow turns, polaroid rain. Reached only by URL. */
+  html, body { height: 100%; margin: 0; background: var(--color-bg, #1c1a17); overflow: hidden; }
+  .studio-stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: stretch; justify-content: center;
+  }
+  .studio-slot { position: relative; flex: 1 1 0; min-width: 0; }
+  .studio-bar {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 40; display: flex; gap: 10px; align-items: center;
+    background: rgba(20, 18, 16, 0.85); padding: 10px 14px;
+    border: 1px solid rgba(240, 238, 234, 0.25);
+    font-family: var(--font-caption, sans-serif); font-size: 13px;
+    color: #f0eeea;
+    transition: opacity 0.25s ease;
+  }
+  .studio-bar.faded { opacity: 0; pointer-events: none; }
+  .studio-bar select, .studio-bar button {
+    font: inherit; color: #f0eeea; background: transparent;
+    border: 1px solid rgba(240, 238, 234, 0.4); padding: 6px 10px; cursor: pointer;
+  }
+  .studio-bar select { max-width: 220px; }
+  .studio-bar select option { color: #111; }
+  .studio-bar button:hover { border-color: #f0eeea; }
+  .studio-hint { opacity: 0.55; }
+  /* polaroid rain overlay */
+  .studio-rain { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+  .studio-card {
+    position: absolute; top: -30%;
+    width: min(200px, 16vw); padding: 8px 8px 30px;
+    background: #f0eeea url("../assets/images/polaroid-paper-1.png") center / cover;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+    animation: studio-fall var(--dur, 5s) linear var(--delay, 0s) 1 forwards;
+  }
+  .studio-card img { display: block; width: 100%; aspect-ratio: 1 / 1.06; object-fit: cover; background: #3a3a44; }
+  @keyframes studio-fall {
+    0%   { transform: translateY(0) rotate(var(--tilt, 0deg)); }
+    100% { transform: translateY(165vh) rotate(calc(var(--tilt, 0deg) * -1.4)); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="studio-stage" id="stage"></div>
+  <div class="studio-rain" id="rain"></div>
+
+  <div class="studio-bar" id="bar">
+    <select id="pick"></select>
+    <button type="button" id="addBtn">add</button>
+    <button type="button" id="clearBtn">clear</button>
+    <button type="button" id="rebuildBtn">rebuild all</button>
+    <button type="button" id="rainBtn">polaroid rain</button>
+    <span class="studio-hint">H hides this bar · items build &amp; slowly turn</span>
+  </div>
+
+  <script type="module">
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725t";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725t";
+
+    var api = (window.TRACES_API || "").replace(/\/$/, "");
+    var stage = document.getElementById("stage");
+    var bar = document.getElementById("bar");
+    var pick = document.getElementById("pick");
+    var rain = document.getElementById("rain");
+    var captures = [];
+    var mounted = []; // { slot, viewer, geometry }
+    var bufCache = {};
+
+    fetch(api + "/captures").then(function (r) { return r.json(); }).then(function (d) {
+      captures = (d.captures || []).filter(function (c) { return c.scope === "archive" && c.points; });
+      captures.forEach(function (c, i) {
+        var o = document.createElement("option");
+        o.value = i; o.textContent = c.title;
+        pick.appendChild(o);
+      });
+    });
+
+    function loadGeometry(c) {
+      if (bufCache[c.points]) return Promise.resolve(bufCache[c.points]);
+      return fetch(c.points).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+        var g = deserializeGeometry(buf);
+        bufCache[c.points] = g;
+        return g;
+      });
+    }
+
+    function mountInto(slot, geometry) {
+      var viewer = mountPointCloudViewer(slot, geometry, {});
+      return viewer;
+    }
+
+    document.getElementById("addBtn").addEventListener("click", function () {
+      var c = captures[pick.value];
+      if (!c || mounted.length >= 4) return;
+      var slot = document.createElement("div");
+      slot.className = "studio-slot";
+      stage.appendChild(slot);
+      loadGeometry(c).then(function (g) {
+        var viewer = mountInto(slot, g);
+        mounted.push({ slot: slot, viewer: viewer, geometry: g });
+      });
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", function () {
+      mounted.forEach(function (m) { try { m.viewer.dispose(); } catch (e) {} m.slot.remove(); });
+      mounted = [];
+    });
+
+    // replay the blur-to-precision build on everything currently on stage
+    document.getElementById("rebuildBtn").addEventListener("click", function () {
+      mounted.forEach(function (m) {
+        try { m.viewer.dispose(); } catch (e) {}
+        m.slot.innerHTML = "";
+        m.viewer = mountInto(m.slot, m.geometry);
+      });
+    });
+
+    document.getElementById("rainBtn").addEventListener("click", function () {
+      rain.innerHTML = "";
+      var imgs = captures.map(function (c) { return c.img; }).filter(Boolean).slice(0, 14);
+      imgs.forEach(function (src, i) {
+        var card = document.createElement("figure");
+        card.className = "studio-card";
+        card.style.left = (4 + Math.random() * 88) + "%";
+        card.style.setProperty("--tilt", (Math.random() * 14 - 7).toFixed(1) + "deg");
+        card.style.setProperty("--dur", (4.5 + Math.random() * 3).toFixed(2) + "s");
+        card.style.setProperty("--delay", (i * 0.45 + Math.random() * 0.3).toFixed(2) + "s");
+        card.style.margin = "0";
+        var img = document.createElement("img");
+        img.src = src;
+        card.appendChild(img);
+        rain.appendChild(card);
+      });
+    });
+
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "h" || e.key === "H" || e.key === "י") bar.classList.toggle("faded");
+    });
+  </script>
+
+</body>
+</html>
