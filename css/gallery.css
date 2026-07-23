@@ -48,8 +48,6 @@
   text-align: left;
   line-height: 1.2;
   white-space: nowrap;
-  /* a soft halo keeps the ink-blue readable on the black between cards */
-  text-shadow: 0 0 18px rgba(240, 238, 234, 0.28);
 }
 
 /* archive heading — mirrors the object screen's title: a small meta label above
