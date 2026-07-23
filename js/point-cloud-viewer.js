@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260725n";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725n";
+import * as THREE from "./vendor/three/three.module.js?v=20260725o";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260725o";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -250,7 +250,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   controls.dampingFactor = 0.12;
   // TEMPORARY (exhibition, at Mor's request — remove when she says so):
   // every cloud turns slowly on its own. Touching it stops the turn, and it
-  // only resumes after 15 quiet seconds — resuming right on release made it
+  // only resumes after 6 quiet seconds — resuming right on release made it
   // impossible to actually SET an angle (it drifted away mid-thought).
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.55;
@@ -264,7 +264,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
     if (autoRotateResume) clearTimeout(autoRotateResume);
     autoRotateResume = setTimeout(function () {
       if (autoRotateWanted) controls.autoRotate = true;
-    }, 15000);
+    }, 6000);
   });
   function setAutoRotate(on) {
     autoRotateWanted = !!on;

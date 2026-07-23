@@ -11,8 +11,8 @@
 // look that reads as artificial; a rounder shape breaks that up. (2) each
 // particle gets randomized position jitter and size, so the underlying
 // uniform grid doesn't show through as a repeating pattern.
-import * as THREE from "./vendor/three/three.module.js?v=20260725n";
-import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260725n";
+import * as THREE from "./vendor/three/three.module.js?v=20260725o";
+import { GLTFExporter } from "./vendor/three/GLTFExporter.js?v=20260725o";
 
 // particle radius = (cell edge * PARTICLE_SCALE) / 2 — at 0.6 that's smaller
 // than the ~1-edge spacing between neighbouring cells, so most particles
