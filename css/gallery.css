@@ -26,14 +26,11 @@
 /* Add-new-capture is a blue text layer fixed to the viewport, sitting over the
    upper-right capture (the teddy) and spilling onto the black beside it. Being
    fixed, it stays locked in place while the polaroids scroll beneath it. */
+/* Add-new-capture rides IN the flow of polaroids, right after the last one
+   (as the layout mocks show) — it can never collide with the Archive link or
+   sit lost on empty black, and it centres along with its row */
 .gal-add {
-  position: fixed;
-  top: 20vh;
-  /* anchored to the right edge (like the nav-corner links above it)
-     instead of a content-relative left:85vw - that worked out fine on a
-     genuinely wide screen, but at in-between viewport widths (not quite
-     mobile, not quite ultra-wide) it ran right into the "Archive" link */
-  right: 2.8vw;
+  align-self: center;
   z-index: 25;
   font-family: var(--font-display);
   /* Same display scale as the archive title; the navigation label above is
@@ -48,6 +45,8 @@
   text-align: left;
   line-height: 1.2;
   white-space: nowrap;
+  /* a soft halo keeps the ink-blue readable on the black between cards */
+  text-shadow: 0 0 18px rgba(240, 238, 234, 0.28);
 }
 
 /* archive heading — mirrors the object screen's title: a small meta label above
@@ -158,11 +157,14 @@
 /* A centred grid of fixed columns: a full row of four reads centred, and a
    single capture sits in column one of that same centred block — so it lines up
    exactly where the first of four would be, instead of jumping to the middle. */
+/* versatile rows: cards flow and every row centres itself by how many it
+   holds — 7 captures read as a full row of four over a centred row of three,
+   the way the layout mocks show, instead of a rigid grid with holes */
 .gal-grid {
-  display: grid;
-  grid-template-columns: repeat(4, clamp(200px, 17vw, 372px));
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  align-content: flex-start;
+  align-items: flex-start;
   column-gap: clamp(28px, 3vw, 80px);
   row-gap: clamp(26px, 3.2vh, 52px);
   max-width: min(1850px, 96vw);
@@ -171,12 +173,12 @@
 }
 
 .gal-item {
-  width: auto;
+  width: clamp(200px, 17vw, 372px);
   position: relative;
 }
 
 @media (max-width: 1120px) {
-  .gal-grid { grid-template-columns: repeat(3, clamp(180px, 27vw, 320px)); }
+  .gal-item { width: clamp(180px, 27vw, 320px); }
 }
 @media (max-width: 720px) {
   /* a cramped 2-up grid clipped captions and left no room to breathe -
@@ -310,8 +312,8 @@
   top: 10px;
   bottom: 42px;
   background: radial-gradient(ellipse at center,
-    rgba(0, 0, 0, 0.11) 0%,
-    rgba(0, 0, 0, 0.045) 45%,
+    rgba(0, 0, 0, 0.16) 0%,
+    rgba(0, 0, 0, 0.07) 45%,
     rgba(0, 0, 0, 0) 72%);
   pointer-events: none;
 }
