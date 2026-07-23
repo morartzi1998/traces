@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726n">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726n">
-<link rel="stylesheet" href="../css/object.css?v=20260726n">
-<script src="../js/cursor.js?v=20260726n" defer></script>
-<script src="../js/grain.js?v=20260726n" defer></script>
-<script src="../js/tilt3d.js?v=20260726n" defer></script>
-<script src="../js/owner.js?v=20260726n"></script>
-<script src="../js/config.js?v=20260726n"></script>
-<script src="../js/archive.js?v=20260726n"></script>
-<script src="../js/blobstore.js?v=20260726n"></script>
-<script src="../js/particle-loader.js?v=20260726n"></script>
-<script src="../js/remote-captures.js?v=20260726n"></script>
-<script src="../js/community-seed.js?v=20260726n"></script>
-<script src="../js/flow.js?v=20260726n" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726n"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726o">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726o">
+<link rel="stylesheet" href="../css/object.css?v=20260726o">
+<script src="../js/cursor.js?v=20260726o" defer></script>
+<script src="../js/grain.js?v=20260726o" defer></script>
+<script src="../js/tilt3d.js?v=20260726o" defer></script>
+<script src="../js/owner.js?v=20260726o"></script>
+<script src="../js/config.js?v=20260726o"></script>
+<script src="../js/archive.js?v=20260726o"></script>
+<script src="../js/blobstore.js?v=20260726o"></script>
+<script src="../js/particle-loader.js?v=20260726o"></script>
+<script src="../js/remote-captures.js?v=20260726o"></script>
+<script src="../js/community-seed.js?v=20260726o"></script>
+<script src="../js/flow.js?v=20260726o" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726o"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726n" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726o" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726n";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726n";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726o";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726o";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726n";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726o";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726n";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726o";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2785,6 +2785,111 @@
           });
           yearsWrap.appendChild(btn);
         });
+        // owner-only: rewrite the years and rearrange the order. Mor keeps
+        // scanning OLD belongings into an existing capture's history, and a
+        // scan uploaded later must be able to sit EARLIER on the line — the
+        // last slot is what the capture opens on, so order is meaning, not
+        // just decoration.
+        objTimeline.querySelectorAll(".obj-year-editbtn, .obj-year-actions").forEach(function (el) { el.remove(); });
+        if (window.isOwnerDevice && window.isOwnerDevice()) {
+          var editBtn = document.createElement("button");
+          editBtn.className = "obj-year-editbtn";
+          editBtn.type = "button";
+          editBtn.textContent = "edit years";
+          editBtn.addEventListener("click", function () { renderTimelineEditor(k); });
+          objTimeline.appendChild(editBtn);
+        }
+      }
+
+      // the timeline's edit face: every year becomes a small input and each
+      // version gets up/down movers. Nothing is touched until "save" — cancel
+      // (or scrubbing away) just redraws the normal timeline.
+      function renderTimelineEditor(k) {
+        var versions = catalog[k].versions || [];
+        var yearsWrap = objTimeline.querySelector(".obj-years");
+        clearPendingDelete();
+        objTimeline.querySelectorAll(".obj-year-editbtn, .obj-year-actions").forEach(function (el) { el.remove(); });
+        var work = versions.map(function (v) { return { v: v, year: String(v.year == null ? "" : v.year) }; });
+        function draw() {
+          yearsWrap.innerHTML = "";
+          work.forEach(function (w, i) {
+            var row = document.createElement("div");
+            row.className = "obj-year obj-year--editing";
+            var movers = document.createElement("span");
+            movers.className = "obj-year-movers";
+            var up = document.createElement("button");
+            up.type = "button"; up.className = "obj-year-move"; up.textContent = "▲";
+            up.disabled = i === 0;
+            up.addEventListener("click", function () {
+              var t = work[i - 1]; work[i - 1] = work[i]; work[i] = t; draw();
+            });
+            var down = document.createElement("button");
+            down.type = "button"; down.className = "obj-year-move"; down.textContent = "▼";
+            down.disabled = i === work.length - 1;
+            down.addEventListener("click", function () {
+              var t = work[i + 1]; work[i + 1] = work[i]; work[i] = t; draw();
+            });
+            movers.appendChild(up);
+            movers.appendChild(down);
+            var input = document.createElement("input");
+            input.className = "obj-year-input";
+            input.type = "text";
+            input.inputMode = "numeric";
+            input.value = w.year;
+            input.addEventListener("input", function () { w.year = input.value; });
+            row.appendChild(movers);
+            row.appendChild(input);
+            var dot = document.createElement("i");
+            dot.className = "obj-dot";
+            row.appendChild(dot);
+            yearsWrap.appendChild(row);
+          });
+        }
+        draw();
+        var actions = document.createElement("div");
+        actions.className = "obj-year-actions";
+        var save = document.createElement("button");
+        save.type = "button"; save.className = "obj-year-action"; save.textContent = "save";
+        save.addEventListener("click", function () {
+          var newVersions = work.map(function (w) {
+            var yr = String(w.year).trim();
+            var num = parseInt(yr, 10);
+            // years stay numbers whenever they can — the annotation scrub
+            // ("notes from this year back") compares them numerically
+            return Object.assign({}, w.v, { year: isNaN(num) ? (yr || w.v.year) : num });
+          });
+          catalog[k].versions = newVersions;
+          var fields = { versions: newVersions };
+          // the record's own top-level fields are what a fresh page load (and
+          // the gallery polaroid) actually show — keep them in lockstep with
+          // whatever is now LAST on the line, exactly like deleteVersion does
+          var last = newVersions[newVersions.length - 1];
+          if (last && (last.model || last.img || last.points)) {
+            fields.model = last.model; fields.img = last.img; fields.points = last.points;
+            catalog[k].model = last.model; catalog[k].img = last.img; catalog[k].points = last.points;
+          }
+          if (last && last.title) {
+            fields.title = last.title;
+            catalog[k].title = last.title;
+            document.getElementById("objTitle").textContent = last.title;
+          }
+          if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+          if (window.Community && Community.get(k)) Community.update(k, fields);
+          if (window.isOwnerDevice && window.isOwnerDevice()) {
+            var inArchive = window.Archive && Archive.get(k);
+            var inCommunity = window.Community && Community.get(k);
+            if (inArchive || !inCommunity) patchServerRecord(k, fields);
+            if (inCommunity) patchServerRecord(k + "-community", fields);
+          }
+          renderTimeline(k);
+          selectVersion(k, newVersions.length - 1);
+        });
+        var cancel = document.createElement("button");
+        cancel.type = "button"; cancel.className = "obj-year-action"; cancel.textContent = "cancel";
+        cancel.addEventListener("click", function () { renderTimeline(k); });
+        actions.appendChild(save);
+        actions.appendChild(cancel);
+        objTimeline.appendChild(actions);
       }
       // which dated version is on stage right now (-1 = the capture's own
       // latest view) — "Set this angle as default view" saves onto THIS

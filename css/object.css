@@ -470,6 +470,85 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   outline: 1px solid var(--color-cream);
 }
 
+/* owner-only timeline editing: the years become small inputs and every
+   version gets up/down movers, so a scan of an OLDER belonging uploaded
+   later can still be placed earlier on the line (the last slot is what
+   the capture opens on) */
+.obj-year--editing {
+  cursor: default;
+  gap: 10px;
+}
+
+.obj-year-movers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.obj-year-move {
+  background: none;
+  border: 1px solid rgba(240, 238, 234, 0.35);
+  color: var(--color-cream);
+  width: 18px;
+  height: 15px;
+  line-height: 1;
+  font-size: 0.55rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.obj-year-move:hover:enabled {
+  border-color: var(--color-cream);
+}
+
+.obj-year-move:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.obj-year-input {
+  width: 3.4rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(240, 238, 234, 0.55);
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-align: right;
+  padding: 2px 0;
+}
+
+.obj-year-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-cream);
+}
+
+.obj-year-editbtn,
+.obj-year-action {
+  background: none;
+  border: none;
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 14px;
+}
+
+.obj-year-editbtn:hover,
+.obj-year-action:hover {
+  opacity: 1;
+}
+
+.obj-year-actions {
+  display: flex;
+  gap: 14px;
+}
+
 /* long-press marks a version pending deletion - a blue line through the
    cube itself reads as "struck out"; tapping anywhere else cancels it
    back to normal without deleting anything */
