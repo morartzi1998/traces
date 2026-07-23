@@ -5,19 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725x">
-<script src="../js/owner.js?v=20260725x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725y">
+<script src="../js/owner.js?v=20260725y"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260725x"></script>
+<script src="../js/config.js?v=20260725y"></script>
 <script type="importmap">
   { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
-<script src="../js/grain.js?v=20260725x" defer></script>
+<script src="../js/grain.js?v=20260725y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260725y"></script>
+<script type="module">
+  customElements.whenDefined("model-viewer").then(function () {
+    customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
+  });
+</script>
 <style>
   /* TEMPORARY page (video mode, at Mor's request — remove when she says):
      a chrome-free stage for screen-recording beautiful moments: captures
@@ -104,14 +110,15 @@
     <button type="button" id="clearBtn">clear</button>
     <button type="button" id="rebuildBtn">rebuild all</button>
     <button type="button" id="rainBtn">polaroid rain</button>
+    <button type="button" id="repBtn">show as mesh</button>
     <button type="button" id="frameBtn">frames</button>
     <button type="button" id="bgBtn">background</button>
     <span class="studio-hint">H hides this bar · items build &amp; slowly turn</span>
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725x";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725x";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725y";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725y";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -160,7 +167,7 @@
       stage.appendChild(slot);
       loadGeometry(c).then(function (g) {
         var viewer = mountInto(win, g);
-        mounted.push({ slot: slot, win: win, viewer: viewer, geometry: g });
+        mounted.push({ slot: slot, win: win, viewer: viewer, geometry: g, capture: c });
       });
     });
 
@@ -172,6 +179,7 @@
     // replay the blur-to-precision build on everything currently on stage
     function rebuildAll() {
       mounted.forEach(function (m, i) {
+        if (!m.viewer) return; // on the mesh side there's no build to replay
         // keep the exact framing Mor arranged by hand — the build replays
         // AT that angle and zoom instead of resetting to the default fit
         try { m.view = m.viewer.getView() || m.view; } catch (e) {}
@@ -182,6 +190,39 @@
       });
     }
     document.getElementById("rebuildBtn").addEventListener("click", rebuildAll);
+
+    // the same particles/mesh switch the object view has — flips EVERYTHING
+    // on stage at once. Mesh side auto-rotates too; the build animation
+    // belongs to the particle side only.
+    var showMesh = false;
+    var repBtn = document.getElementById("repBtn");
+    repBtn.addEventListener("click", function () {
+      showMesh = !showMesh;
+      repBtn.textContent = showMesh ? "show as particles" : "show as mesh";
+      mounted.forEach(function (m) {
+        if (m.viewer) { try { m.view = m.viewer.getView() || m.view; } catch (e) {} }
+        try { m.viewer && m.viewer.dispose(); } catch (e) {}
+        m.viewer = null;
+        m.win.innerHTML = "";
+        if (showMesh && m.capture.model) {
+          var mv = document.createElement("model-viewer");
+          mv.setAttribute("camera-controls", "");
+          mv.setAttribute("disable-pan", "");
+          mv.setAttribute("bounds", "tight");
+          mv.setAttribute("interaction-prompt", "none");
+          mv.setAttribute("shadow-intensity", "0");
+          mv.setAttribute("exposure", "1");
+          mv.setAttribute("auto-rotate", "");
+          mv.setAttribute("rotation-per-second", "10deg");
+          mv.setAttribute("auto-rotate-delay", "0");
+          mv.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
+          mv.src = m.capture.model;
+          m.win.appendChild(mv);
+        } else {
+          m.viewer = mountInto(m.win, m.geometry, m.view);
+        }
+      });
+    });
 
     // frames: the objects sit INSIDE polaroid cards, captions included —
     // remounting on toggle both fits the new size and replays the build
