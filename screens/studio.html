@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725w">
-<script src="../js/owner.js?v=20260725w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725x">
+<script src="../js/owner.js?v=20260725x"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260725w"></script>
+<script src="../js/config.js?v=20260725x"></script>
 <script type="importmap">
   { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
-<script src="../js/grain.js?v=20260725w" defer></script>
+<script src="../js/grain.js?v=20260725x" defer></script>
 <style>
   /* TEMPORARY page (video mode, at Mor's request — remove when she says):
      a chrome-free stage for screen-recording beautiful moments: captures
@@ -55,7 +55,14 @@
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
     animation: studio-fall var(--dur, 5s) linear var(--delay, 0s) 1 forwards;
   }
-  .studio-card img { display: block; width: 100%; aspect-ratio: 1 / 1.06; object-fit: cover; background: #3a3a44; }
+  .studio-card img {
+    display: block; width: 100%; aspect-ratio: 1 / 1.06;
+    object-fit: cover;
+    /* auto-saved thumbnails carry a wide empty backdrop below the object —
+       bias the square crop toward the top, where the object actually sits */
+    object-position: 50% 22%;
+    background: #3a3a44;
+  }
   @keyframes studio-fall {
     0%   { transform: translateY(0) rotate(var(--tilt, 0deg)); }
     100% { transform: translateY(165vh) rotate(calc(var(--tilt, 0deg) * -1.4)); }
@@ -103,8 +110,8 @@
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725w";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725w";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725x";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725x";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
