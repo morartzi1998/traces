@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725v">
-<script src="../js/owner.js?v=20260725v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725w">
+<script src="../js/owner.js?v=20260725w"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260725v"></script>
+<script src="../js/config.js?v=20260725w"></script>
 <script type="importmap">
   { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
-<script src="../js/grain.js?v=20260725v" defer></script>
+<script src="../js/grain.js?v=20260725w" defer></script>
 <style>
   /* TEMPORARY page (video mode, at Mor's request — remove when she says):
      a chrome-free stage for screen-recording beautiful moments: captures
@@ -103,8 +103,8 @@
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725v";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725v";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725w";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725w";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -192,11 +192,24 @@
     });
 
     // looping rain: a new card drops every beat until toggled off; each
-    // card removes itself when it lands so the overlay never piles up
+    // card removes itself when it lands so the overlay never piles up.
+    // Cards only ever use photos that have finished loading — a heavy image
+    // used to fall as an empty frame before its pixels arrived
     var rainTimer = null;
     var rainBtn = document.getElementById("rainBtn");
+    var rainPool = [];
+    var rainWarmed = false;
+    function warmRainPool() {
+      if (rainWarmed) return;
+      rainWarmed = true;
+      captures.map(function (c) { return c.img; }).filter(Boolean).forEach(function (src) {
+        var im = new Image();
+        im.onload = function () { rainPool.push(src); };
+        im.src = src;
+      });
+    }
     function dropCard() {
-      var imgs = captures.map(function (c) { return c.img; }).filter(Boolean);
+      var imgs = rainPool;
       if (!imgs.length) return;
       var card = document.createElement("figure");
       card.className = "studio-card";
@@ -218,6 +231,7 @@
         rainBtn.textContent = "polaroid rain";
         return;
       }
+      warmRainPool();
       dropCard();
       rainTimer = setInterval(dropCard, 650);
       rainBtn.textContent = "stop rain";
