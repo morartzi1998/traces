@@ -98,8 +98,8 @@
     linear-gradient(180deg, rgba(29, 29, 61, 0.41), rgba(0, 0, 0, 0.41)),
     #8a8a8f;
   --color-ink-blue: #0a25b4;
-  --font-display: "Vito Extended", "Helvetica Neue", Arial, sans-serif;
-  --font-wide: "Vito Wide", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "narkiss-hadash-extended", "Vito Extended", "Helvetica Neue", Arial, sans-serif;
+  --font-wide: "narkiss-hadash-extended", "Vito Wide", "Helvetica Neue", Arial, sans-serif;
   /* Lumend is the real design face; until its files are added, fall back to a
      clean neutral sans (never Courier / cursive, which aren't in the design). */
   --font-caption: "Lumend Blur Demo", "Helvetica Neue", Arial, sans-serif;
