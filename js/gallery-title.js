@@ -33,15 +33,20 @@
        clear any inline top there — leaving it set would pin the top while CSS
        pins the bottom, stretching the chip down the whole screen. */
     if (addCapture && titleText) {
+      // measure the anchor's DOCUMENT position (rect.top + scrollY), not its
+      // viewport position — align() re-runs whenever a late item joins the
+      // grid, and if that happened mid-scroll the heading was off-screen,
+      // its rect.top negative, and the fixed CTA got pinned above the
+      // viewport ("the button disappears when you reach the end")
       if (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) {
         // on a phone the CTA floats on the right, aligned to the object/space
         // filter row (using the empty space beside it)
         var filters = document.querySelector(".gal-filters");
         if (filters) {
-          addCapture.style.top = Math.round(filters.getBoundingClientRect().top) + "px";
+          addCapture.style.top = Math.round(filters.getBoundingClientRect().top + window.scrollY) + "px";
         }
       } else {
-        addCapture.style.top = Math.round(titleText.getBoundingClientRect().top) + "px";
+        addCapture.style.top = Math.round(titleText.getBoundingClientRect().top + window.scrollY) + "px";
       }
     }
   }
