@@ -19,7 +19,15 @@
   // URL — great for the live preview, useless once saved because it 403s within
   // hours. Detect it so publish() can re-host its bytes permanently instead.
   function isTripoProxy(ref) {
-    return typeof ref === "string" && ref.indexOf("/proxy?url=") !== -1;
+    // ANY Tripo address is temporary — the /proxy wrapper AND direct
+    // tripo-data CDN links (the preview image the AI flow stores is a direct
+    // link, and it 403s within a day; that's how saved scans lost their
+    // thumbnails). All of them must be re-hosted at publish time.
+    return typeof ref === "string" && (
+      ref.indexOf("/proxy?url=") !== -1 ||
+      ref.indexOf("tripo3d.com") !== -1 ||
+      ref.indexOf("tripo3d.ai") !== -1
+    );
   }
 
   function loadBlob(ref) {
@@ -31,7 +39,10 @@
     // so its bytes get uploaded to our own store and the saved record keeps a
     // permanent /captures/file URL, not an expiring one
     if (isTripoProxy(ref)) {
-      return fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+      // a direct Tripo CDN link has no CORS for us — pull it through the
+      // worker's own /proxy so the bytes actually arrive
+      var u = ref.indexOf("/proxy?url=") !== -1 ? ref : api() + "/proxy?url=" + encodeURIComponent(ref);
+      return fetch(u).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
     }
     return Promise.resolve(null);
   }
