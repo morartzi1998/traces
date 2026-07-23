@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725u">
-<script src="../js/owner.js?v=20260725u"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725v">
+<script src="../js/owner.js?v=20260725v"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260725u"></script>
+<script src="../js/config.js?v=20260725v"></script>
 <script type="importmap">
   { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
-<script src="../js/grain.js?v=20260725u" defer></script>
+<script src="../js/grain.js?v=20260725v" defer></script>
 <style>
   /* TEMPORARY page (video mode, at Mor's request — remove when she says):
      a chrome-free stage for screen-recording beautiful moments: captures
@@ -60,6 +60,30 @@
     0%   { transform: translateY(0) rotate(var(--tilt, 0deg)); }
     100% { transform: translateY(165vh) rotate(calc(var(--tilt, 0deg) * -1.4)); }
   }
+  /* framed mode: every object sits INSIDE a polaroid card, caption included */
+  .studio-stage.framed { align-items: center; gap: 3vw; }
+  .studio-stage.framed .studio-slot {
+    flex: 0 1 auto;
+    width: min(26vw, 440px);
+    background: #f0eeea url("../assets/images/polaroid-paper-1.png") center / cover;
+    padding: 14px 14px 14px;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.6);
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .studio-win { position: relative; width: 100%; }
+  .studio-stage.framed .studio-win { aspect-ratio: 1 / 1.06; background: #3f3f4a; }
+  .studio-stage:not(.framed) .studio-win { position: absolute; inset: 0; }
+  .studio-cap {
+    display: none;
+    font-family: var(--font-caption, cursive);
+    color: #0a25b4; font-size: clamp(0.8rem, 1.1vw, 1.1rem);
+    padding: 10px 2px 4px; line-height: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .studio-stage.framed .studio-cap { display: block; }
+  /* stage backgrounds cycle: night (default) / violet / paper */
+  body.bg-violet { background: linear-gradient(180deg, #45456e 0%, #2e2e50 100%); }
+  body.bg-paper { background: #e8e5df url("../assets/images/paper-texture.png") center / cover; }
 </style>
 </head>
 <body>
@@ -73,12 +97,14 @@
     <button type="button" id="clearBtn">clear</button>
     <button type="button" id="rebuildBtn">rebuild all</button>
     <button type="button" id="rainBtn">polaroid rain</button>
+    <button type="button" id="frameBtn">frames</button>
+    <button type="button" id="bgBtn">background</button>
     <span class="studio-hint">H hides this bar · items build &amp; slowly turn</span>
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725u";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725u";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725v";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725v";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -107,9 +133,8 @@
       });
     }
 
-    function mountInto(slot, geometry) {
-      var viewer = mountPointCloudViewer(slot, geometry, {});
-      return viewer;
+    function mountInto(win, geometry, view) {
+      return mountPointCloudViewer(win, geometry, view ? { initialView: view } : {});
     }
 
     document.getElementById("addBtn").addEventListener("click", function () {
@@ -117,10 +142,18 @@
       if (!c || mounted.length >= 4) return;
       var slot = document.createElement("div");
       slot.className = "studio-slot";
+      slot.style.setProperty("--tilt", (Math.random() * 5 - 2.5).toFixed(1) + "deg");
+      var win = document.createElement("div");
+      win.className = "studio-win";
+      var cap = document.createElement("div");
+      cap.className = "studio-cap";
+      cap.textContent = c.title;
+      slot.appendChild(win);
+      slot.appendChild(cap);
       stage.appendChild(slot);
       loadGeometry(c).then(function (g) {
-        var viewer = mountInto(slot, g);
-        mounted.push({ slot: slot, viewer: viewer, geometry: g });
+        var viewer = mountInto(win, g);
+        mounted.push({ slot: slot, win: win, viewer: viewer, geometry: g });
       });
     });
 
@@ -130,30 +163,64 @@
     });
 
     // replay the blur-to-precision build on everything currently on stage
-    document.getElementById("rebuildBtn").addEventListener("click", function () {
-      mounted.forEach(function (m) {
+    function rebuildAll() {
+      mounted.forEach(function (m, i) {
+        // keep the exact framing Mor arranged by hand — the build replays
+        // AT that angle and zoom instead of resetting to the default fit
+        try { m.view = m.viewer.getView() || m.view; } catch (e) {}
         try { m.viewer.dispose(); } catch (e) {}
-        m.slot.innerHTML = "";
-        m.viewer = mountInto(m.slot, m.geometry);
+        m.win.innerHTML = "";
+        // staggered: each object starts its build a beat after the previous
+        setTimeout(function () { m.viewer = mountInto(m.win, m.geometry, m.view); }, i * 700);
       });
+    }
+    document.getElementById("rebuildBtn").addEventListener("click", rebuildAll);
+
+    // frames: the objects sit INSIDE polaroid cards, captions included —
+    // remounting on toggle both fits the new size and replays the build
+    document.getElementById("frameBtn").addEventListener("click", function () {
+      stage.classList.toggle("framed");
+      rebuildAll();
     });
 
-    document.getElementById("rainBtn").addEventListener("click", function () {
-      rain.innerHTML = "";
-      var imgs = captures.map(function (c) { return c.img; }).filter(Boolean).slice(0, 14);
-      imgs.forEach(function (src, i) {
-        var card = document.createElement("figure");
-        card.className = "studio-card";
-        card.style.left = (4 + Math.random() * 88) + "%";
-        card.style.setProperty("--tilt", (Math.random() * 14 - 7).toFixed(1) + "deg");
-        card.style.setProperty("--dur", (4.5 + Math.random() * 3).toFixed(2) + "s");
-        card.style.setProperty("--delay", (i * 0.45 + Math.random() * 0.3).toFixed(2) + "s");
-        card.style.margin = "0";
-        var img = document.createElement("img");
-        img.src = src;
-        card.appendChild(img);
-        rain.appendChild(card);
-      });
+    // stage background: night / violet (community) / paper
+    var bgs = ["", "bg-violet", "bg-paper"];
+    var bgIdx = 0;
+    document.getElementById("bgBtn").addEventListener("click", function () {
+      bgIdx = (bgIdx + 1) % bgs.length;
+      document.body.className = bgs[bgIdx];
+    });
+
+    // looping rain: a new card drops every beat until toggled off; each
+    // card removes itself when it lands so the overlay never piles up
+    var rainTimer = null;
+    var rainBtn = document.getElementById("rainBtn");
+    function dropCard() {
+      var imgs = captures.map(function (c) { return c.img; }).filter(Boolean);
+      if (!imgs.length) return;
+      var card = document.createElement("figure");
+      card.className = "studio-card";
+      card.style.left = (4 + Math.random() * 88) + "%";
+      card.style.setProperty("--tilt", (Math.random() * 14 - 7).toFixed(1) + "deg");
+      var dur = 4.5 + Math.random() * 3;
+      card.style.setProperty("--dur", dur.toFixed(2) + "s");
+      card.style.margin = "0";
+      var img = document.createElement("img");
+      img.src = imgs[Math.floor(Math.random() * imgs.length)];
+      card.appendChild(img);
+      rain.appendChild(card);
+      setTimeout(function () { card.remove(); }, dur * 1000 + 300);
+    }
+    rainBtn.addEventListener("click", function () {
+      if (rainTimer) {
+        clearInterval(rainTimer);
+        rainTimer = null;
+        rainBtn.textContent = "polaroid rain";
+        return;
+      }
+      dropCard();
+      rainTimer = setInterval(dropCard, 650);
+      rainBtn.textContent = "stop rain";
     });
 
     window.addEventListener("keydown", function (e) {
