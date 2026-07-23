@@ -26,11 +26,14 @@
 /* Add-new-capture is a blue text layer fixed to the viewport, sitting over the
    upper-right capture (the teddy) and spilling onto the black beside it. Being
    fixed, it stays locked in place while the polaroids scroll beneath it. */
-/* Add-new-capture rides IN the flow of polaroids, right after the last one
-   (as the layout mocks show) — it can never collide with the Archive link or
-   sit lost on empty black, and it centres along with its row */
+/* Add-new-capture FLOATS over the archive while it scrolls (its fixed
+   position is the point — it hovers in place over the feed), pulled a bit
+   inward from the edge per the layout mocks so it never collides with the
+   Archive link */
 .gal-add {
-  align-self: center;
+  position: fixed;
+  top: 46vh;
+  right: 7vw;
   z-index: 25;
   font-family: var(--font-display);
   /* Same display scale as the archive title; the navigation label above is
