@@ -5,12 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
-<link rel="stylesheet" href="../css/base.css?v=20260725t">
-<script src="../js/config.js?v=20260725t"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260725u">
+<script src="../js/owner.js?v=20260725u"></script>
+<script>
+  // owner-only: a visitor who somehow lands on the studio URL is sent home
+  if (!(window.isOwnerDevice && window.isOwnerDevice())) {
+    window.location.replace("../index.html");
+  }
+</script>
+<script src="../js/config.js?v=20260725u"></script>
 <script type="importmap">
   { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
 </script>
-<script src="../js/grain.js?v=20260725t" defer></script>
+<script src="../js/grain.js?v=20260725u" defer></script>
 <style>
   /* TEMPORARY page (video mode, at Mor's request — remove when she says):
      a chrome-free stage for screen-recording beautiful moments: captures
@@ -70,8 +77,8 @@
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725t";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725t";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260725u";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260725u";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
