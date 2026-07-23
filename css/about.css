@@ -182,22 +182,21 @@ body {
 .ab-credit {
   margin-top: 6vh;
   padding-top: 16px;
-  border-top: 1px solid rgba(10, 37, 180, 0.22);
-  text-align: center;
+  border-top: 1px solid rgba(240, 238, 234, 0.18);
+  text-align: left;
   font-size: 0.68rem;
   line-height: 1.5;
-  color: var(--color-ink-blue);
+  color: rgba(240, 238, 234, 0.75);
 }
 .ab-credit p {
   margin: 0;
   font-size: inherit;
   line-height: inherit;
-  /* the article's own paragraphs are edge-aligned — the credit centres */
-  text-align: center;
+  text-align: left;
 }
 .ab-credit-logo {
   display: block;
-  width: 64px;
+  width: 58px;
   height: auto;
-  margin: 8px auto 5px;
+  margin: 8px 0 5px;
 }
