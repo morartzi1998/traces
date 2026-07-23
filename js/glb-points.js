@@ -13,7 +13,7 @@
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260726b";
+import * as THREE from "./vendor/three/three.module.js?v=20260726c";
 
 export function glbToPoints(arrayBuffer) {
   try {
