@@ -116,11 +116,13 @@ body {
 
 .ab-archive-note {
   margin-top: 4vh;
+  /* the note and the link underneath are ONE unit — no paragraph gap */
+  margin-bottom: 0;
   opacity: 0.7;
 }
 .ab-archive-link {
   display: inline-block;
-  margin-top: 1.4vh;
+  margin-top: 8px;
   font-family: var(--font-display);
   font-size: clamp(1.1rem, 1.6vw, 1.6rem);
   color: var(--color-ink-blue);
