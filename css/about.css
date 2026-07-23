@@ -114,13 +114,13 @@ body {
   text-wrap: pretty; /* avoid a lone short word stranded on its own line */
 }
 
-.ab-archive-note {
+.ab-text .ab-archive-note {
   margin-top: 4vh;
   /* the note and the link underneath are ONE unit — no paragraph gap */
   margin-bottom: 0;
   opacity: 0.7;
 }
-.ab-archive-link {
+.ab-text .ab-archive-link {
   display: inline-block;
   margin-top: 8px;
   font-family: var(--font-display);

@@ -89,6 +89,36 @@
 
 /* ---------- Design tokens ---------- */
 
+@font-face {
+  font-family: "Narkiss Hebrew";
+  src: url("https://use.typekit.net/af/e58500/00000000000000007754e4d6/31/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* HEBREW LETTERS ONLY — Latin text falls through to the site's own faces */
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+20AA;
+}
+
+@font-face {
+  font-family: "Narkiss Hebrew";
+  src: url("https://use.typekit.net/af/dbe4c6/00000000000000007754e4d3/31/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  /* HEBREW LETTERS ONLY — Latin text falls through to the site's own faces */
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+20AA;
+}
+
+@font-face {
+  font-family: "Narkiss Hebrew";
+  src: url("https://use.typekit.net/af/014100/00000000000000007754e4d7/31/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  /* HEBREW LETTERS ONLY — Latin text falls through to the site's own faces */
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+20AA;
+}
+
 :root {
   --color-bg: #161616;
   --color-cream: #f0eeea;
@@ -98,13 +128,13 @@
     linear-gradient(180deg, rgba(29, 29, 61, 0.41), rgba(0, 0, 0, 0.41)),
     #8a8a8f;
   --color-ink-blue: #0a25b4;
-  --font-display: "narkiss-hadash-extended", "Vito Extended", "Helvetica Neue", Arial, sans-serif;
-  --font-wide: "narkiss-hadash-extended", "Vito Wide", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Narkiss Hebrew", "Vito Extended", "Helvetica Neue", Arial, sans-serif;
+  --font-wide: "Narkiss Hebrew", "Vito Wide", "Helvetica Neue", Arial, sans-serif;
   /* Lumend is the real design face; until its files are added, fall back to a
      clean neutral sans (never Courier / cursive, which aren't in the design). */
-  --font-caption: "Lumend Blur Demo", "Helvetica Neue", Arial, sans-serif;
-  --font-ink: "Lumend Demo", "Helvetica Neue", Arial, sans-serif;
-  --font-drawn: "Lumend Rounded Drawn Demo", "Helvetica Neue", Arial, sans-serif;
+  --font-caption: "Lumend Blur Demo", "Narkiss Hebrew", "Helvetica Neue", Arial, sans-serif;
+  --font-ink: "Lumend Demo", "Narkiss Hebrew", "Helvetica Neue", Arial, sans-serif;
+  --font-drawn: "Lumend Rounded Drawn Demo", "Narkiss Hebrew", "Helvetica Neue", Arial, sans-serif;
 
   /* ---------- Shared type scale ----------
      One small "metadata" size used for every secondary line that sits around a
