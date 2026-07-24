@@ -1203,7 +1203,8 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .remark-card-actions {
   display: flex;
   gap: 14px;
-  padding: 0 10px 8px;
+  /* the underlines hang 5px below the text — keep them clear of the edge */
+  padding: 0 10px 12px;
 }
 
 .remark-card-act {
@@ -1384,7 +1385,9 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-link-card-actions {
   display: flex;
   gap: 20px;
-  margin: 6px 0 6px;
+  /* lifted off the rule below: the underlines hang 5px under the text, so
+     without the extra bottom room they read as struck by the divider */
+  margin: 2px 0 14px;
 }
 
 .obj-link-card-act {

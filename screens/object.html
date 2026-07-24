@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727i">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727i">
-<link rel="stylesheet" href="../css/object.css?v=20260727i">
-<script src="../js/cursor.js?v=20260727i" defer></script>
-<script src="../js/grain.js?v=20260727i" defer></script>
-<script src="../js/tilt3d.js?v=20260727i" defer></script>
-<script src="../js/owner.js?v=20260727i"></script>
-<script src="../js/config.js?v=20260727i"></script>
-<script src="../js/archive.js?v=20260727i"></script>
-<script src="../js/blobstore.js?v=20260727i"></script>
-<script src="../js/particle-loader.js?v=20260727i"></script>
-<script src="../js/remote-captures.js?v=20260727i"></script>
-<script src="../js/community-seed.js?v=20260727i"></script>
-<script src="../js/flow.js?v=20260727i" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727i"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727j">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727j">
+<link rel="stylesheet" href="../css/object.css?v=20260727j">
+<script src="../js/cursor.js?v=20260727j" defer></script>
+<script src="../js/grain.js?v=20260727j" defer></script>
+<script src="../js/tilt3d.js?v=20260727j" defer></script>
+<script src="../js/owner.js?v=20260727j"></script>
+<script src="../js/config.js?v=20260727j"></script>
+<script src="../js/archive.js?v=20260727j"></script>
+<script src="../js/blobstore.js?v=20260727j"></script>
+<script src="../js/particle-loader.js?v=20260727j"></script>
+<script src="../js/remote-captures.js?v=20260727j"></script>
+<script src="../js/community-seed.js?v=20260727j"></script>
+<script src="../js/flow.js?v=20260727j" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727j"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727i" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727j" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727i";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727i";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727j";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727j";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727i";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727j";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727i";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727j";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -162,13 +162,14 @@
   function __icpAlign(refPts, movPts, optsIn) {
     var startD = (optsIn && optsIn.startD) || 0.35;
     var endD = (optsIn && optsIn.endD) || 0.12;
+    var iters = (optsIn && optsIn.iters) || 24;
     var cell = 0.08;
     var grid = __buildGrid(refPts, cell);
     var mov = movPts.slice();
     var R = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], T = [0, 0, 0];
-    for (var iter = 0; iter < 24; iter++) {
+    for (var iter = 0; iter < iters; iter++) {
       // matching radius tightens over iterations, shaking off bad pairs
-      var maxD = startD - ((startD - endD) * iter) / 23;
+      var maxD = startD - ((startD - endD) * iter) / (iters - 1);
       var maxD2 = maxD * maxD;
       var ca = [0, 0, 0], cb = [0, 0, 0], pairs = [];
       for (var i = 0; i < mov.length; i += 3) {
@@ -213,7 +214,19 @@
       ];
       R = Rn;
     }
-    return { R: R, t: T };
+    // how well this fit actually explains the moving cloud: mean squared
+    // matched distance, with every unmatched point paying the full radius —
+    // a fit that only explains half the points must never outscore one that
+    // explains all of them slightly less tightly (lower is better)
+    var scoreD = 0.1, scoreD2 = scoreD * scoreD, matched = 0, sum = 0;
+    for (var si = 0; si < mov.length; si += 3) {
+      var sn = __nearest(grid, cell, refPts, mov[si], mov[si + 1], mov[si + 2], scoreD2);
+      if (sn < 0) continue;
+      var sdx = refPts[sn] - mov[si], sdy = refPts[sn + 1] - mov[si + 1], sdz = refPts[sn + 2] - mov[si + 2];
+      matched++; sum += sdx * sdx + sdy * sdy + sdz * sdz;
+    }
+    var total = mov.length / 3 || 1;
+    return { R: R, t: T, score: (sum + (total - matched) * scoreD2) / total };
   }
 
   // the "Frankenstein" merge: ONE new unified object that combines every scan.
@@ -309,7 +322,53 @@
       }
       // after hand-placed anchors the polish may only micro-adjust — a
       // full-strength pass could rotate away from what the user lined up
-      var fit = __icpAlign(refPts, mov, init ? { startD: 0.1, endD: 0.04 } : null);
+      var fit;
+      if (init) {
+        fit = __icpAlign(refPts, mov, { startD: 0.1, endD: 0.04 });
+      } else {
+        // ICP from a single identity start falls into whichever local
+        // minimum is nearest — on anything rotationally repetitive (a
+        // chandelier's arms, a table's legs) that routinely locks arm
+        // BETWEEN arm and the merge reads as two ghosts interleaved. Try a
+        // fan of yaw starts around the vertical axis, keep whichever
+        // best explains the whole cloud, then polish only that one.
+        var trial = [];
+        for (var tp = 0; tp < mov.length; tp += 3 * Math.max(1, Math.floor(mov.length / (3 * 2000)))) {
+          trial.push(mov[tp], mov[tp + 1], mov[tp + 2]);
+        }
+        var bestYaw = 0, bestScore = Infinity;
+        for (var ya = 0; ya < 12; ya++) {
+          var yawA = (ya * Math.PI) / 6;
+          var yc = Math.cos(yawA), ys = Math.sin(yawA);
+          var spun = new Array(trial.length);
+          for (var sp = 0; sp < trial.length; sp += 3) {
+            spun[sp] = yc * trial[sp] + ys * trial[sp + 2];
+            spun[sp + 1] = trial[sp + 1];
+            spun[sp + 2] = -ys * trial[sp] + yc * trial[sp + 2];
+          }
+          var probe = __icpAlign(refPts, spun, { iters: 8 });
+          if (probe.score < bestScore) { bestScore = probe.score; bestYaw = yawA; }
+        }
+        if (bestYaw) {
+          var bc = Math.cos(bestYaw), bs = Math.sin(bestYaw);
+          for (var bm = 0; bm < mov.length; bm += 3) {
+            var bx = mov[bm], bz = mov[bm + 2];
+            mov[bm] = bc * bx + bs * bz;
+            mov[bm + 2] = -bs * bx + bc * bz;
+          }
+        }
+        fit = __icpAlign(refPts, mov, null);
+        if (bestYaw) {
+          // fold the winning yaw into the returned transform (fit ∘ yaw);
+          // yaw is a pure rotation so the translation is untouched
+          var byc = Math.cos(bestYaw), bys = Math.sin(bestYaw);
+          var Ry = [[byc, 0, bys], [0, 1, 0], [-bys, 0, byc]];
+          var Rf = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+          for (var fr = 0; fr < 3; fr++) for (var fc = 0; fc < 3; fc++)
+            Rf[fr][fc] = fit.R[fr][0] * Ry[0][fc] + fit.R[fr][1] * Ry[1][fc] + fit.R[fr][2] * Ry[2][fc];
+          fit = { R: Rf, t: fit.t };
+        }
+      }
       if (init) {
         // total = fit ∘ init
         var Rt = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
