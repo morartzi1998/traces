@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726x">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726x">
-<link rel="stylesheet" href="../css/object.css?v=20260726x">
-<script src="../js/cursor.js?v=20260726x" defer></script>
-<script src="../js/grain.js?v=20260726x" defer></script>
-<script src="../js/tilt3d.js?v=20260726x" defer></script>
-<script src="../js/owner.js?v=20260726x"></script>
-<script src="../js/config.js?v=20260726x"></script>
-<script src="../js/archive.js?v=20260726x"></script>
-<script src="../js/blobstore.js?v=20260726x"></script>
-<script src="../js/particle-loader.js?v=20260726x"></script>
-<script src="../js/remote-captures.js?v=20260726x"></script>
-<script src="../js/community-seed.js?v=20260726x"></script>
-<script src="../js/flow.js?v=20260726x" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726x"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726y">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726y">
+<link rel="stylesheet" href="../css/object.css?v=20260726y">
+<script src="../js/cursor.js?v=20260726y" defer></script>
+<script src="../js/grain.js?v=20260726y" defer></script>
+<script src="../js/tilt3d.js?v=20260726y" defer></script>
+<script src="../js/owner.js?v=20260726y"></script>
+<script src="../js/config.js?v=20260726y"></script>
+<script src="../js/archive.js?v=20260726y"></script>
+<script src="../js/blobstore.js?v=20260726y"></script>
+<script src="../js/particle-loader.js?v=20260726y"></script>
+<script src="../js/remote-captures.js?v=20260726y"></script>
+<script src="../js/community-seed.js?v=20260726y"></script>
+<script src="../js/flow.js?v=20260726y" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726y"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726x" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726y" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726x";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726x";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726y";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726y";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726x";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726y";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726x";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726y";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1036,7 +1036,8 @@
           visibility: it.visibility || "private",
           annotations: it.annotations.map(function (a) {
             return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
-              since: a.since || 2021, pos: a.pos || null, normal: a.normal || null,
+              since: a.since || 2021, forVersion: a.forVersion || null,
+              pos: a.pos || null, normal: a.normal || null,
               ppos: a.ppos || null };
           }),
           links: (it.links || []).map(function (l) {
@@ -1260,7 +1261,8 @@
       function syncAnnotationsEverywhere(k) {
         var annotations = (catalog[k].annotations || []).map(function (a) {
           return { x: a.x, y: a.y, title: a.title, type: a.type, text: a.text,
-            since: a.since || 2021, pos: a.pos || null, normal: a.normal || null,
+            since: a.since || 2021, forVersion: a.forVersion || null,
+            pos: a.pos || null, normal: a.normal || null,
             ppos: a.ppos || null };
         });
         var fields = { annotations: annotations };
@@ -1843,6 +1845,18 @@
       // which point in the object's history the timeline is showing
       var activeYear = 2021;
 
+      // which notes belong on stage right now: a note tagged to a specific
+      // scan (forVersion) shows on that scan alone — a pin placed on the 2009
+      // computer means nothing on the 2026 desk. Older, untagged notes keep
+      // the year rule the curated histories were built on.
+      function annotationVisibleNow(a) {
+        var vList = catalog[key].versions || [];
+        var curV = vList.length
+          ? vList[displayedVersionIndex === -1 ? vList.length - 1 : displayedVersionIndex]
+          : null;
+        if (a.forVersion != null && curV) return a.forVersion === curV.created;
+        return (a.since || 2021) <= activeYear;
+      }
       function renderAnnotations() {
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
         clearHotspots();
@@ -1851,8 +1865,7 @@
         var ready = isModel && modelViewer.loaded;
         var isPoints = !!pcViewer && !objPoints.hidden;
         catalog[key].annotations.forEach(function (a, i) {
-          // the timeline scrubs history: only show notes from the selected year back
-          if ((a.since || 2021) > activeYear) return;
+          if (!annotationVisibleNow(a)) return;
           if (ready) {
             if (!a.pos) convertTo3D(a);
             if (a.pos) {
@@ -2008,10 +2021,10 @@
         kindBoxes[1].checked = item.kind === "space";
         document.getElementById("whitePrivate").checked = item.visibility !== "community";
         document.getElementById("whiteCommunity").checked = item.visibility === "community";
-        // scrubbed to an older year, the list holds only the notes that
-        // existed by then — identical to the stage markers' year filter
+        // the list mirrors the stage exactly: each scan's own tagged notes,
+        // and the year rule for older untagged ones
         var anns = timelineHasHistory()
-          ? (item.annotations || []).filter(function (a) { return (a.since || 2021) <= activeYear; })
+          ? (item.annotations || []).filter(annotationVisibleNow)
           : (item.annotations || []);
         document.getElementById("whiteAnnCount").textContent = anns.length;
         // the how-to line only earns its space when adding a note is actually
@@ -4074,6 +4087,13 @@
             editingAnnotation.text = text;
             editingAnnotation.type = type;
           } else {
+            // the note belongs to the SCAN it was pinned on — scrubbing the
+            // timeline shows each scan only its own notes (a coordinate on
+            // the 2009 computer means nothing on the 2026 desk)
+            var noteVersions = catalog[key].versions || [];
+            var noteV = noteVersions.length
+              ? noteVersions[displayedVersionIndex === -1 ? noteVersions.length - 1 : displayedVersionIndex]
+              : null;
             catalog[key].annotations.push({
               x: pendingSpot ? pendingSpot.x : 0.5,
               y: pendingSpot ? pendingSpot.y : 0.5,
@@ -4082,7 +4102,8 @@
               ppos: pendingSpot ? pendingSpot.ppos : null,
               title: title,
               type: type,
-              since: activeYear, // the note belongs to the year currently selected
+              since: activeYear, // kept for the year-scrub of older, untagged notes
+              forVersion: noteV ? noteV.created : null,
               text: text,
             });
           }

@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260726x";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260726x";
+import * as THREE from "./vendor/three/three.module.js?v=20260726y";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260726y";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -129,9 +129,25 @@ export function mountPointCloudViewer(container, geometry, opts) {
     // still dominates a single-pass std (squaring distance weights them
     // enormously even though they're a tiny fraction of the total count)
     var refined = cutoff > 0 ? meanAndStd(withinCutoff) : first;
-    var center = (refined && refined.count > count * 0.5) ? refined.center : first.center;
     var std = (refined && refined.count > count * 0.5) ? refined.std : first.std;
     var trimmed = std * 2.5;
+    // the ORBIT PIVOT is this center — and a mean gets dragged toward
+    // whichever side of a scan is denser, or out along a long sparse arm
+    // (a walking cane, a strip of wall). An off-centre pivot is exactly what
+    // made some captures sweep across the screen like a clock hand instead
+    // of turning in place like a dancer. The per-axis MEDIAN stays planted
+    // in the dense mass of the object no matter what hangs off its sides.
+    var center = (function () {
+      var stride = Math.max(1, Math.floor(count / 60000));
+      var xs = [], ys = [], zs = [];
+      for (var mi = 0; mi < count; mi += stride) {
+        if (!withinCutoff(mi)) continue;
+        xs.push(pos.getX(mi)); ys.push(pos.getY(mi)); zs.push(pos.getZ(mi));
+      }
+      if (!xs.length) return (refined && refined.count > count * 0.5) ? refined.center : first.center;
+      function med(arr) { arr.sort(function (a, b) { return a - b; }); return arr[arr.length >> 1]; }
+      return new THREE.Vector3(med(xs), med(ys), med(zs));
+    })();
     // only step in when there's a real sign of outlier bloat (the trimmed
     // spread is well under the raw extent) - for an already well-formed
     // cloud this leaves the plain bounding sphere untouched rather than
