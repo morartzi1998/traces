@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727j">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727j">
-<link rel="stylesheet" href="../css/object.css?v=20260727j">
-<script src="../js/cursor.js?v=20260727j" defer></script>
-<script src="../js/grain.js?v=20260727j" defer></script>
-<script src="../js/tilt3d.js?v=20260727j" defer></script>
-<script src="../js/owner.js?v=20260727j"></script>
-<script src="../js/config.js?v=20260727j"></script>
-<script src="../js/archive.js?v=20260727j"></script>
-<script src="../js/blobstore.js?v=20260727j"></script>
-<script src="../js/particle-loader.js?v=20260727j"></script>
-<script src="../js/remote-captures.js?v=20260727j"></script>
-<script src="../js/community-seed.js?v=20260727j"></script>
-<script src="../js/flow.js?v=20260727j" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727j"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727k">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727k">
+<link rel="stylesheet" href="../css/object.css?v=20260727k">
+<script src="../js/cursor.js?v=20260727k" defer></script>
+<script src="../js/grain.js?v=20260727k" defer></script>
+<script src="../js/tilt3d.js?v=20260727k" defer></script>
+<script src="../js/owner.js?v=20260727k"></script>
+<script src="../js/config.js?v=20260727k"></script>
+<script src="../js/archive.js?v=20260727k"></script>
+<script src="../js/blobstore.js?v=20260727k"></script>
+<script src="../js/particle-loader.js?v=20260727k"></script>
+<script src="../js/remote-captures.js?v=20260727k"></script>
+<script src="../js/community-seed.js?v=20260727k"></script>
+<script src="../js/flow.js?v=20260727k" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727k"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727j" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727k" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727j";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727j";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727k";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727k";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727j";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727k";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727j";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727k";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -919,12 +919,15 @@
             if (d.dual) loc.dual = true;
             if (!loc.openOn && d.openOn) loc.openOn = d.openOn;
             if (loc.pointSize == null && d.pointSize != null) loc.pointSize = d.pointSize;
+            if (loc.tilt == null && d.tilt != null) loc.tilt = d.tilt;
+            if (loc.meshTilt == null && d.meshTilt != null) loc.meshTilt = d.meshTilt;
             if (Array.isArray(d.versions) && Array.isArray(loc.versions)) {
               d.versions.forEach(function (sv) {
                 loc.versions.forEach(function (lv) {
                   if (lv.created !== sv.created) return;
                   if (!lv.points && sv.points) lv.points = sv.points;
                   if (!lv.defaultView && sv.defaultView) lv.defaultView = sv.defaultView;
+                  if (!lv.meshTilt && sv.meshTilt) lv.meshTilt = sv.meshTilt;
                   // a year Mor typed in ("edit years") lives on the server —
                   // a device whose local copy still has only the derived
                   // upload year must adopt it, or her curation only ever
@@ -955,6 +958,7 @@
             model: d.model, points: d.points, dual: !!d.dual,
             openOn: d.openOn || null,
             pointSize: d.pointSize || null, tilt: d.tilt || null,
+            meshTilt: d.meshTilt || null,
             defaultView: d.defaultView || null,
             connected: d.connected || "", connectedKey: d.connectedKey || null,
             feeling: d.feeling || "", annotations: d.annotations || [],
@@ -971,7 +975,8 @@
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
-                    defaultView: v.defaultView || null, feeling: v.feeling || "",
+                    defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
+                    feeling: v.feeling || "",
                     title: v.title || d.title };
                 })
               : [{ year: new Date(d.created || Date.now()).getFullYear(),
@@ -999,6 +1004,7 @@
             points: c.points || null,
             pointSize: c.pointSize || null,
             tilt: c.tilt || null,
+            meshTilt: c.meshTilt || null,
             connected: c.connected || "",
             connectedKey: c.connectedKey || null,
             feeling: c.feeling || "",
@@ -1015,7 +1021,8 @@
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
-                    defaultView: v.defaultView || null, feeling: v.feeling || "",
+                    defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
+                    feeling: v.feeling || "",
                     title: v.title || c.title };
                 })
               : [{ year: new Date(c.created || Date.now()).getFullYear(),
@@ -2496,6 +2503,15 @@
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = false;
+          // a mesh comes in at whatever angle its scan baked — apply the
+          // straightening saved for exactly what's going on stage (an old
+          // version's own, else the capture's), and reset when there is
+          // none so one scan's fix never leans the next scan shown
+          var vTiltSel = displayedVersionIndex >= 0 ? (catalog[k].versions || [])[displayedVersionIndex] : null;
+          var mTilt = vTiltSel ? (vTiltSel.meshTilt || null) : (catalog[k].meshTilt || null);
+          modelViewer.orientation = mTilt
+            ? (mTilt.z || 0) + "rad " + (mTilt.x || 0) + "rad 0rad"
+            : "0deg 0deg 0deg";
           // a saved default view (or, scrubbing the timeline, whatever
           // angle was already being looked at) restores model-viewer's own
           // camera-orbit string — set before .src so it's already queued
@@ -3271,6 +3287,7 @@
       // the prev arrow sits exactly where the menu unfolds — tuck both
       // arrows away whenever the menu is open. Watching the menu's own
       // hidden attribute covers every one of its many close paths at once.
+      var adjustPanelOpening = false;
       if (window.MutationObserver) {
         new MutationObserver(function () {
           var open = !menu.hidden;
@@ -3284,7 +3301,11 @@
           // path at once, same trick as the arrows above.
           if (!open) {
             objMenuBtn.setAttribute("aria-expanded", "false");
-            closeAdjustPanel();
+            // the Adjust entry CLOSES the menu as it opens its panel — this
+            // observer fires on that close a beat later and was shutting the
+            // panel the instant it appeared (the sliders never showed at all)
+            if (adjustPanelOpening) adjustPanelOpening = false;
+            else closeAdjustPanel();
             if (timelineHasHistory()) {
               objTimeline.hidden = false;
               void objTimeline.offsetWidth;
@@ -3348,8 +3369,10 @@
           : "Set this angle as default view & thumbnail";
         // point-size + straighten sliders live behind this one entry now,
         // in their own panel (see menuAdjust below), instead of a stack of
-        // inline slider rows cluttering the menu list itself
-        menuAdjustRow.hidden = !onLivePoints || !menuManageable;
+        // inline slider rows cluttering the menu list itself — and the
+        // straightening works on the mesh side too (its own saved angle),
+        // not only on the point cloud
+        menuAdjustRow.hidden = !(onLivePoints || onLiveModel) || !menuManageable;
         // closing the menu also dismisses the adjust panel, so it never
         // lingers open over the capture on its own
         if (!opening) closeAdjustPanel();
@@ -3392,16 +3415,31 @@
       var menuAdjustRow = menuAdjust.closest("li");
       var objAdjustPanel = document.getElementById("objAdjustPanel");
       function closeAdjustPanel() { objAdjustPanel.hidden = true; }
+      // the mesh's saved straightening for whatever is on stage right now —
+      // an old version carries its own (each scan bakes its own lean)
+      function currentMeshTilt() {
+        var vSel = displayedVersionIndex >= 0 ? (catalog[key].versions || [])[displayedVersionIndex] : null;
+        return (vSel ? vSel.meshTilt : catalog[key].meshTilt) || null;
+      }
+      function onMeshSide() {
+        return objPoints.hidden && !modelViewer.hidden && catalog[key].model;
+      }
       menuAdjust.addEventListener("click", function () {
         // close the menu and open the adjust panel in its place, seeded
         // with this capture's current point-size + tilt so the sliders
         // start where the scan actually is, not at their defaults
+        adjustPanelOpening = true;
         menu.hidden = true;
         objMenuBtn.setAttribute("aria-expanded", "false");
         var idx = closestPointSizeIndex(catalog[key].pointSize || 0.013);
         menuPointSizeSlider.value = idx + 1;
         menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
-        var savedTilt = catalog[key].tilt || { x: 0, z: 0 };
+        // on the mesh side the sliders straighten the MESH (its own saved
+        // angle, separate from the cloud's — the two representations are
+        // baked in different frames); point size means nothing there
+        var mesh = onMeshSide();
+        menuPointSizeSlider.closest(".obj-adjust-row").hidden = !!mesh;
+        var savedTilt = (mesh ? currentMeshTilt() : catalog[key].tilt) || { x: 0, z: 0 };
         menuTiltXSlider.value = Math.round((savedTilt.x || 0) * 180 / Math.PI);
         menuTiltZSlider.value = Math.round((savedTilt.z || 0) * 180 / Math.PI);
         objAdjustPanel.hidden = false;
@@ -3409,19 +3447,66 @@
       document.getElementById("objAdjustDone").addEventListener("click", closeAdjustPanel);
 
       function applyTiltFromSliders() {
-        if (!pcViewer) return;
         var x = parseFloat(menuTiltXSlider.value) * Math.PI / 180;
         var z = parseFloat(menuTiltZSlider.value) * Math.PI / 180;
-        pcViewer.setTilt(x, z);
+        if (onMeshSide()) {
+          // model-viewer's orientation is "roll pitch yaw" — roll leans
+          // side to side (our z), pitch tips forward/back (our x)
+          modelViewer.orientation = z + "rad " + x + "rad 0rad";
+          return;
+        }
+        if (pcViewer) pcViewer.setTilt(x, z);
       }
       menuTiltXSlider.addEventListener("input", applyTiltFromSliders);
       menuTiltZSlider.addEventListener("input", applyTiltFromSliders);
       menuSaveTilt.addEventListener("click", function () {
+        var inArchive = window.Archive && Archive.get(key);
+        var inCommunity = window.Community && Community.get(key);
+        if (onMeshSide()) {
+          // the mesh's own straightening, kept apart from the cloud's tilt —
+          // the two representations are baked in different frames, so one
+          // angle can never serve both
+          var mTilt = {
+            x: parseFloat(menuTiltXSlider.value) * Math.PI / 180,
+            z: parseFloat(menuTiltZSlider.value) * Math.PI / 180,
+          };
+          var vSel = displayedVersionIndex >= 0 ? (catalog[key].versions || [])[displayedVersionIndex] : null;
+          if (vSel) {
+            // an OLD scan on stage: the fix belongs to that version alone
+            vSel.meshTilt = mTilt;
+            [window.Archive, window.Community].forEach(function (store) {
+              if (!store || !store.get(key)) return;
+              var rec = store.get(key);
+              if (!Array.isArray(rec.versions)) return;
+              var hit = rec.versions.filter(function (v) { return v.created === vSel.created; })[0];
+              if (!hit) return;
+              hit.meshTilt = mTilt;
+              store.update(key, { versions: rec.versions });
+            });
+            if (window.isOwnerDevice && window.isOwnerDevice()) {
+              [key, key + "-community"].forEach(function (serverId) {
+                queuedRecordPatch(serverId, function (rec) {
+                  if (!Array.isArray(rec.versions)) return false;
+                  var hit = rec.versions.filter(function (v) { return v.created === vSel.created; })[0];
+                  if (!hit) return false;
+                  hit.meshTilt = mTilt;
+                });
+              });
+            }
+          } else {
+            catalog[key].meshTilt = mTilt;
+            if (inArchive) Archive.update(key, { meshTilt: mTilt });
+            if (inCommunity) Community.update(key, { meshTilt: mTilt });
+            persist(key);
+            syncViewToServer();
+          }
+          menuSaveTilt.textContent = "Saved";
+          setTimeout(function () { menuSaveTilt.textContent = "Save this as upright"; }, 1500);
+          return;
+        }
         if (!pcViewer) return;
         var tilt = pcViewer.getTilt();
         catalog[key].tilt = tilt;
-        var inArchive = window.Archive && Archive.get(key);
-        var inCommunity = window.Community && Community.get(key);
         if (inArchive) Archive.update(key, { tilt: tilt });
         if (inCommunity) Community.update(key, { tilt: tilt });
         // patch the shared record DIRECTLY (same as the default-view save) —
@@ -4007,6 +4092,7 @@
         // the straightening choice travels too — fixing a scan that sits
         // diagonally must reach visitors, not just this browser
         if (catalog[key].tilt != null) fields.tilt = catalog[key].tilt;
+        if (catalog[key].meshTilt != null) fields.meshTilt = catalog[key].meshTilt;
         var inArchive = window.Archive && Archive.get(key);
         var inCommunity = window.Community && Community.get(key);
         if (inArchive) patchServerRecord(key, fields);
