@@ -42,7 +42,7 @@
   color: var(--color-ink-blue);
   text-decoration: underline;
   text-underline-offset: 8px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   background: none;
   border: none;
   cursor: pointer;
@@ -101,7 +101,7 @@
   border: none;
   text-decoration: underline;
   text-underline-offset: 9px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   cursor: pointer;
 }
 
@@ -274,7 +274,7 @@
   padding: 0;
   text-decoration: underline;
   text-underline-offset: 7px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   cursor: pointer;
 }
 
@@ -505,7 +505,7 @@
   font-size: 1rem;
   text-decoration: underline;
   text-underline-offset: 6px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   opacity: 0.8;
   cursor: pointer;
   flex-shrink: 0;

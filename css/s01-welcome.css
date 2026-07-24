@@ -229,7 +229,7 @@
   text-transform: capitalize;
   text-decoration: underline;
   text-underline-offset: 7px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
   cursor: pointer;
   background: none;
   border: none;
@@ -353,7 +353,7 @@
     text-transform: lowercase;
     text-decoration: underline;
     text-underline-offset: 6px;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 1.5px;
     margin-bottom: 0.3rem;
   }
 
