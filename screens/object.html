@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726v">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726v">
-<link rel="stylesheet" href="../css/object.css?v=20260726v">
-<script src="../js/cursor.js?v=20260726v" defer></script>
-<script src="../js/grain.js?v=20260726v" defer></script>
-<script src="../js/tilt3d.js?v=20260726v" defer></script>
-<script src="../js/owner.js?v=20260726v"></script>
-<script src="../js/config.js?v=20260726v"></script>
-<script src="../js/archive.js?v=20260726v"></script>
-<script src="../js/blobstore.js?v=20260726v"></script>
-<script src="../js/particle-loader.js?v=20260726v"></script>
-<script src="../js/remote-captures.js?v=20260726v"></script>
-<script src="../js/community-seed.js?v=20260726v"></script>
-<script src="../js/flow.js?v=20260726v" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726w">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726w">
+<link rel="stylesheet" href="../css/object.css?v=20260726w">
+<script src="../js/cursor.js?v=20260726w" defer></script>
+<script src="../js/grain.js?v=20260726w" defer></script>
+<script src="../js/tilt3d.js?v=20260726w" defer></script>
+<script src="../js/owner.js?v=20260726w"></script>
+<script src="../js/config.js?v=20260726w"></script>
+<script src="../js/archive.js?v=20260726w"></script>
+<script src="../js/blobstore.js?v=20260726w"></script>
+<script src="../js/particle-loader.js?v=20260726w"></script>
+<script src="../js/remote-captures.js?v=20260726w"></script>
+<script src="../js/community-seed.js?v=20260726w"></script>
+<script src="../js/flow.js?v=20260726w" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726w"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726v" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726w" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726v";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726v";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726w";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726w";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726v";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726w";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726v";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726w";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -901,7 +901,7 @@
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
-                    defaultView: v.defaultView || null,
+                    defaultView: v.defaultView || null, feeling: v.feeling || "",
                     title: v.title || d.title };
                 })
               : [{ year: new Date(d.created || Date.now()).getFullYear(),
@@ -945,7 +945,7 @@
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
-                    defaultView: v.defaultView || null,
+                    defaultView: v.defaultView || null, feeling: v.feeling || "",
                     title: v.title || c.title };
                 })
               : [{ year: new Date(c.created || Date.now()).getFullYear(),
@@ -1973,11 +1973,13 @@
         var vNote = document.getElementById("whiteVersionNote");
         vNote.hidden = !(oldVersion && ver);
         vNote.textContent = (oldVersion && ver) ? "[" + ver.year + " scan]" : "";
-        // an old scan's card stays lean: the feeling text describes the
-        // capture as it is TODAY, which read as noise (and length) under a
-        // years-old scan — hide that whole block while scrubbed back
+        // an old scan's card shows ITS OWN text when one was written for it
+        // (a re-scan of an old belonging carries its own story now); with no
+        // per-scan text, the block hides entirely — the record's feeling
+        // describes the capture as it is TODAY and read as noise back there
+        var versionFeeling = oldVersion ? ((ver && ver.feeling) || "") : null;
         var descSection = document.querySelector(".obj-white-section--description");
-        if (descSection) descSection.hidden = oldVersion;
+        if (descSection) descSection.hidden = oldVersion && !versionFeeling;
         var subEl = document.getElementById("whiteSub");
         subEl.hidden = !item.connected;
         subEl.textContent = item.connected ? 'connected to the space "' + item.connected + '"' : "";
@@ -1988,8 +1990,9 @@
           ? function () { try { sessionStorage.setItem("traces-item", jumpKey); } catch (e) {} show(jumpKey); }
           : null;
         var feelingEl = document.getElementById("whiteFeeling");
-        feelingEl.textContent = item.feeling || "no description yet";
-        feelingEl.classList.toggle("obj-white-feeling--empty", !item.feeling);
+        var shownFeeling = oldVersion ? versionFeeling : (item.feeling || "");
+        feelingEl.textContent = shownFeeling || "no description yet";
+        feelingEl.classList.toggle("obj-white-feeling--empty", !shownFeeling);
         var kindBoxes = document.querySelectorAll("#whiteKind input");
         kindBoxes[0].checked = item.kind !== "space";
         kindBoxes[1].checked = item.kind === "space";
