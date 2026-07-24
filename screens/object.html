@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726r">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726r">
-<link rel="stylesheet" href="../css/object.css?v=20260726r">
-<script src="../js/cursor.js?v=20260726r" defer></script>
-<script src="../js/grain.js?v=20260726r" defer></script>
-<script src="../js/tilt3d.js?v=20260726r" defer></script>
-<script src="../js/owner.js?v=20260726r"></script>
-<script src="../js/config.js?v=20260726r"></script>
-<script src="../js/archive.js?v=20260726r"></script>
-<script src="../js/blobstore.js?v=20260726r"></script>
-<script src="../js/particle-loader.js?v=20260726r"></script>
-<script src="../js/remote-captures.js?v=20260726r"></script>
-<script src="../js/community-seed.js?v=20260726r"></script>
-<script src="../js/flow.js?v=20260726r" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726r"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726s">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726s">
+<link rel="stylesheet" href="../css/object.css?v=20260726s">
+<script src="../js/cursor.js?v=20260726s" defer></script>
+<script src="../js/grain.js?v=20260726s" defer></script>
+<script src="../js/tilt3d.js?v=20260726s" defer></script>
+<script src="../js/owner.js?v=20260726s"></script>
+<script src="../js/config.js?v=20260726s"></script>
+<script src="../js/archive.js?v=20260726s"></script>
+<script src="../js/blobstore.js?v=20260726s"></script>
+<script src="../js/particle-loader.js?v=20260726s"></script>
+<script src="../js/remote-captures.js?v=20260726s"></script>
+<script src="../js/community-seed.js?v=20260726s"></script>
+<script src="../js/flow.js?v=20260726s" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726s"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726r" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726s" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726r";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726r";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726s";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726s";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726r";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726s";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726r";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726s";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -778,8 +778,24 @@
                   if (lv.created !== sv.created) return;
                   if (!lv.points && sv.points) lv.points = sv.points;
                   if (!lv.defaultView && sv.defaultView) lv.defaultView = sv.defaultView;
+                  // a year Mor typed in ("edit years") lives on the server —
+                  // a device whose local copy still has only the derived
+                  // upload year must adopt it, or her curation only ever
+                  // shows on the device she edited from
+                  if (sv.year != null && !lv.yearExplicit) { lv.year = sv.year; lv.yearExplicit = true; }
                 });
               });
+              // the server's version ORDER is the curated one (every reorder
+              // is pushed there on save) — when both sides hold the same
+              // scans, arrange the local list the same way
+              var svKeys = d.versions.map(function (v) { return v.created; }).join(",");
+              var lvSorted = loc.versions.slice().sort(function (a, b) {
+                return d.versions.findIndex(function (v) { return v.created === a.created; })
+                     - d.versions.findIndex(function (v) { return v.created === b.created; });
+              });
+              var lvKeys = loc.versions.map(function (v) { return v.created; }).slice().sort().join(",");
+              var svSortedKeys = d.versions.map(function (v) { return v.created; }).slice().sort().join(",");
+              if (svKeys && lvKeys === svSortedKeys) loc.versions = lvSorted;
             }
             return;
           }
@@ -796,9 +812,13 @@
             // the same timeline the owner sees — this runs after the one-time
             // version-defaulting pass above, so it sets versions itself
             // (either the real history, or a single-version fallback).
+            // a version's stored year is Mor's own edit (the timeline's
+            // "edit years") and must survive a reload — the upload date is
+            // only the fallback for versions that never got a real year
             versions: (Array.isArray(d.versions) && d.versions.length)
               ? d.versions.map(function (v) {
-                  return { year: new Date(v.created || Date.now()).getFullYear(),
+                  return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
+                    yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null,
                     title: v.title || d.title };
@@ -837,9 +857,12 @@
             // a re-scan appends a dated version; a fresh capture has just one.
             // title falls back to the capture's current title when a
             // version predates per-version title snapshots.
+            // same rule as the server-record mapping above: an explicitly
+            // edited year always beats the derived upload year on reload
             versions: (Array.isArray(c.versions) && c.versions.length)
               ? c.versions.map(function (v) {
-                  return { year: new Date(v.created || Date.now()).getFullYear(),
+                  return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
+                    yearExplicit: v.year != null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null,
                     title: v.title || c.title };
@@ -3226,18 +3249,31 @@
       // picks only ever shows for her, and every visitor still sees the raw
       // default orientation. Patches just those fields, reusing the existing
       // model/points URLs (never a re-upload of the whole capture).
-      function patchServerRecord(serverId, fields) {
+      // every patch is a read-modify-write of the WHOLE record — two of them
+      // in flight at once (save years, then title, then an annotation, in
+      // quick succession) each read the same old record and the last POST
+      // silently threw away the others' work. One queue per record keeps
+      // them strictly one-after-another.
+      var patchQueues = {};
+      function queuedRecordPatch(serverId, mutate) {
         var api = (window.TRACES_API || "").replace(/\/$/, "");
         if (!api) return;
-        fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
-          .then(function (d) {
-            var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
-            if (!rec) return;
-            Object.keys(fields).forEach(function (fk) { rec[fk] = fields[fk]; });
-            return fetch(api + "/captures", {
-              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec),
+        var prev = patchQueues[serverId] || Promise.resolve();
+        patchQueues[serverId] = prev.then(function () {
+          return fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+            .then(function (d) {
+              var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
+              if (!rec || mutate(rec) === false) return;
+              return fetch(api + "/captures", {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec),
+              });
             });
-          }).catch(function () {});
+        }).catch(function () {});
+      }
+      function patchServerRecord(serverId, fields) {
+        queuedRecordPatch(serverId, function (rec) {
+          Object.keys(fields).forEach(function (fk) { rec[fk] = fields[fk]; });
+        });
       }
 
       // ----- "Make a visual merge from object's history" ---------------------
@@ -3592,20 +3628,15 @@
       // positions can differ between the local record and the server one
       function syncVersionViewToServer(created, view) {
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
-        var api = (window.TRACES_API || "").replace(/\/$/, "");
-        if (!api) return;
         [key, key + "-community"].forEach(function (serverId) {
-          fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
-            .then(function (d) {
-              var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
-              if (!rec || !Array.isArray(rec.versions)) return;
-              var hit = rec.versions.filter(function (v) { return v.created === created; })[0];
-              if (!hit) return;
-              hit.defaultView = view;
-              return fetch(api + "/captures", {
-                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec),
-              });
-            }).catch(function () {});
+          // through the same per-record queue as every other patch — a view
+          // save racing a year/annotation save must not clobber either side
+          queuedRecordPatch(serverId, function (rec) {
+            if (!Array.isArray(rec.versions)) return false;
+            var hit = rec.versions.filter(function (v) { return v.created === created; })[0];
+            if (!hit) return false;
+            hit.defaultView = view;
+          });
         });
       }
       function saveVersionViewLocally(store, created, view) {
