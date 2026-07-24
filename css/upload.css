@@ -206,7 +206,7 @@
   font-size: 0.8rem;
   opacity: 0.8;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 5px;
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;

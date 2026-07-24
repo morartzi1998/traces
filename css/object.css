@@ -349,7 +349,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 5px;
   cursor: pointer;
   padding: 0;
 }
@@ -1213,7 +1213,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   font-size: 0.78rem;
   color: #ffffff;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 4px;
   cursor: pointer;
   opacity: 0.85;
 }
@@ -1393,7 +1393,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   font-size: 0.85rem;
   color: var(--color-ink-blue);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 4px;
   cursor: pointer;
   opacity: 0.85;
 }

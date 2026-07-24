@@ -60,7 +60,7 @@
   font-size: 1.1rem;
   letter-spacing: 0.05em;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 5px;
   text-transform: uppercase;
   color: var(--color-cream);
   background: none;
