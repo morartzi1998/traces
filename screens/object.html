@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726w">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726w">
-<link rel="stylesheet" href="../css/object.css?v=20260726w">
-<script src="../js/cursor.js?v=20260726w" defer></script>
-<script src="../js/grain.js?v=20260726w" defer></script>
-<script src="../js/tilt3d.js?v=20260726w" defer></script>
-<script src="../js/owner.js?v=20260726w"></script>
-<script src="../js/config.js?v=20260726w"></script>
-<script src="../js/archive.js?v=20260726w"></script>
-<script src="../js/blobstore.js?v=20260726w"></script>
-<script src="../js/particle-loader.js?v=20260726w"></script>
-<script src="../js/remote-captures.js?v=20260726w"></script>
-<script src="../js/community-seed.js?v=20260726w"></script>
-<script src="../js/flow.js?v=20260726w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726x">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726x">
+<link rel="stylesheet" href="../css/object.css?v=20260726x">
+<script src="../js/cursor.js?v=20260726x" defer></script>
+<script src="../js/grain.js?v=20260726x" defer></script>
+<script src="../js/tilt3d.js?v=20260726x" defer></script>
+<script src="../js/owner.js?v=20260726x"></script>
+<script src="../js/config.js?v=20260726x"></script>
+<script src="../js/archive.js?v=20260726x"></script>
+<script src="../js/blobstore.js?v=20260726x"></script>
+<script src="../js/particle-loader.js?v=20260726x"></script>
+<script src="../js/remote-captures.js?v=20260726x"></script>
+<script src="../js/community-seed.js?v=20260726x"></script>
+<script src="../js/flow.js?v=20260726x" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726x"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726w" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726x" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726w";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726w";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726x";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726x";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726w";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726x";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726w";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726x";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -496,12 +496,12 @@
         <h1 class="obj-title" id="objTitle" dir="auto">Old living room lamp</h1>
       </div>
       <ul class="obj-menu" id="objMenu" hidden>
-        <li><button type="button" id="menuUpdateCapture">Update capture</button></li>
+        <li id="menuUpdateRow"><button type="button" id="menuUpdateCapture">Update capture</button></li>
         <li id="menuSetImageRow" hidden><button type="button" id="menuSetImage">Set a display image</button></li>
-        <li><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
+        <li id="menuAnnotateRow"><button type="button" id="menuAddAnnotation">Add an annotation</button></li>
         <li id="menuVisualMergeRow" hidden><button type="button" id="menuVisualMerge">Make a visual merge from object's history</button></li>
         <li id="menuToggleRepRow" hidden><button type="button" id="menuToggleRep">Show as mesh</button></li>
-        <li><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
+        <li id="menuConnectRow"><button type="button" onclick="startConnectFlow()">Connect previous captured object</button></li>
         <li id="menuConnectedRow" hidden><button type="button" id="menuConnectedList">Show connected captures</button></li>
         <li hidden><button type="button" id="menuToggleView">Show in its space</button></li>
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
@@ -864,6 +864,9 @@
                   // upload year must adopt it, or her curation only ever
                   // shows on the device she edited from
                   if (sv.year != null && !lv.yearExplicit) { lv.year = sv.year; lv.yearExplicit = true; }
+                  // a story written for this scan on another device (or moved
+                  // onto it server-side) must show here too
+                  if (sv.feeling && !lv.feeling) lv.feeling = sv.feeling;
                 });
               });
               // the server's version ORDER is the curated one (every reorder
@@ -1626,14 +1629,19 @@
       var menuDisconnect = document.getElementById("menuDisconnect");
       var menuDisconnectRow = menuDisconnect.closest("li");
 
+      // may the CURRENT capture be edited from this device? (set in show(k),
+      // read by the menu-row gating and the view toggle)
+      var menuManageable = false;
       function hasSpaceView(k) {
         return !!(catalog[k].connectedKey && catalog[catalog[k].connectedKey]);
       }
 
       function refreshViewToggle() {
         var has = hasSpaceView(key);
+        // seeing an object inside its space is for every visitor;
+        // DISCONNECTING it from that space is not
         menuToggleViewRow.hidden = !has;
-        menuDisconnectRow.hidden = !has;
+        menuDisconnectRow.hidden = !has || !menuManageable;
         menuToggleView.textContent = SPACE_VIEW_ACTIVE ? "Show this object alone" : "Show in its space";
       }
 
@@ -1979,7 +1987,9 @@
         // describes the capture as it is TODAY and read as noise back there
         var versionFeeling = oldVersion ? ((ver && ver.feeling) || "") : null;
         var descSection = document.querySelector(".obj-white-section--description");
-        if (descSection) descSection.hidden = oldVersion && !versionFeeling;
+        // the owner always sees the block (so "write this scan's story" stays
+        // reachable through Edit); visitors only when there's a story to read
+        if (descSection) descSection.hidden = oldVersion && !versionFeeling && !canEditCapture(key);
         var subEl = document.getElementById("whiteSub");
         subEl.hidden = !item.connected;
         subEl.textContent = item.connected ? 'connected to the space "' + item.connected + '"' : "";
@@ -2509,11 +2519,25 @@
         // anyone else's shared capture gets a strictly read-only view - they
         // can open and look, but never edit what isn't theirs.
         var isOwnerHere = window.isOwnerDevice && window.isOwnerDevice();
-        objMenuBtnEl.hidden = !isOwnerHere && !ownedHere;
+        menuManageable = isOwnerHere || ownedHere;
+        // a visitor gets the menu too when it holds something to LOOK at —
+        // the collage of a capture's history, or a space's connected list —
+        // just never the editing rows (gated below on menuManageable). This
+        // replaced the separate floating "collage" pill: one entry point,
+        // open to everyone.
+        var visitorRows = mergeableVersions(k).length >= 2
+          || (catalog[k].kind === "space" && connectedCaptures(k).length > 0)
+          || hasSpaceView(k);
+        objMenuBtnEl.hidden = !menuManageable && !visitorRows;
+        // editing rows exist only for someone who may edit this capture
+        ["menuUpdateRow", "menuAnnotateRow", "menuConnectRow"].forEach(function (rid) {
+          var row = document.getElementById(rid);
+          if (row) row.hidden = !menuManageable;
+        });
         // uploading a display image works for anything Mor can manage, live 3D
         // view or not — so it's offered whenever the menu itself is
         var menuSetImageRow = document.getElementById("menuSetImageRow");
-        if (menuSetImageRow) menuSetImageRow.hidden = !isOwnerHere && !ownedHere;
+        if (menuSetImageRow) menuSetImageRow.hidden = !menuManageable;
         // a 3D "visual merge" only means something with at least two dated
         // point-cloud scans to combine — otherwise the button read as broken
         // (it never had a handler at all). Hidden until there's real history.
@@ -2549,7 +2573,9 @@
         // the collage of a capture's dated scans is for everyone, not just
         // the owner's menu — visitors could never reach it before
         var collageBtn = document.getElementById("objCollageBtn");
-        if (collageBtn) collageBtn.hidden = mergeableVersions(k).length < 2;
+        // the floating collage pill is retired — the menu is the one entry
+        // point for the visual merge now, for visitors and owner alike
+        if (collageBtn) collageBtn.hidden = true;
         // switching captures (prev/next, a jump link, entering community
         // browsing) always lands on a fully closed menu - this used to only
         // hide it, leaving the hamburger icon's bars stuck in their
@@ -2628,15 +2654,53 @@
 
       document.getElementById("whiteEditBtn").addEventListener("click", function () {
         var item = catalog[key];
-        document.getElementById("whiteTitleInput").value = item.title;
-        document.getElementById("whiteFeelingInput").value = item.feeling || "";
+        // scrubbed to an old scan, Edit edits THAT scan's own title/story —
+        // not the capture's present-day face
+        var vSel = displayedVersionIndex >= 0 ? (item.versions || [])[displayedVersionIndex] : null;
+        document.getElementById("whiteTitleInput").value = vSel ? (vSel.title || item.title) : item.title;
+        document.getElementById("whiteFeelingInput").value = vSel ? (vSel.feeling || "") : (item.feeling || "");
         document.getElementById("whiteObj").checked = item.kind !== "space";
         document.getElementById("whiteSpace").checked = item.kind === "space";
+        // the description block hides on a story-less old scan — editing IS
+        // how a story gets written, so it must be visible now
+        var ds = document.querySelector(".obj-white-section--description");
+        if (ds) ds.hidden = false;
         setWhiteInputsDisabled(false);
         white.classList.add("editing");
       });
       document.getElementById("whiteSave").addEventListener("click", function () {
         var item = catalog[key];
+        // an old scan on stage: the save lands on that version alone
+        var vList = item.versions || [];
+        var vSel = displayedVersionIndex >= 0 ? vList[displayedVersionIndex] : null;
+        if (vSel) {
+          var vt = document.getElementById("whiteTitleInput").value.trim();
+          if (vt) vSel.title = vt;
+          vSel.feeling = document.getElementById("whiteFeelingInput").value.trim();
+          [window.Archive, window.Community].forEach(function (store) {
+            if (!store || !store.get(key)) return;
+            var rec = store.get(key);
+            var hit = (rec.versions || []).filter(function (v) { return v.created === vSel.created; })[0];
+            if (!hit) return;
+            hit.title = vSel.title;
+            hit.feeling = vSel.feeling;
+            store.update(key, { versions: rec.versions });
+          });
+          if (window.isOwnerDevice && window.isOwnerDevice()) {
+            var vMeta = vList.map(function (v) {
+              return { created: v.created, year: v.year, title: v.title,
+                feeling: v.created === vSel.created ? vSel.feeling : undefined };
+            });
+            var inArch = window.Archive && Archive.get(key);
+            var inComm = window.Community && Community.get(key);
+            if (inArch || !inComm) patchServerVersionsMeta(key, vMeta);
+            if (inComm) patchServerVersionsMeta(key + "-community", vMeta);
+          }
+          exitWhiteEdit();
+          document.getElementById("objTitle").textContent = vSel.title || item.title;
+          fillWhite(item);
+          return;
+        }
         var t = document.getElementById("whiteTitleInput").value.trim();
         if (t) item.title = t;
         item.feeling = document.getElementById("whiteFeelingInput").value.trim();
@@ -3196,7 +3260,7 @@
         // best side, so there's a real angle worth saving in both cases
         var onLiveModel = catalog[key].model && !modelViewer.hidden && modelViewer.loaded;
         var onLivePoints = pcViewer && !objPoints.hidden;
-        menuSetDefaultViewRow.hidden = !(onLiveModel || onLivePoints);
+        menuSetDefaultViewRow.hidden = !(onLiveModel || onLivePoints) || !menuManageable;
         // with an OLD scan on stage the same button saves the angle for THAT
         // scan alone (and leaves the polaroid thumbnail out of it) — say so,
         // instead of promising a thumbnail change that deliberately won't happen
@@ -3206,7 +3270,7 @@
         // point-size + straighten sliders live behind this one entry now,
         // in their own panel (see menuAdjust below), instead of a stack of
         // inline slider rows cluttering the menu list itself
-        menuAdjustRow.hidden = !onLivePoints;
+        menuAdjustRow.hidden = !onLivePoints || !menuManageable;
         // closing the menu also dismisses the adjust panel, so it never
         // lingers open over the capture on its own
         if (!opening) closeAdjustPanel();
@@ -3406,6 +3470,10 @@
             var v = by[m.created] || { created: m.created };
             v.year = m.year;
             if (m.title) v.title = m.title;
+            // a version's own story text — only ever set when the caller
+            // explicitly sends one (the per-scan edit), so a plain
+            // years/order save can never blank stories out
+            if (m.feeling != null) v.feeling = m.feeling;
             return v;
           });
           var last = rec.versions[rec.versions.length - 1];
