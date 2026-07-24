@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727o">
-<link rel="stylesheet" href="../css/object.css?v=20260727o">
-<script src="../js/cursor.js?v=20260727o" defer></script>
-<script src="../js/grain.js?v=20260727o" defer></script>
-<script src="../js/tilt3d.js?v=20260727o" defer></script>
-<script src="../js/owner.js?v=20260727o"></script>
-<script src="../js/config.js?v=20260727o"></script>
-<script src="../js/archive.js?v=20260727o"></script>
-<script src="../js/blobstore.js?v=20260727o"></script>
-<script src="../js/particle-loader.js?v=20260727o"></script>
-<script src="../js/remote-captures.js?v=20260727o"></script>
-<script src="../js/community-seed.js?v=20260727o"></script>
-<script src="../js/flow.js?v=20260727o" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727o"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727p">
+<link rel="stylesheet" href="../css/object.css?v=20260727p">
+<script src="../js/cursor.js?v=20260727p" defer></script>
+<script src="../js/grain.js?v=20260727p" defer></script>
+<script src="../js/tilt3d.js?v=20260727p" defer></script>
+<script src="../js/owner.js?v=20260727p"></script>
+<script src="../js/config.js?v=20260727p"></script>
+<script src="../js/archive.js?v=20260727p"></script>
+<script src="../js/blobstore.js?v=20260727p"></script>
+<script src="../js/particle-loader.js?v=20260727p"></script>
+<script src="../js/remote-captures.js?v=20260727p"></script>
+<script src="../js/community-seed.js?v=20260727p"></script>
+<script src="../js/flow.js?v=20260727p" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727p"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727o" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727p" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727o";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727o";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727p";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727p";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727o";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727p";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727o";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727p";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3566,7 +3566,23 @@
         // locally above) while the shared record never changed.
         if (isOwner) {
           shrinkThumbForUpload(dataUrl).then(function (blob) {
-            serverPatchIds(key).forEach(function (sid) { saveThumbnailToServer(sid, blob, 0); });
+            // upload the shrunk image ONCE, then point every candidate server
+            // record at it. serverPatchIds returns both the archive and the
+            // community id when it can't be sure which one this capture lives
+            // under (a community capture reached with a stale/cleared
+            // "came from community" flag used to resolve to the wrong id, and
+            // the patch landed on a record that doesn't exist — a silent
+            // no-op, so the visitor's picture never changed). Patching both is
+            // safe: queuedRecordPatch simply skips an id the server doesn't
+            // have.
+            uploadThumbBlob(blob, 0, function (url) {
+              serverPatchIds(key).forEach(function (sid) {
+                queuedRecordPatch(sid, function (rec) { rec.img = url; });
+              });
+              if (catalog[key]) catalog[key].img = url;
+              if (window.Archive && Archive.get(key)) Archive.update(key, { img: url });
+              if (window.Community && Community.get(key)) Community.update(key, { img: url });
+            });
           });
         }
       }
@@ -3595,10 +3611,12 @@
         });
       }
 
-      function saveThumbnailToServer(serverId, blob, attempt) {
+      // upload a thumbnail blob to the file store, retrying a stalled/failed
+      // request, and hand the resulting hosted URL to `onUrl`. Separated from
+      // the record patch so ONE upload can update several candidate records.
+      function uploadThumbBlob(blob, attempt, onUrl) {
         var api = (window.TRACES_API || "").replace(/\/$/, "");
         if (!api || !window.BlobStore) return;
-        var k = key; // pin the capture — the upload may outlive a prev/next swap
         var form = new FormData();
         form.append("file", blob, "thumb.png");
         var xhr = new XMLHttpRequest();
@@ -3608,7 +3626,7 @@
         xhr.open("POST", api + "/captures/upload");
         var failed = function () {
           if (attempt < 2) {
-            setTimeout(function () { saveThumbnailToServer(serverId, blob, attempt + 1); },
+            setTimeout(function () { uploadThumbBlob(blob, attempt + 1, onUrl); },
               (attempt + 1) * 2000);
             return;
           }
@@ -3638,16 +3656,7 @@
           var url = null;
           try { url = JSON.parse(xhr.responseText).url; } catch (e) {}
           if (!url) { failed(); return; }
-          // through the shared per-record queue — the raw fetch→POST this
-          // used to do could race a year/tilt/annotation patch and clobber
-          // whichever landed in between
-          queuedRecordPatch(serverId, function (rec) { rec.img = url; });
-          if (catalog[k]) catalog[k].img = url;
-          // point the local record at the hosted copy too — if the idb
-          // write above failed quietly (storage full), the gallery card
-          // otherwise keeps showing the old picture forever
-          if (window.Archive && Archive.get(k)) Archive.update(k, { img: url });
-          if (window.Community && Community.get(k)) Community.update(k, { img: url });
+          onUrl(url);
         };
         xhr.send(form);
       }
@@ -3691,7 +3700,15 @@
         var ids = [];
         if (c.onServerArchive) ids.push(k);
         if (c.onServerCommunity) ids.push(k + "-community");
-        if (!ids.length) ids.push((browsingCommunity || c.visibility === "community") ? k + "-community" : k);
+        // when the merge never tagged which scope this capture lives under
+        // (the flags come from the server list, and a capture opened before
+        // that resolved has neither), don't GUESS from a one-shot "came from
+        // community" flag that may already be cleared — target BOTH ids. A
+        // patch to whichever one the server doesn't actually have is a silent
+        // no-op (queuedRecordPatch skips a missing record), so hitting both
+        // is safe and always reaches the real record. This is what fixed a
+        // community capture's new display image never reaching visitors.
+        if (!ids.length) { ids.push(k); ids.push(k + "-community"); }
         return ids;
       }
       // reorder/rename/redate the server's version list WITHOUT touching its

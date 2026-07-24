@@ -6,10 +6,10 @@
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="css/base.css?v=20260727o">
-<link rel="stylesheet" href="css/chrome.css?v=20260727o">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260727o">
-<link rel="stylesheet" href="css/loading.css?v=20260727o">
+<link rel="stylesheet" href="css/base.css?v=20260727p">
+<link rel="stylesheet" href="css/chrome.css?v=20260727p">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260727p">
+<link rel="stylesheet" href="css/loading.css?v=20260727p">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -21,11 +21,11 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260727o" defer></script>
-<script src="js/grain.js?v=20260727o" defer></script>
-<script src="js/config.js?v=20260727o"></script>
-<script src="js/owner.js?v=20260727o"></script>
-<script src="js/flow.js?v=20260727o" defer></script>
+<script src="js/cursor.js?v=20260727p" defer></script>
+<script src="js/grain.js?v=20260727p" defer></script>
+<script src="js/config.js?v=20260727p"></script>
+<script src="js/owner.js?v=20260727p"></script>
+<script src="js/flow.js?v=20260727p" defer></script>
 </head>
 <body>
 
@@ -92,10 +92,24 @@
       var ready = document.readyState === "complete";
       window.addEventListener("load", function () { ready = true; });
       var label = document.getElementById("appLoaderPct");
+      // the polaroid pile takes ~2s to finish dealing itself in (the last
+      // card lands at ~1.9s). On a cached load "ready" is true from the very
+      // first tick, so without a floor the counter raced to 100 in ~1.3s and
+      // the splash vanished before the animation ever played — which read as
+      // "no loading animation on the phone". This floor holds the count back
+      // just long enough for the pile to finish, without going back to the
+      // old fixed fake wait: a genuinely slow load still crawls past it.
+      var MIN_MS = 2200;
+      var started = Date.now();
       var t = setInterval(function () {
+        var elapsed = Date.now() - started;
+        var ceil = ready ? Math.max(1, Math.round((elapsed / MIN_MS) * 100)) : 100;
         pct += ready
           ? 6 + Math.floor(Math.random() * 5)
           : (pct < 88 ? 1 + Math.floor(Math.random() * 3) : 0);
+        // while the entrance is still playing, don't let the count outrun the
+        // floor — once the floor's passed, 100 lands immediately
+        if (pct > ceil) pct = ceil;
         if (pct >= 100) {
           pct = 100;
           clearInterval(t);

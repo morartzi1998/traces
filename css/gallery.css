@@ -312,9 +312,15 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.gal-card:hover {
-  transform: rotate(-0.8deg) translateY(-8px) scale(1.02);
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+/* only real pointers get the lift-on-hover. On a touch screen :hover STICKS
+   after a tap, so every card you opened stayed lifted (translated up with a
+   heavier shadow) — reading as polaroids randomly "popping up" out of the
+   feed after you touched them */
+@media (hover: hover) and (pointer: fine) {
+  .gal-card:hover {
+    transform: rotate(-0.8deg) translateY(-8px) scale(1.02);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.6);
+  }
 }
 
 /* the same whisper-subtle depth gradient as the home polaroids: the photo's
