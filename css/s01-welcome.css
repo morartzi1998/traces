@@ -320,10 +320,15 @@
     text-align: left;
   }
 
+  /* .hero-text is display:contents on a phone, so its text-align can't
+     reach the headline — centre the headline itself, matching the centred
+     photo and CTA under it */
   .headline {
     white-space: normal;
     font-size: clamp(1.9rem, 6vw, 2.7rem);
     line-height: 1;
+    width: 100%;
+    text-align: center;
   }
 
   /* the CTA zone takes all the room left under the scan: the small invitation

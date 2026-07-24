@@ -6,10 +6,10 @@
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="css/base.css?v=20260727l">
-<link rel="stylesheet" href="css/chrome.css?v=20260727l">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260727l">
-<link rel="stylesheet" href="css/loading.css?v=20260727l">
+<link rel="stylesheet" href="css/base.css?v=20260727m">
+<link rel="stylesheet" href="css/chrome.css?v=20260727m">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260727m">
+<link rel="stylesheet" href="css/loading.css?v=20260727m">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -21,11 +21,11 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260727l" defer></script>
-<script src="js/grain.js?v=20260727l" defer></script>
-<script src="js/config.js?v=20260727l"></script>
-<script src="js/owner.js?v=20260727l"></script>
-<script src="js/flow.js?v=20260727l" defer></script>
+<script src="js/cursor.js?v=20260727m" defer></script>
+<script src="js/grain.js?v=20260727m" defer></script>
+<script src="js/config.js?v=20260727m"></script>
+<script src="js/owner.js?v=20260727m"></script>
+<script src="js/flow.js?v=20260727m" defer></script>
 </head>
 <body>
 
@@ -80,13 +80,22 @@
 
   <script>
     (function () {
-      // show the entry splash once per browser session, then reveal the app
+      // show the entry splash once per browser session, then reveal the app.
+      // The counter is tied to the REAL load: it crawls while the page is
+      // still fetching and sprints to 100 the moment everything is ready —
+      // so the splash lasts exactly as long as the loading it stands for
+      // (plus the short minimum the polaroid drop animation needs), instead
+      // of a fixed fake count that held the screen hostage either way
       var loader = document.getElementById("appLoader");
       if (sessionStorage.getItem("traces-loaded")) { loader.remove(); return; }
       var pct = 0;
+      var ready = document.readyState === "complete";
+      window.addEventListener("load", function () { ready = true; });
       var label = document.getElementById("appLoaderPct");
       var t = setInterval(function () {
-        pct += 1 + Math.floor(Math.random() * 3);
+        pct += ready
+          ? 6 + Math.floor(Math.random() * 5)
+          : (pct < 88 ? 1 + Math.floor(Math.random() * 3) : 0);
         if (pct >= 100) {
           pct = 100;
           clearInterval(t);

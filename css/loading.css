@@ -181,22 +181,27 @@
     box-shadow: 0 16px 34px rgba(0, 0, 0, 0.62);
     opacity: 0;
     transform: translate(-50%, -50%);
-    animation: load-drop 0.72s cubic-bezier(0.18, 0.72, 0.24, 1) forwards;
+    /* same idea as the desktop row: land, then keep a gentle float going —
+       the phone pile used to finish its 1.2s build and sit frozen while the
+       counter kept counting, which read as the loading being stuck */
+    animation:
+      load-drop 0.72s cubic-bezier(0.18, 0.72, 0.24, 1) var(--sd, 0s) forwards,
+      load-pile-float var(--float-dur, 5.4s) ease-in-out calc(var(--sd, 0s) + 0.72s) infinite;
   }
 
   /* each card lands a beat after the previous one, and the later it lands the
      higher it sits — so the pile visibly builds from the bottom up; the small
      per-card offsets keep it looking hand-stacked. --tilt comes from inline. */
-  .load-polaroid:nth-child(1)  { z-index: 1;  --sx: -6px;  --sy: 26px;  animation-delay: 0s;    }
-  .load-polaroid:nth-child(2)  { z-index: 2;  --sx: 18px;  --sy: -20px; animation-delay: 0.13s; }
-  .load-polaroid:nth-child(3)  { z-index: 3;  --sx: -22px; --sy: 6px;   animation-delay: 0.26s; }
-  .load-polaroid:nth-child(4)  { z-index: 4;  --sx: 12px;  --sy: 22px;  animation-delay: 0.39s; }
-  .load-polaroid:nth-child(5)  { z-index: 5;  --sx: -14px; --sy: -14px; animation-delay: 0.52s; }
-  .load-polaroid:nth-child(6)  { z-index: 6;  --sx: 22px;  --sy: 10px;  animation-delay: 0.65s; }
-  .load-polaroid:nth-child(7)  { z-index: 7;  --sx: -10px; --sy: -24px; animation-delay: 0.78s; }
-  .load-polaroid:nth-child(8)  { z-index: 8;  --sx: 8px;   --sy: 18px;  animation-delay: 0.91s; }
-  .load-polaroid:nth-child(9)  { z-index: 9;  --sx: -18px; --sy: -8px;  animation-delay: 1.04s; }
-  .load-polaroid:nth-child(10) { z-index: 10; --sx: 4px;   --sy: 0px;   animation-delay: 1.17s; }
+  .load-polaroid:nth-child(1)  { z-index: 1;  --sx: -6px;  --sy: 26px;  --sd: 0s;    }
+  .load-polaroid:nth-child(2)  { z-index: 2;  --sx: 18px;  --sy: -20px; --sd: 0.13s; }
+  .load-polaroid:nth-child(3)  { z-index: 3;  --sx: -22px; --sy: 6px;   --sd: 0.26s; }
+  .load-polaroid:nth-child(4)  { z-index: 4;  --sx: 12px;  --sy: 22px;  --sd: 0.39s; }
+  .load-polaroid:nth-child(5)  { z-index: 5;  --sx: -14px; --sy: -14px; --sd: 0.52s; }
+  .load-polaroid:nth-child(6)  { z-index: 6;  --sx: 22px;  --sy: 10px;  --sd: 0.65s; }
+  .load-polaroid:nth-child(7)  { z-index: 7;  --sx: -10px; --sy: -24px; --sd: 0.78s; }
+  .load-polaroid:nth-child(8)  { z-index: 8;  --sx: 8px;   --sy: 18px;  --sd: 0.91s; }
+  .load-polaroid:nth-child(9)  { z-index: 9;  --sx: -18px; --sy: -8px;  --sd: 1.04s; }
+  .load-polaroid:nth-child(10) { z-index: 10; --sx: 4px;   --sy: 0px;   --sd: 1.17s; }
 
   @keyframes load-drop {
     0% {
@@ -208,6 +213,16 @@
       opacity: 1;
       transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg)) scale(1);
     }
+  }
+
+  /* the pile's version of load-float: the same soft bob around each card's
+     own resting spot, periods staggered by the 3n rules above so the pile
+     breathes instead of nodding in unison */
+  @keyframes load-pile-float {
+    0%, 100% { transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--tilt, 0deg)); }
+    25%      { transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 4px)) rotate(var(--tilt, 0deg)); }
+    50%      { transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 6px)) rotate(var(--tilt, 0deg)); }
+    75%      { transform: translate(-50%, -50%) translate(var(--sx, 0px), calc(var(--sy, 0px) - 2px)) rotate(var(--tilt, 0deg)); }
   }
 
   .load-polaroid:hover,
