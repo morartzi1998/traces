@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
 <title>Traces — diagnostics</title>
 <script type="importmap">
-  { "imports": { "three": "./js/vendor/three/three.module.js?v=20260726z" } }
+  { "imports": { "three": "./js/vendor/three/three.module.js?v=20260727a" } }
 </script>
 <style>
   body { background: #14120f; color: #f0eadc; font-family: monospace; font-size: 15px;
@@ -70,8 +70,8 @@
   .then(function (buf) {
     if (!buf) { line("cloud render", "fail", "no data to try rendering"); return; }
     // mount through the site's own modules — the exact production path
-    import("./js/voxelize-shared.js?v=20260726z").then(function (vx) {
-      return import("./js/point-cloud-viewer.js?v=20260726z").then(function (pcv) {
+    import("./js/voxelize-shared.js?v=20260727a").then(function (vx) {
+      return import("./js/point-cloud-viewer.js?v=20260727a").then(function (pcv) {
         var g = vx.deserializeGeometry(buf);
         line("deserialize", "ok", g.getAttribute("position").count + " points");
         var pv = pcv.mountPointCloudViewer(document.getElementById("cloudBox"), g, {});
