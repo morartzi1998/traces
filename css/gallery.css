@@ -41,7 +41,8 @@
   font-size: var(--fs-title);
   color: var(--color-ink-blue);
   text-decoration: underline;
-  text-underline-offset: 7px;
+  text-underline-offset: 8px;
+  text-decoration-thickness: 1px;
   background: none;
   border: none;
   cursor: pointer;
@@ -99,7 +100,8 @@
   background: none;
   border: none;
   text-decoration: underline;
-  text-underline-offset: 8px;
+  text-underline-offset: 9px;
+  text-decoration-thickness: 1px;
   cursor: pointer;
 }
 
@@ -271,7 +273,8 @@
   border: none;
   padding: 0;
   text-decoration: underline;
-  text-underline-offset: 6px;
+  text-underline-offset: 7px;
+  text-decoration-thickness: 1px;
   cursor: pointer;
 }
 
@@ -501,7 +504,8 @@
   font-family: inherit;
   font-size: 1rem;
   text-decoration: underline;
-  text-underline-offset: 5px;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
   opacity: 0.8;
   cursor: pointer;
   flex-shrink: 0;

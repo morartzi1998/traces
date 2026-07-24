@@ -24,7 +24,9 @@
   function progress() {
     var s = scroller();
     var max = s.scrollHeight - window.innerHeight;
-    if (max <= 0) return 0;
+    // a window tall enough to hold the whole story leaves nothing to scroll —
+    // show the pile fully fanned (the end state) instead of forever-stacked
+    if (max <= 0) return 1;
     return Math.min(1, Math.max(0, s.scrollTop / max));
   }
 
@@ -34,11 +36,19 @@
     // stack is open while you read the last of the story
     var p = Math.min(1, raw / 0.8);
 
-    // fan the polaroids downward: compact near the top, fully open as p -> 1
+    // fan the polaroids downward: compact near the top, fully open as p -> 1.
+    // The per-card step is capped so the LAST card still sits whole above the
+    // bottom nav at full spread — maximum scroll always ends on the complete
+    // cascade, never on a clipped polaroid.
+    var cardH = cards.length ? cards[0].offsetHeight : 0;
+    var pileTop = pile.getBoundingClientRect().top;
+    var avail = window.innerHeight - pileTop - cardH - 84;
+    var per = Math.min(window.innerHeight * 0.185,
+      cards.length > 1 ? Math.max(40, avail / (cards.length - 1)) : 0);
     cards.forEach(function (card, i) {
       var compact = i * 20;
-      var spread = i * (window.innerHeight * 0.185);
-      var y = compact + p * spread;
+      var spread = i * per;
+      var y = compact + p * (spread - compact > 0 ? spread - compact : 0);
       card.style.transform = "translateY(" + y + "px) rotate(var(--tilt, 0deg))";
     });
 

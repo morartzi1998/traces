@@ -65,7 +65,7 @@
    row, same quiet style as .up-qr-hint (no box, no color swap) */
 .up-option-tip {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 12px);
   left: 0;
   color: var(--color-cream);
   font-family: inherit;
@@ -95,7 +95,8 @@
 }
 
 .up-option-body {
-  padding-top: 20px;
+  /* room for the hover hint that sits between the row title and this body */
+  padding-top: 38px;
 }
 
 /* Drop zone */
@@ -206,7 +207,8 @@
   font-size: 0.8rem;
   opacity: 0.8;
   text-decoration: underline;
-  text-underline-offset: 5px;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
