@@ -6,10 +6,10 @@
 <title>Traces — Capture your home</title>
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="css/base.css?v=20260727s">
-<link rel="stylesheet" href="css/chrome.css?v=20260727s">
-<link rel="stylesheet" href="css/s01-welcome.css?v=20260727s">
-<link rel="stylesheet" href="css/loading.css?v=20260727s">
+<link rel="stylesheet" href="css/base.css?v=20260727t">
+<link rel="stylesheet" href="css/chrome.css?v=20260727t">
+<link rel="stylesheet" href="css/s01-welcome.css?v=20260727t">
+<link rel="stylesheet" href="css/loading.css?v=20260727t">
 <style>
   /* Entry loader — the archive polaroids fan out and float while the
      interface loads, then the whole splash fades into the welcome screen */
@@ -21,11 +21,11 @@
   }
   .app-loader.is-done { opacity: 0; visibility: hidden; }
 </style>
-<script src="js/cursor.js?v=20260727s" defer></script>
-<script src="js/grain.js?v=20260727s" defer></script>
-<script src="js/config.js?v=20260727s"></script>
-<script src="js/owner.js?v=20260727s"></script>
-<script src="js/flow.js?v=20260727s" defer></script>
+<script src="js/cursor.js?v=20260727t" defer></script>
+<script src="js/grain.js?v=20260727t" defer></script>
+<script src="js/config.js?v=20260727t"></script>
+<script src="js/owner.js?v=20260727t"></script>
+<script src="js/flow.js?v=20260727t" defer></script>
 </head>
 <body>
 
@@ -91,24 +91,31 @@
       var pct = 0;
       var ready = document.readyState === "complete";
       window.addEventListener("load", function () { ready = true; });
+      // window.load waits for EVERY font and image to finish — on a phone over
+      // mobile data that's several seconds, and the counter used to freeze at
+      // ~88% that whole time waiting for it. The app is usable the moment the
+      // DOM and its critical CSS are in, so treat "ready" more generously: the
+      // DOM being parsed is enough, and a hard 4.5s safety cap means the splash
+      // never holds the screen hostage even if some asset stalls forever.
+      if (document.readyState !== "loading") ready = true;
+      document.addEventListener("DOMContentLoaded", function () { ready = true; });
+      setTimeout(function () { ready = true; }, 4500);
       var label = document.getElementById("appLoaderPct");
       // the polaroid pile takes ~2s to finish dealing itself in (the last
       // card lands at ~1.9s). On a cached load "ready" is true from the very
       // first tick, so without a floor the counter raced to 100 in ~1.3s and
-      // the splash vanished before the animation ever played — which read as
-      // "no loading animation on the phone". This floor holds the count back
-      // just long enough for the pile to finish, without going back to the
-      // old fixed fake wait: a genuinely slow load still crawls past it.
+      // the splash vanished before the animation ever played. This floor holds
+      // the count back just long enough for the pile to finish.
       var MIN_MS = 2200;
       var started = Date.now();
       var t = setInterval(function () {
         var elapsed = Date.now() - started;
-        var ceil = ready ? Math.max(1, Math.round((elapsed / MIN_MS) * 100)) : 100;
-        pct += ready
-          ? 6 + Math.floor(Math.random() * 5)
-          : (pct < 88 ? 1 + Math.floor(Math.random() * 3) : 0);
-        // while the entrance is still playing, don't let the count outrun the
-        // floor — once the floor's passed, 100 lands immediately
+        var ceil = ready ? Math.max(1, (elapsed / MIN_MS) * 100) : 100;
+        // ready → sprint to 100; not ready → EASE toward a soft 96 ceiling
+        // (a shrinking step as it approaches) so the bar keeps visibly moving
+        // instead of stalling dead at one number
+        pct += ready ? (6 + Math.random() * 5)
+                     : Math.max(0.4, (96 - pct) * 0.07);
         if (pct > ceil) pct = ceil;
         if (pct >= 100) {
           pct = 100;
@@ -119,7 +126,7 @@
             setTimeout(function () { loader.remove(); }, 650);
           }, 450);
         }
-        label.textContent = pct;
+        label.textContent = Math.min(100, Math.round(pct));
       }, 90);
     })();
 
