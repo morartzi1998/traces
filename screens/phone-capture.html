@@ -6,11 +6,11 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726u">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260726u">
-<script src="../js/cursor.js?v=20260726u" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260726u" defer></script>
-<script src="../js/normalize-image.js?v=20260726u" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726v">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260726v">
+<script src="../js/cursor.js?v=20260726v" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260726v" defer></script>
+<script src="../js/normalize-image.js?v=20260726v" defer></script>
 </head>
 <body>
 
@@ -92,25 +92,26 @@
         showOnly(sending);
 
         var previewThumb = null;
+        // the photo is only UPLOADED here — the paid 3D generation starts on
+        // the desktop, after the person actually confirms this shot. Every
+        // re-shoot used to fire its own full generation (a real scan's cost,
+        // multiplied by however many tries it took to like the photo).
         window.normalizeImageToJpeg(file).then(function (jpegBlob) {
           return makeThumb(jpegBlob, 640).then(function (thumb) {
             previewThumb = thumb;
             var fd = new FormData();
-            fd.append("image", jpegBlob, "capture.jpg");
-            return fetch(api + "/generate", { method: "POST", body: fd });
+            fd.append("file", jpegBlob, "capture.jpg");
+            return fetch(api + "/captures/upload", { method: "POST", body: fd });
           });
         })
           .then(function (r) { return r.json(); })
           .then(function (d) {
-            if (!d || !d.task_id) { fail("The photo couldn't be processed."); return; }
+            if (!d || !d.url) { fail("The photo couldn't be processed."); return; }
             // the deployed relay only stores whatever's in `task_id`, so the
-            // preview rides along inside it as a small JSON blob ({ t, thumb }).
-            // The desktop unpacks it; a plain id (no preview) still works too.
-            // Self-contained + expires with the 10-min session, so nothing is
-            // left behind — and it needs no backend change to work today.
-            var relay = previewThumb
-              ? JSON.stringify({ t: d.task_id, thumb: previewThumb })
-              : d.task_id;
+            // payload rides along inside it as a small JSON blob — here
+            // { u: hosted photo URL, thumb } (the desktop generates from u
+            // after confirm; older { t: task id } payloads still unpack too).
+            var relay = JSON.stringify({ u: d.url, thumb: previewThumb || null });
             return fetch(api + "/session/" + sessionId, {
               method: "POST",
               headers: { "Content-Type": "application/json" },

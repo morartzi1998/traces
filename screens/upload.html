@@ -6,19 +6,19 @@
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726u">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726u">
-<link rel="stylesheet" href="../css/upload.css?v=20260726u">
-<script src="../js/owner.js?v=20260726u"></script>
-<script src="../js/config.js?v=20260726u"></script>
-<script src="../js/cursor.js?v=20260726u" defer></script>
-<script src="../js/grain.js?v=20260726u" defer></script>
-<script src="../js/blobstore.js?v=20260726u"></script>
-<script src="../js/flow.js?v=20260726u" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260726u" defer></script>
-<script src="../js/normalize-image.js?v=20260726u" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260726u"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726u"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726v">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726v">
+<link rel="stylesheet" href="../css/upload.css?v=20260726v">
+<script src="../js/owner.js?v=20260726v"></script>
+<script src="../js/config.js?v=20260726v"></script>
+<script src="../js/cursor.js?v=20260726v" defer></script>
+<script src="../js/grain.js?v=20260726v" defer></script>
+<script src="../js/blobstore.js?v=20260726v"></script>
+<script src="../js/flow.js?v=20260726v" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260726v" defer></script>
+<script src="../js/normalize-image.js?v=20260726v" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260726v"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726v"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,12 +27,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726u" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726v" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726u";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260726u";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260726u";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726v";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260726v";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260726v";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -266,16 +266,23 @@
             .then(function (d) {
               if (d && d.task_id) {
                 var payload = resolvePhonePayload(d);
-                if (payload.thumb) {
-                  // re-shooting happens on the phone; the computer keeps
-                  // listening and only ever shows the latest photo, so the
-                  // one thing done here is the final confirm. Don't stop the
-                  // relay — a fresh shot from the phone should refresh this.
+                if (payload.photoUrl) {
+                  // nothing has been generated (or paid for) yet — the photo
+                  // just waits here for a human yes. Re-shooting on the phone
+                  // refreshes this same card with the newer shot.
+                  if (payload.photoUrl !== lastConfirmTaskId) {
+                    lastConfirmTaskId = payload.photoUrl;
+                    hint.textContent = "photo received — confirm on your computer";
+                    showPhoneConfirm(payload.thumb || payload.photoUrl, payload);
+                  }
+                } else if (payload.thumb) {
+                  // older phone page: its generation is already running —
+                  // keep the original confirm-then-continue behaviour
                   prepPhoneCapture(payload.taskId, payload.thumb);
                   if (payload.taskId !== lastConfirmTaskId) {
                     lastConfirmTaskId = payload.taskId;
                     hint.textContent = "photo received — confirm on your computer";
-                    showPhoneConfirm(payload.thumb);
+                    showPhoneConfirm(payload.thumb, payload);
                   }
                 } else {
                   // no preview available: keep the original straight-to-
@@ -304,16 +311,25 @@
       function resolvePhonePayload(d) {
         var taskId = d.task_id;
         var thumb = d.thumb || null;
+        var photoUrl = null;
         if (typeof taskId === "string" && taskId.charAt(0) === "{") {
           try {
             var parsed = JSON.parse(taskId);
-            if (parsed && parsed.t) {
+            // newest phones relay { u: hosted photo, thumb } — no task exists
+            // yet; the desktop starts the (paid) generation only on confirm.
+            // Older { t: task id } payloads (a generation already running)
+            // still unpack and behave exactly as before.
+            if (parsed && parsed.u) {
+              photoUrl = parsed.u;
+              taskId = null;
+              if (!thumb) thumb = parsed.thumb || null;
+            } else if (parsed && parsed.t) {
               taskId = parsed.t;
               if (!thumb) thumb = parsed.thumb || null;
             }
           } catch (e) {}
         }
-        return { taskId: taskId, thumb: thumb };
+        return { taskId: taskId, thumb: thumb, photoUrl: photoUrl };
       }
 
       // hand this phone capture's task off to processing.html exactly the way
@@ -337,11 +353,12 @@
         // showed the abstract sphere while building (the photo lived on the
         // phone; the desktop never had it)
         try {
-          if (thumb && thumb.indexOf("data:") === 0 && window.BlobStore && window.BlobStore.dataURLToBlob) {
-            window.BlobStore.set("upload-source-img", window.BlobStore.dataURLToBlob(thumb))
-              .then(function () { try { sessionStorage.setItem("traces-upload-img", "idb:upload-source-img"); } catch (e) {} })
-              .catch(function () {});
-          } else if (thumb) {
+          if (thumb) {
+            // written synchronously — navigation to processing.html follows
+            // this call immediately, and an async-only write loses that race
+            // (the particles then fall back to the abstract sphere again).
+            // The phone preview is a small compressed jpeg, safely under the
+            // sessionStorage quota that full-size photos blow past.
             sessionStorage.setItem("traces-upload-img", thumb);
           } else {
             sessionStorage.removeItem("traces-upload-img");
@@ -349,9 +366,12 @@
         } catch (e) {}
       }
 
-      function showPhoneConfirm(thumb) {
+      function showPhoneConfirm(thumb, payload) {
         var overlay = document.getElementById("phoneConfirm");
         var img = document.getElementById("phoneConfirmImg");
+        var processBtn = document.getElementById("phoneConfirmProcess");
+        processBtn.disabled = false;
+        processBtn.textContent = "Process";
         // if the phone re-shoots, this same card is refreshed in place with a
         // quick cross-fade to the newer photo — no second dialog
         if (!overlay.hidden && img.src) {
@@ -362,7 +382,36 @@
           img.src = thumb;
         }
         overlay.hidden = false;
-        document.getElementById("phoneConfirmProcess").onclick = function () {
+        processBtn.onclick = function () {
+          // the new flow: the phone only parked its photo — THIS click is
+          // what starts the one paid generation, from the confirmed shot
+          if (payload && payload.photoUrl) {
+            processBtn.disabled = true;
+            processBtn.textContent = "starting…";
+            fetch(payload.photoUrl)
+              .then(function (r) { return r.ok ? r.blob() : null; })
+              .then(function (blob) {
+                if (!blob) throw new Error("photo fetch failed");
+                var fd = new FormData();
+                fd.append("image", blob, "capture.jpg");
+                return fetch(phoneApi + "/generate", { method: "POST", body: fd });
+              })
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                if (!d || !d.task_id) throw new Error("no task id");
+                clearInterval(phonePollTimer);
+                prepPhoneCapture(d.task_id, payload.thumb || payload.photoUrl);
+                overlay.hidden = true;
+                goTo("processing.html");
+              })
+              .catch(function () {
+                processBtn.disabled = false;
+                processBtn.textContent = "Process";
+                var h = document.getElementById("phoneQrHint");
+                if (h) h.textContent = "couldn't start the build — try again";
+              });
+            return;
+          }
           clearInterval(phonePollTimer);
           overlay.hidden = true;
           goTo("processing.html");
