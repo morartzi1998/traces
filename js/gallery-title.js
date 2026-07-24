@@ -22,10 +22,19 @@
     var titleText = document.querySelector(".gal-title");
     var addCapture = document.querySelector(".gal-add");
     if (!first || !screenEl) return;
+    var phone = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
     var cs = getComputedStyle(screenEl);
     var contentLeft = screenEl.getBoundingClientRect().left + parseFloat(cs.paddingLeft);
-    alignToFirst(title, contentLeft, first);
-    alignToFirst(filters, contentLeft, first);
+    if (phone) {
+      // the phone feed is a single centred column — matching the heading
+      // to the first polaroid's left edge shoved the whole title block
+      // toward the middle of the screen; it belongs on the margin there
+      if (title) title.style.marginLeft = "0";
+      if (filters) filters.style.marginLeft = "0";
+    } else {
+      alignToFirst(title, contentLeft, first);
+      alignToFirst(filters, contentLeft, first);
+    }
 
     /* Keep the fixed CTA on the exact same top axis as the archive heading,
        even when responsive type or viewport height changes. On a phone the

@@ -190,12 +190,23 @@
   .gal-grid {
     grid-template-columns: 1fr;
     gap: 3.5rem;
-    max-width: 100%;
+    /* one generous polaroid per row with real breathing room at both
+       edges — the desktop card width (a 180px clamp) left a tiny print
+       adrift in the column instead of filling it */
+    max-width: min(86vw, 430px);
+    margin: 0 auto;
+  }
+
+  .gal-item {
+    width: 100%;
   }
 
   /* clear the fixed bottom nav so the last polaroid's caption isn't
-     hidden behind Community / About */
+     hidden behind Community / About; the deeper side padding is the
+     margin the feed keeps from the screen edges */
   .gal-screen {
+    padding-left: 7vw;
+    padding-right: 7vw;
     padding-bottom: 6rem;
   }
 

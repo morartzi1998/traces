@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727n">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727n">
-<link rel="stylesheet" href="../css/object.css?v=20260727n">
-<script src="../js/cursor.js?v=20260727n" defer></script>
-<script src="../js/grain.js?v=20260727n" defer></script>
-<script src="../js/tilt3d.js?v=20260727n" defer></script>
-<script src="../js/owner.js?v=20260727n"></script>
-<script src="../js/config.js?v=20260727n"></script>
-<script src="../js/archive.js?v=20260727n"></script>
-<script src="../js/blobstore.js?v=20260727n"></script>
-<script src="../js/particle-loader.js?v=20260727n"></script>
-<script src="../js/remote-captures.js?v=20260727n"></script>
-<script src="../js/community-seed.js?v=20260727n"></script>
-<script src="../js/flow.js?v=20260727n" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727n"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727o">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727o">
+<link rel="stylesheet" href="../css/object.css?v=20260727o">
+<script src="../js/cursor.js?v=20260727o" defer></script>
+<script src="../js/grain.js?v=20260727o" defer></script>
+<script src="../js/tilt3d.js?v=20260727o" defer></script>
+<script src="../js/owner.js?v=20260727o"></script>
+<script src="../js/config.js?v=20260727o"></script>
+<script src="../js/archive.js?v=20260727o"></script>
+<script src="../js/blobstore.js?v=20260727o"></script>
+<script src="../js/particle-loader.js?v=20260727o"></script>
+<script src="../js/remote-captures.js?v=20260727o"></script>
+<script src="../js/community-seed.js?v=20260727o"></script>
+<script src="../js/flow.js?v=20260727o" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727o"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727n" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727o" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727n";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727n";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727o";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727o";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727n";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727o";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727n";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727o";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3808,14 +3808,13 @@
           if (g) return g;
           if (!v.model || !window.__glbToPoints) return null;
           return fetchRefBuffer(v.model).then(function (buf) { return buf ? window.__glbToPoints(buf) : null; });
-        }).then(function (g) {
-          // strip the stray drift specks around a raw scan before aligning —
-          // they were half of what made a merged room read as debris
-          if (g && window.__removeOutliers && g.getAttribute("position").count > 1000) {
-            try { g = window.__removeOutliers(g); } catch (e) {}
-          }
-          return g;
         }).catch(function () { return null; });
+        // NOTE: no outlier pass here any more. Raw scans are already
+        // outlier-cleaned once, at capture time (upload.html), and running
+        // the density filter again on a STORED cloud is exactly what
+        // amputated real-but-sparse pieces — it cut a whole vase off the
+        // end of the porcelain row. A reconstructed mesh has no drift
+        // specks to clean in the first place.
       }
       // kept from the last merge so "align by hand" can rerun the combination
       // from the same loaded scans without re-fetching megabytes
