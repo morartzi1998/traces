@@ -326,14 +326,17 @@
     text-align: left;
   }
 
-  /* left-aligned, the way the desktop hero reads (.hero-text is
-     display:contents on a phone so its own text-align can't reach the
-     headline — set it here) */
+  /* the headline BLOCK is centred in the column, but its own lines stay
+     left-aligned (ragged right) — fit-content shrinks the box to the widest
+     line so align-self:center can centre that box, while text-align:left
+     keeps the lines themselves flush left inside it */
   .headline {
     white-space: normal;
     font-size: clamp(1.9rem, 6vw, 2.7rem);
     line-height: 1;
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
+    align-self: center;
     text-align: left;
   }
 
