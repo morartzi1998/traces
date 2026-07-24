@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727m">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727m">
-<link rel="stylesheet" href="../css/object.css?v=20260727m">
-<script src="../js/cursor.js?v=20260727m" defer></script>
-<script src="../js/grain.js?v=20260727m" defer></script>
-<script src="../js/tilt3d.js?v=20260727m" defer></script>
-<script src="../js/owner.js?v=20260727m"></script>
-<script src="../js/config.js?v=20260727m"></script>
-<script src="../js/archive.js?v=20260727m"></script>
-<script src="../js/blobstore.js?v=20260727m"></script>
-<script src="../js/particle-loader.js?v=20260727m"></script>
-<script src="../js/remote-captures.js?v=20260727m"></script>
-<script src="../js/community-seed.js?v=20260727m"></script>
-<script src="../js/flow.js?v=20260727m" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727m"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727n">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727n">
+<link rel="stylesheet" href="../css/object.css?v=20260727n">
+<script src="../js/cursor.js?v=20260727n" defer></script>
+<script src="../js/grain.js?v=20260727n" defer></script>
+<script src="../js/tilt3d.js?v=20260727n" defer></script>
+<script src="../js/owner.js?v=20260727n"></script>
+<script src="../js/config.js?v=20260727n"></script>
+<script src="../js/archive.js?v=20260727n"></script>
+<script src="../js/blobstore.js?v=20260727n"></script>
+<script src="../js/particle-loader.js?v=20260727n"></script>
+<script src="../js/remote-captures.js?v=20260727n"></script>
+<script src="../js/community-seed.js?v=20260727n"></script>
+<script src="../js/flow.js?v=20260727n" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727n"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727m" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727n" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727m";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727m";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727n";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727n";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727m";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727n";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727m";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727n";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3560,24 +3560,84 @@
         // (learned from the server list itself) — targeting by LOCAL store
         // presence missed a capture whose shared copy sits under the other
         // scope's id: the owner saw her new picture, visitors never did.
+        // The screenshot is shrunk before it travels: a full-resolution
+        // stage grab runs to several MB of PNG, and on gallery Wi-Fi that
+        // upload quietly stalled — the owner saw her new picture (saved
+        // locally above) while the shared record never changed.
         if (isOwner) {
-          serverPatchIds(key).forEach(function (sid) { saveThumbnailToServer(sid, dataUrl); });
+          shrinkThumbForUpload(dataUrl).then(function (blob) {
+            serverPatchIds(key).forEach(function (sid) { saveThumbnailToServer(sid, blob, 0); });
+          });
         }
       }
 
-      function saveThumbnailToServer(serverId, dataUrl) {
+      // scale a display-image screenshot down to card size (the polaroids
+      // render a few hundred px wide — 3456px of PNG is pure upload weight).
+      // Kept as PNG: the mesh grabs carry a transparent background that the
+      // cream polaroid shows through, and JPEG would flatten it to black.
+      function shrinkThumbForUpload(dataUrl) {
+        return new Promise(function (resolve) {
+          var fallback = function () { resolve(window.BlobStore.dataURLToBlob(dataUrl)); };
+          try {
+            var img = new Image();
+            img.onload = function () {
+              var s = 1280 / Math.max(img.width, img.height);
+              if (s >= 1) { fallback(); return; }
+              var c = document.createElement("canvas");
+              c.width = Math.round(img.width * s);
+              c.height = Math.round(img.height * s);
+              c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+              c.toBlob(function (b) { b ? resolve(b) : fallback(); }, "image/png");
+            };
+            img.onerror = fallback;
+            img.src = dataUrl;
+          } catch (e) { fallback(); }
+        });
+      }
+
+      function saveThumbnailToServer(serverId, blob, attempt) {
         var api = (window.TRACES_API || "").replace(/\/$/, "");
         if (!api || !window.BlobStore) return;
         var k = key; // pin the capture — the upload may outlive a prev/next swap
         var form = new FormData();
-        form.append("file", window.BlobStore.dataURLToBlob(dataUrl), "thumb.png");
+        form.append("file", blob, "thumb.png");
         var xhr = new XMLHttpRequest();
+        // a stalled connection used to hold the request open forever with no
+        // failure signal at all — cap it so the retry path actually runs
+        xhr.timeout = 30000;
         xhr.open("POST", api + "/captures/upload");
+        var failed = function () {
+          if (attempt < 2) {
+            setTimeout(function () { saveThumbnailToServer(serverId, blob, attempt + 1); },
+              (attempt + 1) * 2000);
+            return;
+          }
+          // out of retries: say so, quietly but visibly — the silent version
+          // of this failure meant "saved" on the owner's screen while every
+          // visitor kept the old picture, with nothing to suggest re-trying
+          try {
+            var note = document.getElementById("thumbSyncFailNote");
+            if (!note) {
+              note = document.createElement("p");
+              note.id = "thumbSyncFailNote";
+              note.style.cssText = "position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);" +
+                "z-index:60;color:rgba(240,234,220,0.85);font-size:0.78rem;letter-spacing:0.05em;" +
+                "background:rgba(12,11,10,0.8);padding:6px 12px;max-width:80vw;text-align:center";
+              document.body.appendChild(note);
+            }
+            note.textContent = "the new display image was saved here but couldn't reach the shared archive — check the connection and save it again";
+            note.hidden = false;
+            clearTimeout(note.__t);
+            note.__t = setTimeout(function () { note.hidden = true; }, 12000);
+          } catch (e) {}
+        };
+        xhr.onerror = failed;
+        xhr.ontimeout = failed;
         xhr.onload = function () {
-          if (xhr.status < 200 || xhr.status >= 300) return;
+          if (xhr.status < 200 || xhr.status >= 300) { failed(); return; }
           var url = null;
           try { url = JSON.parse(xhr.responseText).url; } catch (e) {}
-          if (!url) return;
+          if (!url) { failed(); return; }
           // through the shared per-record queue — the raw fetch→POST this
           // used to do could race a year/tilt/annotation patch and clobber
           // whichever landed in between
