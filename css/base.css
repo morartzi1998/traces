@@ -298,3 +298,30 @@ body {
     transition: none !important;
   }
 }
+
+/* ---------- One shared action-button height ----------
+   Back/Proceed-style rectangles were each carrying their own vertical
+   padding (9px on one screen, 12px on another, 15px on a third), so pairs
+   sitting side by side rendered at visibly different heights. One fixed
+   height, centred content, everywhere. The html prefix outranks each
+   page's own class rule regardless of stylesheet order. */
+html .onb-btn,
+html .up-back,
+html .up-btn,
+html .proc-cancel,
+html .proc-proceed,
+html .phone-confirm-retake,
+html .phone-confirm-cancel,
+html .phone-confirm-process,
+html .btn,
+html .obj-white-btn,
+html .obj-white-edit,
+html .obj-blue-btn {
+  height: 46px;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
