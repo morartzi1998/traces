@@ -260,9 +260,15 @@
   .main {
     flex-direction: column;
     gap: 1.75rem;
-    padding-top: 5.5rem; /* clear the fixed logo with breathing room */
-    padding-bottom: 2rem;
-    justify-content: flex-start;
+    /* clear the fixed logo top and the Community/About nav bottom, then let
+       the three blocks (headline, photo, CTA) share the leftover height
+       evenly — the old flex-start + a flex-grow CTA dumped ALL the slack
+       into one gap in the middle, so the content sat clustered high with a
+       big empty band above the plus. space-evenly gives matching air above
+       the headline, between the blocks, and below the plus. */
+    padding-top: 4.5rem;
+    padding-bottom: 3.5rem;
+    justify-content: space-evenly;
     align-items: flex-start;
   }
 
@@ -331,23 +337,18 @@
     text-align: center;
   }
 
-  /* the CTA zone takes all the room left under the scan: the small invitation
-     line sits at its top (just below the photo), and the oversized plus drops
-     to the very bottom of the screen — the plus, not the words, is the tap */
-  /* the CTA zone fills the room under the scan and pushes its content to the
-     bottom: the small "add your capture" line sits right above the oversized
-     plus (close together), and the whole group is lifted clear of the bottom
-     Community/About nav */
+  /* the CTA is its own compact block now (the "add your capture" line above
+     the oversized plus), sized to its content so .main's space-evenly can
+     give it matching air above and below instead of it stretching to fill
+     and pinning the plus against the bottom nav */
   .cta {
     order: 2;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
     width: 100%;
-    padding-bottom: 3rem;
-    margin-top: 1.25rem;
     text-decoration: none;
     font-size: inherit;
   }
