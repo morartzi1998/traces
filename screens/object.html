@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726y">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726y">
-<link rel="stylesheet" href="../css/object.css?v=20260726y">
-<script src="../js/cursor.js?v=20260726y" defer></script>
-<script src="../js/grain.js?v=20260726y" defer></script>
-<script src="../js/tilt3d.js?v=20260726y" defer></script>
-<script src="../js/owner.js?v=20260726y"></script>
-<script src="../js/config.js?v=20260726y"></script>
-<script src="../js/archive.js?v=20260726y"></script>
-<script src="../js/blobstore.js?v=20260726y"></script>
-<script src="../js/particle-loader.js?v=20260726y"></script>
-<script src="../js/remote-captures.js?v=20260726y"></script>
-<script src="../js/community-seed.js?v=20260726y"></script>
-<script src="../js/flow.js?v=20260726y" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726y"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726z">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726z">
+<link rel="stylesheet" href="../css/object.css?v=20260726z">
+<script src="../js/cursor.js?v=20260726z" defer></script>
+<script src="../js/grain.js?v=20260726z" defer></script>
+<script src="../js/tilt3d.js?v=20260726z" defer></script>
+<script src="../js/owner.js?v=20260726z"></script>
+<script src="../js/config.js?v=20260726z"></script>
+<script src="../js/archive.js?v=20260726z"></script>
+<script src="../js/blobstore.js?v=20260726z"></script>
+<script src="../js/particle-loader.js?v=20260726z"></script>
+<script src="../js/remote-captures.js?v=20260726z"></script>
+<script src="../js/community-seed.js?v=20260726z"></script>
+<script src="../js/flow.js?v=20260726z" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726z"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726y" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726z" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726y";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726y";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726z";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726z";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726y";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726z";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726y";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726z";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -842,7 +842,14 @@
       function mergeRemoteCapturesIntoCatalog(list) {
         (list || []).forEach(function (d) {
           var k = d.id.replace(/-community$/, "");
+          // remember which shared record(s) this capture actually lives
+          // under — edits to someone ELSE'S capture (never in this browser's
+          // local stores) must be able to find their way to the right
+          // server id instead of guessing
+          var isCommunityRec = /-community$/.test(d.id);
           if (catalog[k]) {
+            if (isCommunityRec) catalog[k].onServerCommunity = true;
+            else catalog[k].onServerArchive = true;
             // the capture already exists LOCALLY (owner device) — the local
             // copy wins for content, but the shared record may carry
             // server-computed extras the local one predates: the derived
@@ -885,6 +892,7 @@
           }
           catalog[k] = {
             kind: d.kind || "object", title: d.title, img: d.img,
+            onServerArchive: !isCommunityRec, onServerCommunity: isCommunityRec,
             model: d.model, points: d.points, dual: !!d.dual,
             openOn: d.openOn || null,
             pointSize: d.pointSize || null, tilt: d.tilt || null,
@@ -1249,10 +1257,7 @@
         if (window.Archive && Archive.get(k)) Archive.update(k, fields);
         if (window.Community && Community.get(k)) Community.update(k, fields);
         if (window.isOwnerDevice && window.isOwnerDevice()) {
-          var inArchive = window.Archive && Archive.get(k);
-          var inCommunity = window.Community && Community.get(k);
-          if (inArchive || !inCommunity) patchServerRecord(k, fields);
-          if (inCommunity) patchServerRecord(k + "-community", fields);
+          serverPatchIds(k).forEach(function (sid) { patchServerRecord(sid, fields); });
         }
       }
 
@@ -1269,10 +1274,7 @@
         if (window.Archive && Archive.get(k)) Archive.update(k, fields);
         if (window.Community && Community.get(k)) Community.update(k, fields);
         if (window.isOwnerDevice && window.isOwnerDevice()) {
-          var inArchive = window.Archive && Archive.get(k);
-          var inCommunity = window.Community && Community.get(k);
-          if (inArchive || !inCommunity) patchServerRecord(k, fields);
-          if (inCommunity) patchServerRecord(k + "-community", fields);
+          serverPatchIds(k).forEach(function (sid) { patchServerRecord(sid, fields); });
         }
       }
 
@@ -2704,10 +2706,7 @@
               return { created: v.created, year: v.year, title: v.title,
                 feeling: v.created === vSel.created ? vSel.feeling : undefined };
             });
-            var inArch = window.Archive && Archive.get(key);
-            var inComm = window.Community && Community.get(key);
-            if (inArch || !inComm) patchServerVersionsMeta(key, vMeta);
-            if (inComm) patchServerVersionsMeta(key + "-community", vMeta);
+            serverPatchIds(key).forEach(function (sid) { patchServerVersionsMeta(sid, vMeta); });
           }
           exitWhiteEdit();
           document.getElementById("objTitle").textContent = vSel.title || item.title;
@@ -2761,6 +2760,13 @@
               if (api) fetch(api + "/captures/" + key + "-community", { method: "DELETE" }).catch(function () {});
             }
           }
+        } else if (window.isOwnerDevice && window.isOwnerDevice()) {
+          // Mor curating SOMEONE ELSE'S shared capture: it lives only on the
+          // server (never in this browser's stores) — before this, her edits
+          // painted the page and then silently evaporated on reload
+          serverPatchIds(key).forEach(function (sid) {
+            patchServerRecord(sid, { title: item.title, feeling: item.feeling, kind: item.kind });
+          });
         }
         exitWhiteEdit();
         document.getElementById("objTitle").textContent = item.title;
@@ -3113,10 +3119,7 @@
           // hosted file URLs must never be replaced by this device's idb refs
           var meta = newVersions.map(function (v) { return { created: v.created, year: v.year, title: v.title }; });
           if (window.isOwnerDevice && window.isOwnerDevice()) {
-            var inArchive = window.Archive && Archive.get(k);
-            var inCommunity = window.Community && Community.get(k);
-            if (inArchive || !inCommunity) patchServerVersionsMeta(k, meta);
-            if (inCommunity) patchServerVersionsMeta(k + "-community", meta);
+            serverPatchIds(k).forEach(function (sid) { patchServerVersionsMeta(sid, meta); });
           }
           renderTimeline(k);
           selectVersion(k, newVersions.length - 1);
@@ -3469,6 +3472,18 @@
         queuedRecordPatch(serverId, function (rec) {
           Object.keys(fields).forEach(function (fk) { rec[fk] = fields[fk]; });
         });
+      }
+      // which shared record id(s) an edit to this capture must land on —
+      // learned from the server list itself when it merged in (a capture
+      // that was never in this browser's stores, like another visitor's
+      // community scan, still knows exactly where it lives)
+      function serverPatchIds(k) {
+        var c = catalog[k] || {};
+        var ids = [];
+        if (c.onServerArchive) ids.push(k);
+        if (c.onServerCommunity) ids.push(k + "-community");
+        if (!ids.length) ids.push((browsingCommunity || c.visibility === "community") ? k + "-community" : k);
+        return ids;
       }
       // reorder/rename/redate the server's version list WITHOUT touching its
       // file references. The catalog's own version objects carry this
