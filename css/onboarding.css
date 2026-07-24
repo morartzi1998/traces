@@ -53,8 +53,13 @@
   gap: 40px;
   /* Match the upload screen's full vertical footprint: the extra viewport
      breath before the final actions lets this shorter form share the same
-     visual top and bottom boundaries as the three-option capture stack. */
-  margin-top: calc(18px + 5vh);
+     visual top and bottom boundaries as the three-option capture stack.
+     Both columns centre in the same space, so equal column heights mean
+     equal heading tops AND equal button bottoms — this margin is the
+     tuning knob, sized so the difference measures 0 at 900px-tall and
+     690px-tall windows alike (the upload rows deepened by 36px total when
+     their hover hints got clearance, which this absorbs). */
+  margin-top: calc(38px + 7.1vh);
 }
 
 .onb-btn {

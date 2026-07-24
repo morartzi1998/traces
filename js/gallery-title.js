@@ -38,15 +38,20 @@
       // grid, and if that happened mid-scroll the heading was off-screen,
       // its rect.top negative, and the fixed CTA got pinned above the
       // viewport ("the button disappears when you reach the end")
+      // whichever element actually carries the page scroll (the window
+      // normally, but <body> if some stylesheet ever turns it into its own
+      // scroll container again) — window.scrollY alone read 0 in that state
+      // and pinned the fixed CTA far above the viewport mid-scroll
+      var scrolled = window.scrollY || (document.scrollingElement && document.scrollingElement.scrollTop) || document.body.scrollTop || 0;
       if (window.matchMedia && window.matchMedia("(max-width: 720px)").matches) {
         // on a phone the CTA floats on the right, aligned to the object/space
         // filter row (using the empty space beside it)
         var filters = document.querySelector(".gal-filters");
         if (filters) {
-          addCapture.style.top = Math.round(filters.getBoundingClientRect().top + window.scrollY) + "px";
+          addCapture.style.top = Math.round(filters.getBoundingClientRect().top + scrolled) + "px";
         }
       } else {
-        addCapture.style.top = Math.round(titleText.getBoundingClientRect().top + window.scrollY) + "px";
+        addCapture.style.top = Math.round(titleText.getBoundingClientRect().top + scrolled) + "px";
       }
     }
   }

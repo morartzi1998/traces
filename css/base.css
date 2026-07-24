@@ -172,6 +172,17 @@ body {
      in the interface that renders through the display family. Fonts without
      this OpenType set simply ignore it. */
   font-feature-settings: "ss01" 1;
+}
+
+/* The horizontal clip lives on <html> ONLY. Putting it on <body> too turned
+   <body> into its own scroll container (a non-visible overflow on one axis
+   forces the other axis to auto), which silently detached every page's
+   scrolling from the window: window.scrollY froze at 0 and window "scroll"
+   listeners never fired — the archive's floating Add-Capture button computed
+   itself off-screen after any late layout pass, and the About fan never
+   tracked the scroll at all. With <html> alone clipping, page overflow
+   reaches the viewport and scrolls it the normal way. */
+html {
   overflow-x: hidden;
   /* stop a stray horizontal scroll / trackpad swipe from triggering the
      browser's back-navigation gesture */
