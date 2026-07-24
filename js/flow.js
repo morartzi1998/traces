@@ -124,6 +124,14 @@ function locationPrefix() {
   var shown = 0;
   window.addEventListener("error", function (e) {
     if (shown >= 2) return;
+    // "Script error." with no filename/line is the browser hiding the details
+    // of a CROSS-ORIGIN script it can't read — in practice that's the in-app
+    // browser (opening the link from WhatsApp/Instagram injects their own
+    // scripts) or a browser extension throwing, NEVER our own code, whose
+    // errors always arrive with a real filename and line. Surfacing those as
+    // a scary red "error" banner over the live site was pure false alarm, so
+    // only report an error we can actually attribute to a file we serve.
+    if (!e.filename || !e.lineno) return;
     shown++;
     try {
       var d = document.createElement("div");

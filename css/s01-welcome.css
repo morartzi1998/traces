@@ -326,15 +326,15 @@
     text-align: left;
   }
 
-  /* .hero-text is display:contents on a phone, so its text-align can't
-     reach the headline — centre the headline itself, matching the centred
-     photo and CTA under it */
+  /* left-aligned, the way the desktop hero reads (.hero-text is
+     display:contents on a phone so its own text-align can't reach the
+     headline — set it here) */
   .headline {
     white-space: normal;
     font-size: clamp(1.9rem, 6vw, 2.7rem);
     line-height: 1;
     width: 100%;
-    text-align: center;
+    text-align: left;
   }
 
   /* the CTA is its own compact block now (the "add your capture" line above

@@ -1874,6 +1874,13 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   .obj-blue,
   .obj-link-card {
     width: 100%;
+    /* AND they must cover the fixed nav corners (logo top-left, Community /
+       About bottom — both position:fixed z-index:30). On desktop the drawer
+       is only ~34vw on the right, so the corners never touch it; full-width
+       on a phone, the logo and nav punched straight through the card,
+       colliding with its title and text. The card owns its own close button,
+       so sitting over the chrome is correct here. */
+    z-index: 40;
   }
 
   .obj-head {
