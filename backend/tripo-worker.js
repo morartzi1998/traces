@@ -203,8 +203,22 @@ export default {
         let slot = "1";
         if (env.SESSIONS) slot = (await env.SESSIONS.get("task-key:" + taskId)) || "1";
         const apiKey = keyForSlot(env, slot);
-        const res = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: { Authorization: `Bearer ${apiKey}` } });
-        const data = await res.json().catch(() => ({}));
+        let res = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: { Authorization: `Bearer ${apiKey}` } });
+        let data = await res.json().catch(() => ({}));
+        // the task→key mapping only lives 24h; after that this guessed
+        // slot 1 for every old task — and recovering a scan (see
+        // recover-tasks.html) is exactly a query about an OLD task. When the
+        // guessed account rejects the query or doesn't know the task, ask
+        // the other account before giving up.
+        if (!data?.data && env.SESSIONS !== undefined) {
+          const otherSlot = slot === "1" ? "2" : "1";
+          const otherKey = keyForSlot(env, otherSlot);
+          if (otherKey && otherKey !== apiKey) {
+            const res2 = await fetch(`${TRIPO_BASE}/task/${taskId}`, { headers: { Authorization: `Bearer ${otherKey}` } });
+            const data2 = await res2.json().catch(() => ({}));
+            if (data2?.data) data = data2;
+          }
+        }
         const d = data?.data || {};
         const out = d.output || {};
         return json({

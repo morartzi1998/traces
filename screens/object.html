@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726s">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726s">
-<link rel="stylesheet" href="../css/object.css?v=20260726s">
-<script src="../js/cursor.js?v=20260726s" defer></script>
-<script src="../js/grain.js?v=20260726s" defer></script>
-<script src="../js/tilt3d.js?v=20260726s" defer></script>
-<script src="../js/owner.js?v=20260726s"></script>
-<script src="../js/config.js?v=20260726s"></script>
-<script src="../js/archive.js?v=20260726s"></script>
-<script src="../js/blobstore.js?v=20260726s"></script>
-<script src="../js/particle-loader.js?v=20260726s"></script>
-<script src="../js/remote-captures.js?v=20260726s"></script>
-<script src="../js/community-seed.js?v=20260726s"></script>
-<script src="../js/flow.js?v=20260726s" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726s"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726t">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726t">
+<link rel="stylesheet" href="../css/object.css?v=20260726t">
+<script src="../js/cursor.js?v=20260726t" defer></script>
+<script src="../js/grain.js?v=20260726t" defer></script>
+<script src="../js/tilt3d.js?v=20260726t" defer></script>
+<script src="../js/owner.js?v=20260726t"></script>
+<script src="../js/config.js?v=20260726t"></script>
+<script src="../js/archive.js?v=20260726t"></script>
+<script src="../js/blobstore.js?v=20260726t"></script>
+<script src="../js/particle-loader.js?v=20260726t"></script>
+<script src="../js/remote-captures.js?v=20260726t"></script>
+<script src="../js/community-seed.js?v=20260726t"></script>
+<script src="../js/flow.js?v=20260726t" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726t"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726s" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726t" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726s";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726s";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726t";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726t";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726s";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726t";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726s";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726t";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -376,7 +376,86 @@
     merged.userData.origColors = origColors;
     merged.userData.altColors = altColors;
     merged.userData.tints = TINTS;
+    // which scan each point came from — the chimera slicer below needs it
+    merged.userData.origin = origin;
+    merged.userData.scanCount = geoms.length;
     return merged;
+  };
+
+  // One impossible object instead of ghosts stacked on ghosts: the aligned
+  // combination is cut into horizontal slices, and each slice keeps only ONE
+  // scan's points — so the top half can be the leather sofa while the seat
+  // below it is the floral one. Bands are assigned round-robin with a
+  // deterministic shuffle (and fall back to whichever scan actually has
+  // points there, so a short scan never leaves an empty stripe), plus a tiny
+  // sideways shift per slice for the deliberate glitch feel.
+  window.__chimeraFromMerged = function (merged) {
+    var pos = merged.getAttribute("position");
+    var origin = merged.userData && merged.userData.origin;
+    var origColors = merged.userData && merged.userData.origColors;
+    var scanCount = (merged.userData && merged.userData.scanCount) || 0;
+    if (!pos || !origin || origin.length !== pos.count || scanCount < 2) return null;
+    var minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < pos.count; i++) {
+      var y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    if (!(maxY > minY)) return null;
+    var bands = Math.max(scanCount * 2, 5);
+    var h = (maxY - minY) / bands;
+    function bandOf(i) {
+      var b = Math.floor((pos.getY(i) - minY) / h);
+      return b >= bands ? bands - 1 : b;
+    }
+    // per-band point counts per scan, so no band is handed to a scan that
+    // has (almost) nothing there
+    var counts = [];
+    for (var b = 0; b < bands; b++) counts.push(new Array(scanCount).fill(0));
+    for (var i2 = 0; i2 < pos.count; i2++) counts[bandOf(i2)][origin[i2]]++;
+    var pick = [];
+    for (var b2 = 0; b2 < bands; b2++) {
+      var total = 0;
+      for (var s = 0; s < scanCount; s++) total += counts[b2][s];
+      if (!total) { pick.push(-1); continue; }
+      var want = ((b2 * 2654435761) >>> 16) % scanCount;
+      // never the same scan as the slice below, when there's a choice
+      if (pick.length && pick[pick.length - 1] === want && scanCount > 1) want = (want + 1) % scanCount;
+      if (counts[b2][want] < total * 0.05) {
+        var best = 0;
+        for (var s2 = 1; s2 < scanCount; s2++) if (counts[b2][s2] > counts[b2][best]) best = s2;
+        want = best;
+      }
+      pick.push(want);
+    }
+    var shift = [];
+    for (var b3 = 0; b3 < bands; b3++) shift.push((((b3 * 40503) % 97) / 97 - 0.5) * 0.05);
+    var positions = [], colors = [], keptOrigin = [];
+    for (var i3 = 0; i3 < pos.count; i3++) {
+      var band = bandOf(i3);
+      if (origin[i3] !== pick[band]) continue;
+      positions.push(pos.getX(i3) + shift[band], pos.getY(i3), pos.getZ(i3));
+      keptOrigin.push(origin[i3]);
+      if (origColors) colors.push(origColors[i3 * 3], origColors[i3 * 3 + 1], origColors[i3 * 3 + 2]);
+      else colors.push(0.94, 0.93, 0.9);
+    }
+    if (!positions.length) return null;
+    var chimera = new THREE.BufferGeometry();
+    chimera.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    var oc = new Float32Array(colors);
+    chimera.setAttribute("color", new THREE.BufferAttribute(new Float32Array(oc), 3));
+    var tints = merged.userData.tints || [];
+    var alt = new Float32Array(keptOrigin.length * 3);
+    for (var oi = 0; oi < keptOrigin.length; oi++) {
+      var t = tints[keptOrigin[oi] % tints.length] || [1, 1, 1];
+      alt[oi * 3] = t[0]; alt[oi * 3 + 1] = t[1]; alt[oi * 3 + 2] = t[2];
+    }
+    chimera.userData.origColors = oc;
+    chimera.userData.altColors = alt;
+    chimera.userData.tints = tints;
+    chimera.userData.origin = keptOrigin;
+    chimera.userData.scanCount = scanCount;
+    return chimera;
   };
 </script>
 </head>
@@ -508,6 +587,8 @@
       <!-- tints every point by WHICH scan it came from, so the combination
            reads visually; second press restores the real colours -->
       <button class="obj-merge-manual obj-merge-tint" type="button" id="objMergeTint" hidden>colour by scan</button>
+      <!-- the chimera: one impossible object sliced together from every scan -->
+      <button class="obj-merge-manual obj-merge-hybrid" type="button" id="objMergeHybrid" hidden>one hybrid from all</button>
       <div class="obj-merge-legend" id="objMergeLegend" hidden></div>
       <button class="obj-merge-close" type="button" id="objMergeClose" aria-label="Close">&times;</button>
     </div>
@@ -2496,6 +2577,9 @@
         refreshViewToggle();
         releasePan();
         renderTimeline(k);
+        // quiet repair pass: if the shared record still references files that
+        // only this browser holds, upload them now (see maybeRehostVersions)
+        maybeRehostVersions(k);
       }
 
       document.getElementById("objTitle").addEventListener("click", function () {
@@ -2901,27 +2985,49 @@
             return Object.assign({}, w.v, { year: isNaN(num) ? (yr || w.v.year) : num });
           });
           catalog[k].versions = newVersions;
-          var fields = { versions: newVersions };
           // the record's own top-level fields are what a fresh page load (and
           // the gallery polaroid) actually show — keep them in lockstep with
           // whatever is now LAST on the line, exactly like deleteVersion does
           var last = newVersions[newVersions.length - 1];
           if (last && (last.model || last.img || last.points)) {
-            fields.model = last.model; fields.img = last.img; fields.points = last.points;
             catalog[k].model = last.model; catalog[k].img = last.img; catalog[k].points = last.points;
           }
           if (last && last.title) {
-            fields.title = last.title;
             catalog[k].title = last.title;
             document.getElementById("objTitle").textContent = last.title;
           }
-          if (window.Archive && Archive.get(k)) Archive.update(k, fields);
-          if (window.Community && Community.get(k)) Community.update(k, fields);
+          // local stores: merge the new year/title/order INTO the store's own
+          // version objects (which carry upload bookkeeping like hostedModel)
+          // instead of replacing them with the catalog's leaner copies
+          function mergeStoreVersions(store) {
+            if (!store || !store.get(k)) return;
+            var rec = store.get(k);
+            var by = {};
+            (rec.versions || []).forEach(function (v) { by[v.created] = v; });
+            var mergedV = newVersions.map(function (nv) {
+              var sv = by[nv.created] || { created: nv.created, model: nv.model, img: nv.img, points: nv.points };
+              sv.year = nv.year;
+              if (nv.title) sv.title = nv.title;
+              return sv;
+            });
+            var upd = { versions: mergedV };
+            var lastSv = mergedV[mergedV.length - 1];
+            if (lastSv && (lastSv.model || lastSv.img || lastSv.points)) {
+              upd.model = lastSv.model; upd.img = lastSv.img; upd.points = lastSv.points;
+            }
+            if (lastSv && lastSv.title) upd.title = lastSv.title;
+            store.update(k, upd);
+          }
+          mergeStoreVersions(window.Archive);
+          mergeStoreVersions(window.Community);
+          // the server gets ONLY the meta (order/years/titles) — its own
+          // hosted file URLs must never be replaced by this device's idb refs
+          var meta = newVersions.map(function (v) { return { created: v.created, year: v.year, title: v.title }; });
           if (window.isOwnerDevice && window.isOwnerDevice()) {
             var inArchive = window.Archive && Archive.get(k);
             var inCommunity = window.Community && Community.get(k);
-            if (inArchive || !inCommunity) patchServerRecord(k, fields);
-            if (inCommunity) patchServerRecord(k + "-community", fields);
+            if (inArchive || !inCommunity) patchServerVersionsMeta(k, meta);
+            if (inCommunity) patchServerVersionsMeta(k + "-community", meta);
           }
           renderTimeline(k);
           selectVersion(k, newVersions.length - 1);
@@ -3275,6 +3381,87 @@
           Object.keys(fields).forEach(function (fk) { rec[fk] = fields[fk]; });
         });
       }
+      // reorder/rename/redate the server's version list WITHOUT touching its
+      // file references. The catalog's own version objects carry this
+      // device's local idb: refs — writing those to the shared record is
+      // exactly the corruption that once broke the sofa for every visitor:
+      // the server's hosted URLs got replaced by keys only one browser has.
+      function patchServerVersionsMeta(serverId, meta) {
+        queuedRecordPatch(serverId, function (rec) {
+          var by = {};
+          (Array.isArray(rec.versions) ? rec.versions : []).forEach(function (v) { by[v.created] = v; });
+          rec.versions = meta.map(function (m) {
+            var v = by[m.created] || { created: m.created };
+            v.year = m.year;
+            if (m.title) v.title = m.title;
+            return v;
+          });
+          var last = rec.versions[rec.versions.length - 1];
+          if (last) {
+            if (last.title) rec.title = last.title;
+            // the record's face follows the last slot — but only with refs
+            // that actually live on the server
+            ["model", "img", "points"].forEach(function (f) {
+              var ref = last[f];
+              if (ref && ref.indexOf("idb:") !== 0) rec[f] = ref;
+            });
+          }
+        });
+      }
+      // self-healing for records that already got hurt (or scans whose
+      // version upload never finished): any idb: reference sitting on the
+      // SHARED record is a file only one browser has — if THIS device is the
+      // one holding those bytes, quietly upload them and swap the reference
+      // for a real hosted URL, one file at a time.
+      var versionsRehosted = {};
+      function maybeRehostVersions(k) {
+        if (versionsRehosted[k]) return;
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api || !window.BlobStore) return;
+        versionsRehosted[k] = true;
+        fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+          .then(function (d) {
+            [k, k + "-community"].forEach(function (serverId) {
+              var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
+              if (!rec) return;
+              var jobs = [];
+              function collect(obj, topLevel) {
+                ["model", "img", "points"].forEach(function (f) {
+                  var ref = obj[f];
+                  if (typeof ref === "string" && ref.indexOf("idb:") === 0) {
+                    jobs.push({ topLevel: topLevel, created: obj.created, f: f, ref: ref, key: ref.slice(4) });
+                  }
+                });
+              }
+              collect(rec, true);
+              (rec.versions || []).forEach(function (v) { collect(v, false); });
+              var chain = Promise.resolve();
+              jobs.forEach(function (job) {
+                chain = chain.then(function () {
+                  return window.BlobStore.get(job.key).then(function (blob) {
+                    if (!blob) return; // the bytes live on some other device
+                    var form = new FormData();
+                    form.append("file", blob, "rehost.bin");
+                    return fetch(api + "/captures/upload", { method: "POST", body: form })
+                      .then(function (r) { return r.ok ? r.json() : null; })
+                      .then(function (res) {
+                        if (!res || !res.url) return;
+                        queuedRecordPatch(serverId, function (rec2) {
+                          var target = job.topLevel ? rec2
+                            : (rec2.versions || []).filter(function (v) { return v.created === job.created; })[0];
+                          // only replace the exact broken ref — never a value
+                          // something else has already fixed meanwhile
+                          if (!target || target[job.f] !== job.ref) return false;
+                          target[job.f] = res.url;
+                        });
+                      });
+                  });
+                }).catch(function () {});
+              });
+            });
+          }).catch(function () {});
+      }
 
       // ----- "Make a visual merge from object's history" ---------------------
       // a true 3D combination: every dated scan that carries a real point cloud
@@ -3319,11 +3506,14 @@
       var lastMergeVersions = null; // aligned with lastMergeGeoms, for the legend
       var lastMergedGeometry = null;
       var tintOn = false;
+      // whichever combination is on stage right now — the full blend or the
+      // sliced chimera; tint + legend act on this one
+      var currentMergeGeometry = null;
       function updateMergeLegend() {
         var legend = document.getElementById("objMergeLegend");
         legend.hidden = !tintOn;
-        if (!tintOn || !lastMergedGeometry) { legend.innerHTML = ""; return; }
-        var tints = lastMergedGeometry.userData.tints || [];
+        if (!tintOn || !currentMergeGeometry) { legend.innerHTML = ""; return; }
+        var tints = currentMergeGeometry.userData.tints || [];
         legend.innerHTML = "";
         (lastMergeVersions || []).forEach(function (v, i) {
           var t = tints[i % tints.length] || [1, 1, 1];
@@ -3337,9 +3527,9 @@
         });
       }
       function applyTint() {
-        if (!lastMergedGeometry) return;
-        var attr = lastMergedGeometry.getAttribute("color");
-        var src = tintOn ? lastMergedGeometry.userData.altColors : lastMergedGeometry.userData.origColors;
+        if (!currentMergeGeometry) return;
+        var attr = currentMergeGeometry.getAttribute("color");
+        var src = tintOn ? currentMergeGeometry.userData.altColors : currentMergeGeometry.userData.origColors;
         if (!attr || !src) return;
         attr.array.set(src);
         attr.needsUpdate = true;
@@ -3350,22 +3540,52 @@
         tintOn = !tintOn;
         applyTint();
       });
-      function mountMergedResult(merged, doneText) {
+      function mountMergeGeometry(g) {
         var view = document.getElementById("objMergeView");
-        var label = document.getElementById("objMergeLabel");
-        if (!merged) { label.textContent = "couldn't combine these scans"; return; }
+        var keepView = mergeViewer && mergeViewer.getView ? mergeViewer.getView() : null;
         if (mergeViewer && mergeViewer.dispose) { try { mergeViewer.dispose(); } catch (e) {} }
         view.innerHTML = "";
         clearMergeMarks();
-        mergeViewer = window.__mountPointCloudViewer(view, merged, { pointSize: null });
+        var mopts = { pointSize: null };
+        if (keepView) mopts.initialView = keepView;
+        mergeViewer = window.__mountPointCloudViewer(view, g, mopts);
+        currentMergeGeometry = g;
+      }
+      var lastChimera = null;
+      var chimeraOn = false;
+      function mountMergedResult(merged, doneText) {
+        var label = document.getElementById("objMergeLabel");
+        if (!merged) { label.textContent = "couldn't combine these scans"; return; }
+        mountMergeGeometry(merged);
         label.textContent = doneText;
         lastMergedGeometry = merged;
+        lastChimera = null;
+        chimeraOn = false;
         var tintBtn = document.getElementById("objMergeTint");
         tintBtn.hidden = !(merged.userData && merged.userData.altColors);
         tintOn = false;
         tintBtn.textContent = "colour by scan";
+        var hybridBtn = document.getElementById("objMergeHybrid");
+        hybridBtn.hidden = !(merged.userData && merged.userData.origin && (merged.userData.scanCount || 0) >= 2);
+        hybridBtn.textContent = "one hybrid from all";
         updateMergeLegend();
       }
+      document.getElementById("objMergeHybrid").addEventListener("click", function () {
+        if (!lastMergedGeometry) return;
+        var label = document.getElementById("objMergeLabel");
+        var hybridBtn = document.getElementById("objMergeHybrid");
+        if (!chimeraOn && !lastChimera && window.__chimeraFromMerged) {
+          lastChimera = window.__chimeraFromMerged(lastMergedGeometry);
+          if (!lastChimera) return;
+        }
+        chimeraOn = !chimeraOn;
+        mountMergeGeometry(chimeraOn ? lastChimera : lastMergedGeometry);
+        applyTint();
+        hybridBtn.textContent = chimeraOn ? "all scans overlaid" : "one hybrid from all";
+        label.textContent = chimeraOn
+          ? "one impossible object, sliced together from every scan — drag to turn"
+          : "every scan of this object, aligned and combined into one — drag to turn";
+      });
       function openVisualMerge() {
         var overlay = document.getElementById("objMerge");
         var label = document.getElementById("objMergeLabel");

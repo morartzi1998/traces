@@ -720,6 +720,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   bottom: calc(3.4vh + 52px);
 }
 
+/* and the hybrid toggle above both */
+.obj-merge-hybrid {
+  bottom: calc(3.4vh + 104px);
+}
+
 /* which colour is which scan — small chips along the bottom-left */
 .obj-merge-legend {
   position: absolute;
