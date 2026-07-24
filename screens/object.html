@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260726o">
-<link rel="stylesheet" href="../css/chrome.css?v=20260726o">
-<link rel="stylesheet" href="../css/object.css?v=20260726o">
-<script src="../js/cursor.js?v=20260726o" defer></script>
-<script src="../js/grain.js?v=20260726o" defer></script>
-<script src="../js/tilt3d.js?v=20260726o" defer></script>
-<script src="../js/owner.js?v=20260726o"></script>
-<script src="../js/config.js?v=20260726o"></script>
-<script src="../js/archive.js?v=20260726o"></script>
-<script src="../js/blobstore.js?v=20260726o"></script>
-<script src="../js/particle-loader.js?v=20260726o"></script>
-<script src="../js/remote-captures.js?v=20260726o"></script>
-<script src="../js/community-seed.js?v=20260726o"></script>
-<script src="../js/flow.js?v=20260726o" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726o"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260726p">
+<link rel="stylesheet" href="../css/chrome.css?v=20260726p">
+<link rel="stylesheet" href="../css/object.css?v=20260726p">
+<script src="../js/cursor.js?v=20260726p" defer></script>
+<script src="../js/grain.js?v=20260726p" defer></script>
+<script src="../js/tilt3d.js?v=20260726p" defer></script>
+<script src="../js/owner.js?v=20260726p"></script>
+<script src="../js/config.js?v=20260726p"></script>
+<script src="../js/archive.js?v=20260726p"></script>
+<script src="../js/blobstore.js?v=20260726p"></script>
+<script src="../js/particle-loader.js?v=20260726p"></script>
+<script src="../js/remote-captures.js?v=20260726p"></script>
+<script src="../js/community-seed.js?v=20260726p"></script>
+<script src="../js/flow.js?v=20260726p" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260726p"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726o" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260726p" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260726o";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726o";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260726p";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260726p";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726o";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260726p";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260726o";
+  import { glbToPoints } from "../js/glb-points.js?v=20260726p";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -607,6 +607,9 @@
         <div class="obj-white-head-text">
           <h2 class="obj-white-title wo-read" id="whiteTitle" dir="auto">Old living room lamp</h2>
           <p class="obj-white-sub wo-read" id="whiteSub">connected to the space "my old living room"</p>
+          <!-- shown while the timeline has an OLDER scan on stage, so the card
+               plainly says whose details it's showing -->
+          <p class="obj-white-sub wo-read" id="whiteVersionNote" hidden></p>
 
           <h2 class="obj-white-title wo-edit">Describe your capture</h2>
         </div>
@@ -1854,7 +1857,18 @@
       var white = document.getElementById("objWhite");
 
       function fillWhite(item) {
-        document.getElementById("whiteTitle").textContent = item.title;
+        // the card mirrors whatever scan the timeline has on stage: an old
+        // version shows ITS title and year, and only the notes that already
+        // existed by that year (the same rule the stage markers follow) —
+        // not the latest scan's face over an old scan's body
+        var versions = item.versions || [];
+        var vIdx = displayedVersionIndex === -1 ? versions.length - 1 : displayedVersionIndex;
+        var ver = versions[vIdx] || null;
+        var oldVersion = displayedVersionIndex !== -1;
+        document.getElementById("whiteTitle").textContent = (ver && ver.title) || item.title;
+        var vNote = document.getElementById("whiteVersionNote");
+        vNote.hidden = !(oldVersion && ver);
+        vNote.textContent = (oldVersion && ver) ? "the " + ver.year + " scan — an earlier version of this capture" : "";
         var subEl = document.getElementById("whiteSub");
         subEl.hidden = !item.connected;
         subEl.textContent = item.connected ? 'connected to the space "' + item.connected + '"' : "";
@@ -1872,16 +1886,21 @@
         kindBoxes[1].checked = item.kind === "space";
         document.getElementById("whitePrivate").checked = item.visibility !== "community";
         document.getElementById("whiteCommunity").checked = item.visibility === "community";
-        document.getElementById("whiteAnnCount").textContent = item.annotations.length;
-        document.getElementById("whiteAnnotationsHint").hidden = !!item.annotations.length;
-        document.getElementById("whiteAnnotationsEmptyRuleTop").hidden = !!item.annotations.length;
-        document.getElementById("whiteAnnotationsEmptyRuleBottom").hidden = !!item.annotations.length;
-        document.getElementById("whiteAnnotationsFilledRule").hidden = !item.annotations.length;
+        // scrubbed to an older year, the list holds only the notes that
+        // existed by then — identical to the stage markers' year filter
+        var anns = timelineHasHistory()
+          ? (item.annotations || []).filter(function (a) { return (a.since || 2021) <= activeYear; })
+          : (item.annotations || []);
+        document.getElementById("whiteAnnCount").textContent = anns.length;
+        document.getElementById("whiteAnnotationsHint").hidden = !!anns.length;
+        document.getElementById("whiteAnnotationsEmptyRuleTop").hidden = !!anns.length;
+        document.getElementById("whiteAnnotationsEmptyRuleBottom").hidden = !!anns.length;
+        document.getElementById("whiteAnnotationsFilledRule").hidden = !anns.length;
         var ul = document.getElementById("whiteAnnotations");
         ul.innerHTML = "";
-        if (item.annotations.length) {
+        if (anns.length) {
           var mayEdit = canEditCapture(key);
-          item.annotations.forEach(function (a) {
+          anns.forEach(function (a) {
             var li = document.createElement("li");
             var text = document.createElement("span");
             text.textContent = a.title;
@@ -2910,6 +2929,11 @@
         var isLatest = i === versions.length - 1;
         document.getElementById("objUpdated").textContent =
           isLatest ? "[latest — " + v.year + "]" : "[version — " + v.year + "]";
+        // the header title and the open details card both follow the scan the
+        // timeline just put on stage — an old version tells ITS story, not
+        // the latest one's
+        document.getElementById("objTitle").textContent = v.title || catalog[k].title;
+        if (!white.hidden) fillWhite(catalog[k]);
         // a version with its own scan swaps the stage; the curated
         // annotation-only history (chandelier) keeps the current scan.
         // Carry over whatever angle was already being looked at, so
