@@ -6,27 +6,27 @@
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727aq">
-<link rel="stylesheet" href="../css/processing.css?v=20260727aq">
-<script src="../js/owner.js?v=20260727aq"></script>
-<script src="../js/config.js?v=20260727aq"></script>
-<script src="../js/cursor.js?v=20260727aq" defer></script>
-<script src="../js/grain.js?v=20260727aq" defer></script>
-<script src="../js/blobstore.js?v=20260727aq"></script>
-<script src="../js/flow.js?v=20260727aq" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727aq"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ar">
+<link rel="stylesheet" href="../css/processing.css?v=20260727ar">
+<script src="../js/owner.js?v=20260727ar"></script>
+<script src="../js/config.js?v=20260727ar"></script>
+<script src="../js/cursor.js?v=20260727ar" defer></script>
+<script src="../js/grain.js?v=20260727ar" defer></script>
+<script src="../js/blobstore.js?v=20260727ar"></script>
+<script src="../js/flow.js?v=20260727ar" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ar"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727aq" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ar" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727aq";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727aq";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727aq";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727ar";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ar";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ar";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__serializeGeometry = serializeGeometry;
@@ -53,7 +53,7 @@
          as the fallback when no photo exists to sample) -->
     <div class="proc-particles" id="procPhotoParticles" hidden></div>
     <script type="module">
-      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727aq";
+      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727ar";
       window.__mountPhotoParticles = mountPhotoParticles;
     </script>
 
@@ -146,7 +146,14 @@
               cloud.hidden = true;
               particleCanvas.hidden = true;
               (function sync() {
-                pp.setProgress(procProgress / 100);
+                // while the counter parks at 99 waiting on the real model,
+                // hold the assembly just short of fully settled so the picture
+                // keeps visibly shimmering out of its particles — a clear
+                // "still working", never a frozen 99%. It snaps to complete
+                // the moment the model actually arrives.
+                var prog = procProgress / 100;
+                if (awaitingModel && prog >= 0.9) prog = 0.85;
+                pp.setProgress(prog);
                 ppSync = requestAnimationFrame(sync);
               })();
             }).catch(function () { startSphereAssembling(); });
