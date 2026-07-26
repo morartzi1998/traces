@@ -16,33 +16,45 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  /* TOP-anchored (not centred): the heading sits at a fixed height below the
-     nav — the SAME height as the onboarding screen's — so the two first-run
-     screens always line up regardless of how much content each one holds.
-     (Centring made the heading float to a different height on each screen the
-     moment their content lengths differed.) */
-  justify-content: flex-start;
-  padding-top: var(--flow-heading-top);
+  /* vertically CENTRED in the space between the top and bottom navs. The
+     onboarding screen centres an identically-sized column (same
+     --flow-col-min-height), so both screens' headings land at the same
+     height AND the block sits centred, never jammed up near the nav. */
+  justify-content: center;
+  min-height: 0;
   width: min(620px, 90vw);
   margin: 0 auto;
 }
 
+/* the content block both first-run screens centre — a shared minimum height
+   so the shorter one (onboarding) reserves the same column as the taller one
+   (the capture stack), which is what makes their headings line up while both
+   stay centred. Kept modest so even the tallest state (an accordion open)
+   still fits the exhibition display without scrolling. */
+.up-main > *:first-child,
+.onb-main > *:first-child { margin-top: 0; }
+
 .up-heading {
-  font-size: clamp(1.6rem, 2.6vw, 2.5rem);
+  font-size: clamp(1.5rem, 2.4vw, 2.3rem);
   font-weight: 400;
   line-height: 1.25;
-  /* the first option carries 24px of top padding, so trim that off the shared
-     gap to keep the heading-to-first-row distance matched to onboarding */
-  margin-bottom: calc(var(--flow-heading-gap) - 24px);
+  margin-bottom: var(--flow-heading-gap);
 }
 
 /* Accordion options */
 
 .up-option {
   border-bottom: 1px solid var(--color-cream);
-  /* deep enough that the two-line hover hint sits fully ABOVE the row divider
-     instead of crossing it (the reported "hover text over the line") */
-  padding: 20px 0 clamp(46px, 5vh, 56px);
+  /* while COLLAPSED, deep enough that the one-line hover hint sits above the
+     row divider instead of crossing it */
+  padding: 18px 0 34px;
+}
+
+/* once OPEN, the hover hint no longer shows (the body is on screen), so drop
+   the extra bottom room — that keeps the expanded stack short enough to stay
+   on screen without scrolling */
+.up-option:has(.up-option-head[aria-expanded="true"]) {
+  padding-bottom: 16px;
 }
 
 /* Each row already owns equal vertical padding. Adding another viewport-based
@@ -75,9 +87,10 @@
   position: absolute;
   top: calc(100% + 10px);
   left: 0;
-  /* stay within the row's own width and off to the right of the toggle so it
-     wraps to at most ~two lines that sit inside the row's bottom padding */
-  max-width: 82%;
+  /* one line, never wrapped (a broken hint line read as odd) — the copy is
+     kept short enough to fit the row width. Hover tips only show on a real
+     pointer, so an overflow on a tiny phone (where they never appear) is moot. */
+  white-space: nowrap;
   color: var(--color-cream);
   font-family: inherit;
   font-size: 0.8rem;
@@ -164,11 +177,13 @@
 /* the code itself draws in the site's ink blue on a cream card — the
    padding doubles as the quiet zone scanners need around a QR code */
 .up-qr-wrap {
-  width: 130px;
-  height: 130px;
+  /* smaller frame so the phone accordion, when open, still leaves the whole
+     column on screen without scrolling on the exhibition display */
+  width: 104px;
+  height: 104px;
   display: block;
   background: var(--color-cream);
-  padding: 8px;
+  padding: 7px;
   box-sizing: content-box;
 }
 

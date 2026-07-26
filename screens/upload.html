@@ -6,19 +6,19 @@
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bc">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bc">
-<link rel="stylesheet" href="../css/upload.css?v=20260727bc">
-<script src="../js/owner.js?v=20260727bc"></script>
-<script src="../js/config.js?v=20260727bc"></script>
-<script src="../js/cursor.js?v=20260727bc" defer></script>
-<script src="../js/grain.js?v=20260727bc" defer></script>
-<script src="../js/blobstore.js?v=20260727bc"></script>
-<script src="../js/flow.js?v=20260727bc" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727bc" defer></script>
-<script src="../js/normalize-image.js?v=20260727bc" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260727bc"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bc"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bd">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bd">
+<link rel="stylesheet" href="../css/upload.css?v=20260727bd">
+<script src="../js/owner.js?v=20260727bd"></script>
+<script src="../js/config.js?v=20260727bd"></script>
+<script src="../js/cursor.js?v=20260727bd" defer></script>
+<script src="../js/grain.js?v=20260727bd" defer></script>
+<script src="../js/blobstore.js?v=20260727bd"></script>
+<script src="../js/flow.js?v=20260727bd" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727bd" defer></script>
+<script src="../js/normalize-image.js?v=20260727bd" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260727bd"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bd"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,12 +27,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bc" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bd" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bc";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727bc";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727bc";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bd";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727bd";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727bd";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -98,7 +98,7 @@
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="phone">
           <span>Connect your phone</span>
           <span class="up-toggle" aria-hidden="true">+</span>
-          <span class="up-option-tip">a sharp, well-lit photo, held straight (not tilted), from the angle that shows the most detail</span>
+          <span class="up-option-tip">sharp and well-lit, held straight, from the most detailed angle</span>
         </button>
         <div class="up-option-body" id="acc-phone" hidden>
           <div class="up-qr-wrap" id="phoneQrWrap" aria-label="Scan with your phone to connect"></div>
@@ -136,7 +136,7 @@
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="upload">
           <span>Upload Image</span>
           <span class="up-toggle" aria-hidden="true">+</span>
-          <span class="up-option-tip">a sharp, clear photo shot straight-on (not tilted), from the most detailed angle, on a clean background</span>
+          <span class="up-option-tip">sharp and straight-on, from the most detailed angle, clean background</span>
         </button>
         <div class="up-option-body" id="acc-upload" hidden>
 
@@ -163,7 +163,7 @@
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="scan">
           <span>Upload a ready-made scan</span>
           <span class="up-toggle" aria-hidden="true">+</span>
-          <span class="up-option-tip">already have a 3D file from another app? skip the scan and attach it directly</span>
+          <span class="up-option-tip">already have a 3D file? attach it directly, no scan needed</span>
         </button>
         <div class="up-option-body" id="acc-scan" hidden>
 

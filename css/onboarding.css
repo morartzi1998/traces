@@ -8,20 +8,21 @@
   padding: 1.8vw 3.2vw 2.2vw;
 }
 
-/* TOP-anchored to the exact same height as the capture-method screen — both
-   use --flow-heading-top, so their headings always line up (see base.css) */
+/* vertically CENTRED, same as the capture-method screen; a matching bottom
+   spacer (see .onb-actions) makes this shorter form reserve the same column
+   height, so both screens' headings sit centred AND aligned to each other */
 .onb-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding-top: var(--flow-heading-top);
+  justify-content: center;
+  min-height: 0;
   width: min(620px, 90vw);
   margin: 0 auto;
 }
 
 .onb-heading {
-  font-size: clamp(1.6rem, 2.6vw, 2.5rem);
+  font-size: clamp(1.5rem, 2.4vw, 2.3rem);
   font-weight: 400;
   line-height: 1.25;
   text-align: left;
@@ -53,10 +54,10 @@
 .onb-actions {
   display: flex;
   gap: 40px;
-  /* both screens are top-anchored now, so this is just a comfortable gap
-     before the buttons — no longer a knob for matching the other screen's
-     height (the shared --flow-heading-top handles alignment) */
-  margin-top: clamp(32px, 6vh, 72px);
+  /* the knob that matches this shorter form's centred column height to the
+     capture stack's, so both headings land at the same height (tuned so the
+     measured difference is ~0 across window heights) */
+  margin-top: clamp(52px, 8.2vh, 96px);
 }
 
 .onb-btn {

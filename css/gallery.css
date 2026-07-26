@@ -365,18 +365,23 @@
   bottom: 0;
   left: 14px;
   right: 12px;
-  height: 42px;
-  display: flex;
-  align-items: center;
+  min-height: 42px;
   font-family: var(--font-caption);
   font-size: var(--fs-caption);
-  line-height: 1;
+  line-height: 1.12;
   color: var(--color-caption-blue);
   /* a capital first letter on every card title, whatever case it was typed */
   text-transform: capitalize;
-  white-space: nowrap;
+  /* a long title wraps to at most TWO lines and then ellipsises, rather than
+     being truncated on a single line — two lines are preferred, the ellipsis
+     is only the fallback when even two aren't enough. Anchored to the bottom
+     of the caption band so a one-line title still sits where it always did. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  align-content: end;
+  padding-bottom: 12px;
 }
 
 /* owner-only line under each card confirming whether this capture actually
