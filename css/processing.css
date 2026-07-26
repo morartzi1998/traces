@@ -158,7 +158,7 @@
    the line never jumps as the dot count changes (0→3) */
 .proc-dots {
   display: inline-block;
-  width: 1.1em;
+  width: 1.4em;
   text-align: left;
 }
 
@@ -174,6 +174,9 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
   letter-spacing: 0.01em;
+  /* one line always — the inline-block dot slot otherwise created a wrap
+     opportunity that dropped the percentage onto a second line */
+  white-space: nowrap;
 }
 
 /* the loader bar — sits just under the big percentage, centred on the same
