@@ -164,23 +164,22 @@
    holds — 7 captures read as a full row of four over a centred row of three,
    the way the layout mocks show, instead of a rigid grid with holes */
 .gal-grid {
-  display: flex;
-  flex-wrap: wrap;
+  /* a real grid of fixed-width columns, centred as a block. auto-fill keeps
+     the column TRACKS in the same place no matter how many captures exist,
+     so a single capture lands in the exact first-column slot a full grid's
+     first polaroid occupies — and the heading (which gallery-title.js lines
+     up with that first polaroid) then sits consistently across every screen,
+     instead of a lone capture floating dead-centre and dragging the title
+     with it */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, clamp(200px, 17vw, 372px));
   justify-content: center;
-  align-items: flex-start;
+  align-items: start;
   column-gap: clamp(28px, 3vw, 80px);
   row-gap: clamp(26px, 3.2vh, 52px);
   max-width: min(1850px, 96vw);
   margin: 0 auto;
   width: 100%;
-}
-
-/* a lone capture centred looks stranded on a big screen — sit it to the
-   side with a comfortable inset instead, without touching how a full grid
-   (which fills the row from the left already) is laid out */
-.gal-grid:has(.gal-item:only-child) {
-  justify-content: flex-start;
-  padding-left: clamp(32px, 5vw, 130px);
 }
 
 .gal-item {
