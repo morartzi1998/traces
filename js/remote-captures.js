@@ -324,7 +324,7 @@
           // saved angle, per-version clouds. (Exactly this wiped the old
           // television's toggle after a re-scan.) Inherit whatever the
           // outgoing record is missing before overwriting.
-          return fetch(api() + "/captures")
+          return fetch(api() + "/captures", { cache: "no-store" })
             .then(function (r) { return r.ok ? r.json() : { captures: [] }; })
             .catch(function () { return { captures: [] }; })
             .then(function (d) {
@@ -360,7 +360,11 @@
   // any failure) — callers should treat this the same as an empty result.
   function list(scope) {
     if (!api()) return Promise.resolve([]);
-    return fetch(api() + "/captures")
+    // no-store: a visitor's browser (or a CDN in front of the worker) was
+    // serving a CACHED capture list, so the owner's edits — new display
+    // images, renames, freshly shared captures — never reached other people.
+    // Always read the live list.
+    return fetch(api() + "/captures", { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : { captures: [] }; })
       .then(function (d) { return (d.captures || []).filter(function (c) { return c.scope === scope; }); })
       .catch(function () { return []; });

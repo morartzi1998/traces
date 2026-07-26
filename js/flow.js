@@ -31,6 +31,10 @@ function openObject(item, target) {
     // view's prev/next arrows stay within the archive set. community.html
     // sets this flag itself, right before it navigates.
     sessionStorage.removeItem("traces-from-community");
+    // also drop the pinned community-context key (object.html keeps this so a
+    // refresh of a community capture stays in community) — opening from the
+    // archive is a clean, non-community context
+    sessionStorage.removeItem("traces-community-item");
   } catch (e) {}
   goTo(target || "object.html");
 }

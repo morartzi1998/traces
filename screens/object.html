@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ai">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ai">
-<link rel="stylesheet" href="../css/object.css?v=20260727ai">
-<script src="../js/cursor.js?v=20260727ai" defer></script>
-<script src="../js/grain.js?v=20260727ai" defer></script>
-<script src="../js/tilt3d.js?v=20260727ai" defer></script>
-<script src="../js/owner.js?v=20260727ai"></script>
-<script src="../js/config.js?v=20260727ai"></script>
-<script src="../js/archive.js?v=20260727ai"></script>
-<script src="../js/blobstore.js?v=20260727ai"></script>
-<script src="../js/particle-loader.js?v=20260727ai"></script>
-<script src="../js/remote-captures.js?v=20260727ai"></script>
-<script src="../js/community-seed.js?v=20260727ai"></script>
-<script src="../js/flow.js?v=20260727ai" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ai"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727aj">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727aj">
+<link rel="stylesheet" href="../css/object.css?v=20260727aj">
+<script src="../js/cursor.js?v=20260727aj" defer></script>
+<script src="../js/grain.js?v=20260727aj" defer></script>
+<script src="../js/tilt3d.js?v=20260727aj" defer></script>
+<script src="../js/owner.js?v=20260727aj"></script>
+<script src="../js/config.js?v=20260727aj"></script>
+<script src="../js/archive.js?v=20260727aj"></script>
+<script src="../js/blobstore.js?v=20260727aj"></script>
+<script src="../js/particle-loader.js?v=20260727aj"></script>
+<script src="../js/remote-captures.js?v=20260727aj"></script>
+<script src="../js/community-seed.js?v=20260727aj"></script>
+<script src="../js/flow.js?v=20260727aj" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727aj"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ai" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727aj" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ai";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ai";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727aj";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727aj";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ai";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727aj";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ai";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727aj";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -892,6 +892,9 @@
             // real community record (publishSeedRecord) so the change persists
             // for every visitor instead of evaporating against the static file.
             isSeed: true, by: d.by || "", country: d.country || "",
+            // a showcase item lives in the community — say so, or its card
+            // reads "private" and the visibility toggle starts on the wrong box
+            visibility: "community",
           };
         });
       }
@@ -1158,8 +1161,18 @@
       // (the item just navigated to), not by any later prev/next browsing.
       var cameFromCommunity = false;
       try {
-        cameFromCommunity = sessionStorage.getItem("traces-from-community") === "1";
+        var fromFlag = sessionStorage.getItem("traces-from-community") === "1";
+        // the one-shot flag is consumed here, but an auto-refresh reloads THIS
+        // page and would otherwise forget it came from the community — the
+        // backdrop reverts to black, visibility reads wrong, the arrow ring
+        // resets. Pin the community context to the item key so a reload of the
+        // SAME capture stays in community, while opening any OTHER capture
+        // (openObject clears both keys) correctly drops it.
+        var stickyKey = sessionStorage.getItem("traces-community-item");
+        cameFromCommunity = fromFlag || stickyKey === key;
         sessionStorage.removeItem("traces-from-community");
+        if (cameFromCommunity) sessionStorage.setItem("traces-community-item", key);
+        else sessionStorage.removeItem("traces-community-item");
       } catch (e) {}
 
       // prev/next should browse the SAME set of items the community screen
@@ -3795,7 +3808,7 @@
         if (!api) return;
         var prev = patchQueues[serverId] || Promise.resolve();
         patchQueues[serverId] = prev.then(function () {
-          return fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+          return fetch(api + "/captures", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : { captures: [] }; })
             .then(function (d) {
               var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
               if (!rec || mutate(rec) === false) return;
@@ -3925,7 +3938,7 @@
         var api = (window.TRACES_API || "").replace(/\/$/, "");
         if (!api || !window.BlobStore) return;
         versionsRehosted[k] = true;
-        fetch(api + "/captures").then(function (r) { return r.ok ? r.json() : { captures: [] }; })
+        fetch(api + "/captures", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : { captures: [] }; })
           .then(function (d) {
             [k, k + "-community"].forEach(function (serverId) {
               var rec = (d.captures || []).filter(function (c) { return c.id === serverId; })[0];
