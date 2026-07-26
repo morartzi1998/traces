@@ -133,7 +133,8 @@
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  text-transform: lowercase;
+  /* Object / Space — capital first letter */
+  text-transform: capitalize;
   font-size: var(--fs-meta);
   color: var(--color-cream);
 }

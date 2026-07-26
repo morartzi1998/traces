@@ -99,9 +99,9 @@
   font-family: var(--font-caption);
   display: flex;
   flex-direction: column;
-  /* padding + type scale with viewport height so the whole form fits a big
-     exhibition display without a scrollbar (only scrolls as a last resort) */
-  padding: clamp(14px, 2.4vh, 24px) 34px clamp(14px, 2.2vh, 22px) 36px;
+  /* original generous padding restored; the type scales with viewport height
+     so the form still fits a big display without needing a scrollbar */
+  padding: 24px 34px 22px 36px;
   overflow-y: auto;
   font-size: clamp(15px, 1.7vh, 20px);
 }
@@ -147,7 +147,8 @@
   align-items: center;
   gap: 14px;
   cursor: pointer;
-  text-transform: lowercase;
+  /* Object / Space / Private / Community — a capital first letter */
+  text-transform: capitalize;
 }
 
 .choice input {
@@ -273,23 +274,20 @@
 
 .actions {
   display: flex;
-  /* stack the actions so each is a full-width button with its whole label on
-     ONE line, instead of two narrow side-by-side buttons that wrap */
-  flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin-top: 14px;
 }
 
 .btn {
   flex: 1;
   font-family: var(--font-drawn);
-  font-size: clamp(15px, 1.7vh, 20px);
+  /* a touch smaller so the two original side-by-side buttons each keep their
+     label on ONE line instead of wrapping — the wrap is what looked broken */
+  font-size: clamp(13px, 1.5vh, 18px);
   text-transform: uppercase;
-  /* symmetric padding + centred label, so a two-line button reads evenly
-     the same way it does on the small screen */
   text-align: center;
   white-space: nowrap;
-  padding: clamp(9px, 1.3vh, 13px) 12px;
+  padding: 12px 10px;
   border: 1px solid var(--color-ink-blue);
   background: transparent;
   color: var(--color-ink-blue);

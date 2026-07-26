@@ -1655,6 +1655,8 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   display: flex;
   align-items: center;
   gap: 9px;
+  /* Object / Space / Private / Community — capital first letter */
+  text-transform: capitalize;
 }
 
 .obj-white-choices input {

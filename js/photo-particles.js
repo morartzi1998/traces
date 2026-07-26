@@ -64,7 +64,9 @@ export function mountPhotoParticles(container, imageSrc, opts) {
       var dpr = Math.min(window.devicePixelRatio || 1, 1.6);
       if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
+      // over-clear a couple of pixels past every edge so a particle drawn
+      // right at the boundary can never leave a stale residue column/row
+      ctx.clearRect(-2, -2, w + 4, h + 4);
 
       // fit the image area inside the container, centred, with margin
       var fit = Math.min((w * 0.8) / iw, (h * 0.8) / ih);
