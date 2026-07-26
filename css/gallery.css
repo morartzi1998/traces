@@ -364,15 +364,17 @@
 
 .gal-caption {
   position: absolute;
-  /* sits inside the frame's bottom band (see .gal-card padding-bottom); grows
-     UP from here, so one line hugs the bottom and a two-line title fills the
-     band without ever reaching the photo above it */
-  bottom: 11px;
+  /* TOP-anchored just below the photo (the frame's bottom band is 56px, see
+     .gal-card): every caption starts at the SAME height, so one- and two-line
+     titles line up across the whole grid instead of a one-liner sinking to the
+     bottom while a two-liner fills the band. It grows downward into the band,
+     which is deep enough to hold two lines without reaching the photo. */
+  top: calc(100% - 50px);
   left: 14px;
   right: 12px;
   font-family: var(--font-caption);
   font-size: var(--fs-caption);
-  line-height: 1.12;
+  line-height: 1.14;
   color: var(--color-caption-blue);
   /* a capital first letter on every card title, whatever case it was typed */
   text-transform: capitalize;
