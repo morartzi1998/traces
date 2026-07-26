@@ -166,7 +166,9 @@
 .gal-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  /* items flow from the left, so one or two captures sit at the side like a
+     real grid instead of floating dead-centre on the screen */
+  justify-content: flex-start;
   align-items: flex-start;
   column-gap: clamp(28px, 3vw, 80px);
   row-gap: clamp(26px, 3.2vh, 52px);

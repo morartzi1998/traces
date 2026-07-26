@@ -17,11 +17,40 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727ak";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ak";
+import * as THREE from "./vendor/three/three.module.js?v=20260727al";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727al";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
+
+  // the build-in intro reveals points in BUFFER ORDER (drawRange grows from a
+  // few percent up to 100%). A mesh-derived cloud is stored in mesh order, so
+  // an in-order reveal shows a solid STRIP of the object sweeping across the
+  // frame — it reads as a "bar", not a cloud filling in. Shuffle the points
+  // once up front so any prefix of the buffer is a spatially-uniform sample
+  // and the object crystallises evenly from everywhere at once.
+  (function shufflePoints() {
+    if (opts.buildIn === false || geometry.index) return;
+    var pos = geometry.getAttribute("position");
+    if (!pos) return;
+    var p = pos.array;
+    var colAttr = geometry.getAttribute("color");
+    var c = colAttr ? colAttr.array : null;
+    for (var i = pos.count - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var pi = i * 3, pj = j * 3, t;
+      t = p[pi]; p[pi] = p[pj]; p[pj] = t;
+      t = p[pi + 1]; p[pi + 1] = p[pj + 1]; p[pj + 1] = t;
+      t = p[pi + 2]; p[pi + 2] = p[pj + 2]; p[pj + 2] = t;
+      if (c) {
+        t = c[pi]; c[pi] = c[pj]; c[pj] = t;
+        t = c[pi + 1]; c[pi + 1] = c[pj + 1]; c[pj + 1] = t;
+        t = c[pi + 2]; c[pi + 2] = c[pj + 2]; c[pj + 2] = t;
+      }
+    }
+    pos.needsUpdate = true;
+    if (colAttr) colAttr.needsUpdate = true;
+  })();
 
   // a low-powered exhibition laptop (weak integrated GPU, little RAM) can
   // refuse an antialiased context outright — which used to throw and leave
