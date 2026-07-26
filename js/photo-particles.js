@@ -73,23 +73,30 @@ export function mountPhotoParticles(container, imageSrc, opts) {
 
       var t = (now - t0) / 1000;
       var dotBase = Math.max(1.6, cell * fit);
+      // the picture NEVER fully freezes: even once assembled, every particle
+      // keeps a small living orbit around its place and a gentle colour
+      // twinkle, so there's always visible motion — the loader can't read as
+      // stuck (the long park at "99%" especially). The floor is small enough
+      // that the image stays perfectly readable.
+      var WOB_FLOOR = 0.09;
       for (var i = 0; i < parts.length; i++) {
         var p = parts[i];
         // each particle starts assembling after its own small delay, so the
         // picture condenses organically instead of snapping as one sheet
         var lp = Math.max(0, Math.min(1, (progress - p.dl) / (1 - p.dl)));
         var e = lp * lp * (3 - 2 * lp); // smoothstep
-        // scattered position keeps drifting; the drift dies as it locks in
-        var wob = (1 - e);
-        var dx = p.sx * w + Math.sin(t * p.sp + p.ph) * 30 * wob;
-        var dy = p.sy * h + Math.cos(t * p.sp * 0.8 + p.ph) * 24 * wob;
-        var X = dx + (ox + p.tx * dw - dx) * e;
-        var Y = dy + (oy + p.ty * dh - dy) * e;
-        // brighter and small while adrift (visible over the dark bg even
-        // for a dark photo); true colour at full size once placed, sized to
-        // its grid cell so the finished picture reads continuous
+        // big drift while scattered, easing down to a permanent gentle sway
+        var wob = WOB_FLOOR + (1 - e) * (1 - WOB_FLOOR);
+        // scattered start and assembled target — blended by e, then a living
+        // wobble added ON TOP so motion persists even at full assembly
+        var sxp = p.sx * w, syp = p.sy * h;
+        var X = sxp + (ox + p.tx * dw - sxp) * e + Math.sin(t * p.sp + p.ph) * 26 * wob;
+        var Y = syp + (oy + p.ty * dh - syp) * e + Math.cos(t * p.sp * 0.85 + p.ph) * 21 * wob;
+        // colours from the photo, lifted brighter while adrift; a per-particle
+        // twinkle keeps them subtly "changing" the whole time
+        var tw = 0.8 + 0.2 * Math.sin(t * 1.7 + p.ph * 2.3);
         var lift = Math.round(70 * (1 - e));
-        ctx.globalAlpha = 0.55 + 0.45 * e;
+        ctx.globalAlpha = (0.55 + 0.45 * e) * tw;
         ctx.fillStyle = "rgb(" + Math.min(255, p.r + lift) + "," + Math.min(255, p.g + lift) + "," + Math.min(255, p.b + lift) + ")";
         var sz = dotBase * (0.4 + 0.65 * e);
         ctx.fillRect(X - sz / 2, Y - sz / 2, sz, sz);
