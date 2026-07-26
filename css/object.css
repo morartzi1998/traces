@@ -1471,7 +1471,9 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   background: #f0eeea url("../assets/images/paper-texture.png") center / cover;
   color: var(--color-ink-blue);
   font-family: var(--font-caption);
-  padding: 36px 40px;
+  /* vertical rhythm (padding, dividers, type) scales with viewport height so
+     the card fits a large exhibition display without a scrollbar */
+  padding: clamp(18px, 3vh, 36px) 40px;
   box-shadow: -14px 0 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
@@ -1592,7 +1594,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 
 .obj-white-title {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: clamp(1.35rem, 2.3vh, 1.75rem);
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.3;
@@ -1602,7 +1604,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-white-sub {
   display: block;
   width: fit-content;
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 1.7vh, 1.25rem);
   line-height: 1.4;
   margin-top: 7px;
   padding: 0;
@@ -1633,20 +1635,20 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-white-rule {
   border: none;
   border-top: 2px solid var(--color-ink-blue);
-  margin: 24px 0 16px;
+  margin: clamp(12px, 2.2vh, 24px) 0 clamp(9px, 1.4vh, 16px);
 }
 
 .obj-white-label {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 1.7vh, 1.25rem);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin: 0 0 10px;
+  margin: 0 0 clamp(6px, 1vh, 10px);
 }
 
 .obj-white-choices {
   display: flex;
   gap: 30px;
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 1.7vh, 1.25rem);
 }
 
 .obj-white-choices label {
@@ -1671,17 +1673,17 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 }
 
 .obj-white-feeling {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 1.7vh, 1.25rem);
   line-height: 1.3;
   flex: 1;
   /* on a short screen the flexible description share can collapse to a
      sliver — always keep at least ~3 readable lines, scrolling the rest */
-  min-height: 4em;
+  min-height: 3em;
   overflow-y: auto;
 }
 
 .obj-white-label:has(+ .obj-white-feeling) {
-  margin-bottom: 26px;
+  margin-bottom: clamp(12px, 2vh, 26px);
 }
 
 .obj-white-feeling--empty {
@@ -1726,9 +1728,9 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 0;
+  padding: clamp(8px, 1.3vh, 14px) 0;
   border-bottom: 2px solid var(--color-ink-blue);
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 1.7vh, 1.25rem);
 }
 
 /* the .obj-white-rule right after this list already draws the section's
