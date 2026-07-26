@@ -164,6 +164,41 @@
   letter-spacing: 0.01em;
 }
 
+/* the loader bar — sits just under the big percentage, centred on the same
+   axis. A thin cream track with a lit segment that slides across it: an
+   indeterminate loader that keeps visibly moving on EVERY capture path (photo,
+   AI reconstruction, ready-made scan, point cloud) without ever claiming a
+   false amount done. The percentage above it carries the real progress where
+   there is one; this just says "still working". It retires the moment the
+   object itself is on screen (JS hides #procBar in complete/failed). */
+.proc-bar {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 5.5vh);
+  transform: translateX(-50%);
+  z-index: 2;
+  width: min(260px, 60vw);
+  height: 3px;
+  background: rgba(240, 238, 234, 0.16);
+  overflow: hidden;
+}
+.proc-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -36%;
+  width: 36%;
+  background: var(--color-cream, #f0eeea);
+  animation: proc-bar-slide 1.25s ease-in-out infinite;
+}
+@keyframes proc-bar-slide {
+  0% { left: -36%; }
+  100% { left: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .proc-bar-fill { animation: none; left: 0; width: 100%; opacity: 0.4; }
+}
+
 .proc-error-detail {
   position: absolute;
   left: 50%;

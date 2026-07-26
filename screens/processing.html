@@ -6,26 +6,26 @@
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727w">
-<link rel="stylesheet" href="../css/processing.css?v=20260727w">
-<script src="../js/owner.js?v=20260727w"></script>
-<script src="../js/config.js?v=20260727w"></script>
-<script src="../js/cursor.js?v=20260727w" defer></script>
-<script src="../js/grain.js?v=20260727w" defer></script>
-<script src="../js/blobstore.js?v=20260727w"></script>
-<script src="../js/flow.js?v=20260727w" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727w"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727x">
+<link rel="stylesheet" href="../css/processing.css?v=20260727x">
+<script src="../js/owner.js?v=20260727x"></script>
+<script src="../js/config.js?v=20260727x"></script>
+<script src="../js/cursor.js?v=20260727x" defer></script>
+<script src="../js/grain.js?v=20260727x" defer></script>
+<script src="../js/blobstore.js?v=20260727x"></script>
+<script src="../js/flow.js?v=20260727x" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727x"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727w" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727x" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727w";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727w";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727x";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727x";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__serializeGeometry = serializeGeometry;
@@ -51,11 +51,16 @@
          as the fallback when no photo exists to sample) -->
     <div class="proc-particles" id="procPhotoParticles" hidden></div>
     <script type="module">
-      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727w";
+      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727x";
       window.__mountPhotoParticles = mountPhotoParticles;
     </script>
 
     <p class="proc-status" id="procStatus">Processing&nbsp;&nbsp;<span id="procPct">63</span>%</p>
+    <!-- an honest loader: a thin bar that fills to the real reconstruction /
+         preparation percentage, and a soft shimmer travelling across it so it
+         reads as actively working (not a frozen line). Retires the moment the
+         object itself is on screen. -->
+    <div class="proc-bar" id="procBar"><div class="proc-bar-fill" id="procBarFill"></div></div>
     <p class="proc-error-detail" id="procErrorDetail" hidden></p>
 
     <!-- "isolate the object": peels the surrounding room away from a raw
@@ -344,13 +349,14 @@
             model.style.filter = "blur(0px) saturate(1)";
             model.addEventListener("load", function () {
               status.textContent = "Capturing complete";
+              hideLoaderBar();
               proceed.hidden = false;
             }, { once: true });
             model.addEventListener("error", function () { scanReallyFailed(detail); }, { once: true });
             model.src = URL.createObjectURL(blob);
             // safety net if 'load' never fires on this device
             setTimeout(function () {
-              if (proceed.hidden) { status.textContent = "Capturing complete"; proceed.hidden = false; }
+              if (proceed.hidden) { status.textContent = "Capturing complete"; hideLoaderBar(); proceed.hidden = false; }
             }, 9000);
           }).catch(function () { scanReallyFailed(detail); });
         }
@@ -396,6 +402,7 @@
               densityRow.hidden = false;
               trimRow.hidden = false;
               status.textContent = "Capturing complete";
+              hideLoaderBar();
               proceed.hidden = false;
               // same "comes into focus" reveal every other capture path gets —
               // this got dropped when the fake progress animation (the thing
@@ -480,15 +487,29 @@
         try {
           var readyModel = sessionStorage.getItem("traces-capture-model");
           if (readyModel && readyModel.indexOf("idb:") === 0) {
+            awaitingModel = true;
             window.BlobStore.get(readyModel.slice(4)).then(function (blob) {
-              if (blob) showModel(URL.createObjectURL(blob));
+              if (blob) { showModel(URL.createObjectURL(blob)); showModel._onReady(complete); }
+              else { awaitingModel = false; }
             });
           } else if (readyModel) {
+            awaitingModel = true;
             showModel(readyModel);
+            showModel._onReady(complete);
           }
         } catch (e) {}
       }
 
+      // set true while a real model/scan file is still loading behind the
+      // percentage — completion must WAIT for it to actually paint, not fire
+      // the instant the fake counter reaches 100 (that's what read as "it says
+      // complete but it's still loading")
+      var awaitingModel = false;
+      var completed = false;
+      function hideLoaderBar() {
+        var bar = document.getElementById("procBar");
+        if (bar) bar.hidden = true;
+      }
       function setPct(p) {
         procProgress = p;
         status.innerHTML = 'Processing&nbsp;&nbsp;<span>' + p + "%</span>";
@@ -497,13 +518,16 @@
         model.style.filter = f;
       }
       function complete() {
+        completed = true;
         status.textContent = "Capturing complete";
+        hideLoaderBar(); // the object is on screen now; the loader retires
         cloud.style.filter = "blur(0px) saturate(1)";
         model.style.filter = "blur(0px) saturate(1)";
         proceed.hidden = false;
       }
       function failed(msg) {
         stopAssembling();
+        hideLoaderBar();
         status.textContent = "Reconstruction failed";
         // hide the stand-in chandelier placeholder and the (never-loaded)
         // model so a failed screen is just the message on the grid, not a
@@ -640,9 +664,15 @@
         setPct(pct);
         var t = setInterval(function () {
           if (!status.isConnected || status.offsetParent === null) { clearInterval(t); return; }
+          if (completed) { clearInterval(t); return; }
+          // don't run the bar past 99 while a real model is still loading —
+          // completion is owned by the model's own paint (showModel._onReady →
+          // complete), so the bar parks at 99 and "Capturing complete" only
+          // appears once the object is genuinely on screen
+          if (awaitingModel && pct >= 99) { setPct(99); return; }
           pct += 1;
           setPct(pct);
-          if (pct >= 100) { clearInterval(t); complete(); }
+          if (pct >= 100) { clearInterval(t); if (!awaitingModel && !completed) complete(); }
         }, 140);
       }
     })();
