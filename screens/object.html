@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ad">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ad">
-<link rel="stylesheet" href="../css/object.css?v=20260727ad">
-<script src="../js/cursor.js?v=20260727ad" defer></script>
-<script src="../js/grain.js?v=20260727ad" defer></script>
-<script src="../js/tilt3d.js?v=20260727ad" defer></script>
-<script src="../js/owner.js?v=20260727ad"></script>
-<script src="../js/config.js?v=20260727ad"></script>
-<script src="../js/archive.js?v=20260727ad"></script>
-<script src="../js/blobstore.js?v=20260727ad"></script>
-<script src="../js/particle-loader.js?v=20260727ad"></script>
-<script src="../js/remote-captures.js?v=20260727ad"></script>
-<script src="../js/community-seed.js?v=20260727ad"></script>
-<script src="../js/flow.js?v=20260727ad" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ad"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ae">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ae">
+<link rel="stylesheet" href="../css/object.css?v=20260727ae">
+<script src="../js/cursor.js?v=20260727ae" defer></script>
+<script src="../js/grain.js?v=20260727ae" defer></script>
+<script src="../js/tilt3d.js?v=20260727ae" defer></script>
+<script src="../js/owner.js?v=20260727ae"></script>
+<script src="../js/config.js?v=20260727ae"></script>
+<script src="../js/archive.js?v=20260727ae"></script>
+<script src="../js/blobstore.js?v=20260727ae"></script>
+<script src="../js/particle-loader.js?v=20260727ae"></script>
+<script src="../js/remote-captures.js?v=20260727ae"></script>
+<script src="../js/community-seed.js?v=20260727ae"></script>
+<script src="../js/flow.js?v=20260727ae" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ae"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ad" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ae" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ad";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ad";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ae";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ae";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ad";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ae";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ad";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ae";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1430,10 +1430,10 @@
         var api = (window.TRACES_API || "").replace(/\/$/, "");
         if (!api || !window.__glbToPoints || !window.__serializeGeometry) return;
         cloudHealTried[k] = 1;
-        // the mesh may be hosted (http) or still only local (idb: blob)
-        var bufReady = String(it.model).indexOf("idb:") === 0 && window.BlobStore
-          ? window.BlobStore.get(String(it.model).slice(4)).then(function (b) { return b ? b.arrayBuffer() : null; })
-          : fetch(it.model).then(function (r) { return r.ok ? r.arrayBuffer() : null; });
+        // the mesh may be hosted (http) or still only local (idb: blob) —
+        // the shared helper proxies the cross-origin case so the bytes
+        // actually arrive (a raw fetch of a hosted GLB fails CORS)
+        var bufReady = fetchModelBuffer(String(it.model));
         bufReady
           .then(function (buf) {
             if (!buf) return;
@@ -4174,11 +4174,10 @@
         var ready = derivedPointsCache[k]
           ? Promise.resolve(derivedPointsCache[k])
           : (function () {
-              var ref = catalog[k].model;
-              var pk = ref && ref.indexOf("idb:") === 0 ? ref.slice(4) : null;
-              var blobP = pk && window.BlobStore ? window.BlobStore.get(pk)
-                : fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
-              return blobP.then(function (b) { return b ? b.arrayBuffer() : null; })
+              // proxy-aware + capped so a slow/cross-origin model can't leave
+              // the stage stuck on the loading dot: on any miss it resolves
+              // null and backToMesh() puts the mesh back rather than nothing
+              return withTimeout(fetchModelBuffer(catalog[k].model), 20000, null)
                 .then(function (buf) { return (buf && window.__glbToPoints) ? window.__glbToPoints(buf) : null; })
                 .then(function (g) { if (g) derivedPointsCache[k] = g; return g; });
             })();
@@ -4454,6 +4453,34 @@
           promise.then(finish, function () { finish(fallback); });
           setTimeout(function () { finish(fallback); }, ms);
         });
+      }
+
+      // the raw bytes of a model ref, CORS-safe. A hosted (http) GLB lives on
+      // another origin, so fetch()ing it directly fails the cross-origin read
+      // and the bytes never arrive — which is exactly why deriving a point
+      // cloud from a community / hosted mesh produced NOTHING (empty stage).
+      // Route hosted URLs through the worker proxy, the same way the capture
+      // screen loads cross-origin GLBs; fall back to a direct fetch only when
+      // there's no worker configured or the proxy misses.
+      function fetchModelBuffer(ref) {
+        if (!ref) return Promise.resolve(null);
+        if (ref.indexOf("idb:") === 0) {
+          return window.BlobStore
+            ? window.BlobStore.get(ref.slice(4))
+                .then(function (b) { return b ? b.arrayBuffer() : null; })
+                .catch(function () { return null; })
+            : Promise.resolve(null);
+        }
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        var viaProxy = api ? (api + "/proxy?url=" + encodeURIComponent(ref)) : ref;
+        return fetch(viaProxy).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+          .catch(function () { return null; })
+          .then(function (buf) {
+            if (buf || viaProxy === ref) return buf;
+            // proxy missed — last-resort direct fetch (works when the host
+            // does send CORS headers, e.g. same-origin assets)
+            return fetch(ref).then(function (r) { return r.ok ? r.arrayBuffer() : null; }).catch(function () { return null; });
+          });
       }
 
       function boot() {
