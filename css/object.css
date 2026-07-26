@@ -1519,12 +1519,12 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    annotations/visibility/edit button below it. */
 .obj-white-section--description {
   flex: 1;
-  /* min-height stays AUTO (= the section's own min-content): an explicit
-     pixel minimum let flex shrink the box BELOW its fixed parts (image,
-     labels), so the text painted over the annotations section below it.
-     With auto, the section can only shrink until the feeling text hits its
-     own 3-line minimum (it scrolls internally past that), and if the whole
-     column still doesn't fit, the panel itself scrolls — never an overlap. */
+  /* min-height:0 lets this section actually shrink to the space the panel has
+     left after the fixed sections; the feeling paragraph inside carries its
+     own overflow-y:auto (with a small min-height floor), so it scrolls its
+     own text internally rather than pushing the whole panel into a scrollbar.
+     No overlap risk: the text can never spill past the section's own box. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -1532,7 +1532,7 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 /* Let the story prompt sit a touch farther from its divider, while lifting
    the annotations block slightly to balance the large flexible story area. */
 .obj-white-section--description > .obj-white-rule:first-child {
-  margin-bottom: 24px;
+  margin-bottom: clamp(12px, 2vh, 24px);
 }
 
 /* a translateY() nudge here doesn't push layout, so it only reads correctly
@@ -1679,8 +1679,8 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   line-height: 1.3;
   flex: 1;
   /* on a short screen the flexible description share can collapse to a
-     sliver — always keep at least ~3 readable lines, scrolling the rest */
-  min-height: 3em;
+     sliver — always keep at least ~2 readable lines, scrolling the rest */
+  min-height: 2.2em;
   overflow-y: auto;
 }
 

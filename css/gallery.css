@@ -311,10 +311,10 @@
   width: 100%;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   border: none;
-  /* thick lower frame like the welcome-screen polaroids — deep enough that a
-     title wrapping to two lines still sits inside the frame, never over the
-     photo */
-  padding: 10px 10px 56px;
+  /* even polaroid frame: a thin border on three sides and a proportional
+     lower band (like the welcome-screen prints). Deep enough to hold a
+     two-line title, shallow enough that the print keeps its classic ratio. */
+  padding: 10px 10px 48px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   position: relative;
@@ -341,7 +341,7 @@
   left: 10px;
   right: 10px;
   top: 10px;
-  bottom: 42px;
+  bottom: 48px;
   background: radial-gradient(ellipse at center,
     rgba(0, 0, 0, 0.16) 0%,
     rgba(0, 0, 0, 0.07) 45%,
@@ -364,23 +364,24 @@
 
 .gal-caption {
   position: absolute;
-  /* TOP-anchored just below the photo (the frame's bottom band is 56px, see
-     .gal-card): every caption starts at the SAME height, so one- and two-line
-     titles line up across the whole grid instead of a one-liner sinking to the
-     bottom while a two-liner fills the band. It grows downward into the band,
-     which is deep enough to hold two lines without reaching the photo. */
-  top: calc(100% - 50px);
+  /* anchored just below the photo, so every caption starts at the SAME height
+     and one- and two-line titles line up across the grid. The band above
+     (.gal-card padding-bottom) is a proportional 48px — a one-line title sits
+     close under the photo with only a small, balanced margin beneath it (no
+     longer marooned high in an over-deep frame), while a two-line title fills
+     the band without reaching the photo. */
+  top: calc(100% - 42px);
   left: 14px;
   right: 12px;
   font-family: var(--font-caption);
-  font-size: var(--fs-caption);
+  /* a hair under the body caption so two lines sit comfortably in the band */
+  font-size: 1.08rem;
   line-height: 1.14;
   color: var(--color-caption-blue);
   /* a capital first letter on every card title, whatever case it was typed */
   text-transform: capitalize;
-  /* a long title wraps to at most TWO lines and then ellipsises, rather than
-     being truncated on a single line — two lines preferred, ellipsis the
-     fallback when even two aren't enough */
+  /* a long title wraps to at most TWO lines and then ellipsises — two lines
+     preferred, the ellipsis only the fallback when even two aren't enough */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
