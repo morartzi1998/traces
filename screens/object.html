@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bk">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bk">
-<link rel="stylesheet" href="../css/object.css?v=20260727bk">
-<script src="../js/cursor.js?v=20260727bk" defer></script>
-<script src="../js/grain.js?v=20260727bk" defer></script>
-<script src="../js/tilt3d.js?v=20260727bk" defer></script>
-<script src="../js/owner.js?v=20260727bk"></script>
-<script src="../js/config.js?v=20260727bk"></script>
-<script src="../js/archive.js?v=20260727bk"></script>
-<script src="../js/blobstore.js?v=20260727bk"></script>
-<script src="../js/particle-loader.js?v=20260727bk"></script>
-<script src="../js/remote-captures.js?v=20260727bk"></script>
-<script src="../js/community-seed.js?v=20260727bk"></script>
-<script src="../js/flow.js?v=20260727bk" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bk"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bl">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bl">
+<link rel="stylesheet" href="../css/object.css?v=20260727bl">
+<script src="../js/cursor.js?v=20260727bl" defer></script>
+<script src="../js/grain.js?v=20260727bl" defer></script>
+<script src="../js/tilt3d.js?v=20260727bl" defer></script>
+<script src="../js/owner.js?v=20260727bl"></script>
+<script src="../js/config.js?v=20260727bl"></script>
+<script src="../js/archive.js?v=20260727bl"></script>
+<script src="../js/blobstore.js?v=20260727bl"></script>
+<script src="../js/particle-loader.js?v=20260727bl"></script>
+<script src="../js/remote-captures.js?v=20260727bl"></script>
+<script src="../js/community-seed.js?v=20260727bl"></script>
+<script src="../js/flow.js?v=20260727bl" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bl"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,27 +29,27 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bk" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bl" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bk";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bk";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bl";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bl";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bk";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bl";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
   window.__THREE_VEC3 = THREE.Vector3; // the classic scripts hand these to viewer.project()
 
-  // reads a (non-Draco) GLB and returns its mesh surface as a point
-  // BufferGeometry — positions from every primitive's POSITION accessor,
+  // reads a GLB (Draco-compressed included) and returns its mesh surface as a
+  // point BufferGeometry — positions from every primitive's POSITION accessor,
   // world-transformed through the node tree, plus COLOR_0 when present.
   // This is what lets a capture whose timeline is made of MODELS (not point
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
-  // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bk";
+  // (malformed, empty).
+  import { glbToPoints } from "../js/glb-points.js?v=20260727bl";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the

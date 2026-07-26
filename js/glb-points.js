@@ -1,19 +1,46 @@
 /*
   traces — shared GLB(mesh) -> point-cloud extractor
 
-  Reads a (non-Draco) GLB and returns its mesh surface as a point
-  BufferGeometry: positions from every primitive's POSITION accessor,
-  world-transformed through the node tree, with per-point colour sampled
-  from COLOR_0 or the baseColorTexture (webp included) at each vertex UV.
+  Reads a GLB and returns its mesh surface as a point BufferGeometry:
+  positions from every primitive's POSITION accessor, world-transformed
+  through the node tree, with per-point colour sampled from COLOR_0 or the
+  baseColorTexture (webp included) at each vertex UV. KHR_draco_mesh_compression
+  is decoded on the fly (the wasm decoder in vendor/draco) so ready-made
+  uploads exported with Draco get a cloud too.
   Async: yields to the main thread every 60k points so a big mesh never
   freezes the page. Returns a Promise resolving to the geometry, or null
-  when it can't (Draco-compressed, malformed, empty).
+  when it can't (malformed, empty).
 
   Used by object.html (mesh/points toggle, the history collage) and
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727bk";
+import * as THREE from "./vendor/three/three.module.js?v=20260727bl";
+
+// Draco decoder — loaded once, on demand, only when a GLB actually carries
+// KHR_draco_mesh_compression (most Tripo scans do NOT; ready-made uploads
+// exported from Blender/other tools often do). The wrapper is a plain global
+// script (not a module), so it's injected once and the wasm fetched beside it.
+var _dracoModule = null;
+function loadDraco() {
+  if (_dracoModule) return _dracoModule;
+  var wrapUrl = new URL("./vendor/draco/draco_wasm_wrapper.js", import.meta.url).href;
+  var wasmUrl = new URL("./vendor/draco/draco_decoder.wasm", import.meta.url).href;
+  _dracoModule = new Promise(function (resolve, reject) {
+    function build() {
+      fetch(wasmUrl).then(function (r) { return r.arrayBuffer(); })
+        .then(function (wasmBinary) { return self.DracoDecoderModule({ wasmBinary: wasmBinary }); })
+        .then(resolve, reject);
+    }
+    if (self.DracoDecoderModule) { build(); return; }
+    var s = document.createElement("script");
+    s.src = wrapUrl;
+    s.onload = build;
+    s.onerror = function () { reject(new Error("draco wrapper failed to load")); };
+    document.head.appendChild(s);
+  }).catch(function (e) { _dracoModule = null; throw e; });
+  return _dracoModule;
+}
 
 export function glbToPoints(arrayBuffer) {
   try {
@@ -21,7 +48,6 @@ export function glbToPoints(arrayBuffer) {
     if (dv.getUint32(0, true) !== 0x46546c67) return null; // "glTF"
     var jsonLen = dv.getUint32(12, true);
     var gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(arrayBuffer, 20, jsonLen)));
-    if ((gltf.extensionsRequired || []).indexOf("KHR_draco_mesh_compression") !== -1) return null;
     var binStart = 20 + jsonLen;
     if (binStart % 4) binStart += 4 - (binStart % 4);
     var bin = null;
@@ -30,8 +56,16 @@ export function glbToPoints(arrayBuffer) {
       bin = new Uint8Array(arrayBuffer, binStart + 8, binLen);
     }
     if (!bin) return null;
+    // Draco-decoded attributes/indices land here, keyed by glTF accessor
+    // index, so the rest of the pipeline reads them through accessorData
+    // exactly like an uncompressed buffer view.
+    var dracoAccessorCache = {};
     function accessorData(ai) {
+      if (dracoAccessorCache[ai]) return dracoAccessorCache[ai];
       var acc = gltf.accessors[ai];
+      // a Draco accessor has no bufferView of its own — if we reach here for
+      // one it means its primitive never got decoded, so there's nothing to read
+      if (acc.bufferView == null) return null;
       var bv = gltf.bufferViews[acc.bufferView];
       var comps = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[acc.type];
       var CT = { 5126: Float32Array, 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array,
@@ -145,6 +179,81 @@ export function glbToPoints(arrayBuffer) {
       return mc.imgIdx != null ? imageData(mc.imgIdx) : Promise.resolve(null);
     });
 
+    // KHR_draco_mesh_compression: the primitive's real POSITION / TEXCOORD /
+    // COLOR / index data lives compressed in one bufferView, not the plain
+    // accessors. Decode each such primitive up front and drop the results into
+    // dracoAccessorCache so accessorData() serves them transparently below.
+    function decodeDracoPrim(draco, prim) {
+      var ext = prim.extensions.KHR_draco_mesh_compression;
+      var bv = gltf.bufferViews[ext.bufferView];
+      if (!bv) return;
+      var bytes = new Int8Array(bin.buffer, bin.byteOffset + (bv.byteOffset || 0), bv.byteLength);
+      var decoder = new draco.Decoder();
+      var db = new draco.DecoderBuffer();
+      var mesh = null;
+      try {
+        db.Init(bytes, bytes.length);
+        if (decoder.GetEncodedGeometryType(bytes) !== draco.TRIANGULAR_MESH) return;
+        mesh = new draco.Mesh();
+        var status = decoder.DecodeBufferToMesh(db, mesh);
+        if (!status.ok() || mesh.ptr === 0) return;
+        var numPoints = mesh.num_points();
+        var attrs = ext.attributes || {};
+        Object.keys(attrs).forEach(function (name) {
+          var accIdx = prim.attributes[name];
+          if (accIdx == null) return;
+          var attr = decoder.GetAttributeByUniqueId(mesh, attrs[name]);
+          if (!attr || attr.ptr === 0) return;
+          var numComp = attr.num_components();
+          var numValues = numPoints * numComp;
+          var byteLen = numValues * 4;
+          var ptr = draco._malloc(byteLen);
+          decoder.GetAttributeDataArrayForAllPoints(mesh, attr, draco.DT_FLOAT32, byteLen, ptr);
+          var out = new Float32Array(numValues);
+          out.set(new Float32Array(draco.HEAPF32.buffer, ptr, numValues));
+          draco._free(ptr);
+          // Draco hands colour back as raw 0..255 (or 0..65535); match the
+          // 0..1 range the rest of the code assumes when the accessor is normalized
+          var acc = gltf.accessors[accIdx];
+          var norm = acc && acc.normalized
+            ? ({ 5121: 255, 5123: 65535, 5120: 127, 5122: 32767 })[acc.componentType] || 1
+            : 1;
+          if (norm !== 1) for (var k = 0; k < out.length; k++) out[k] /= norm;
+          dracoAccessorCache[accIdx] = { data: out, comps: numComp, count: numPoints };
+        });
+        if (prim.indices != null) {
+          var numFaces = mesh.num_faces();
+          var numIndices = numFaces * 3;
+          var ib = numIndices * 4;
+          var iptr = draco._malloc(ib);
+          decoder.GetTrianglesUInt32Array(mesh, ib, iptr);
+          var idx = new Uint32Array(numIndices);
+          idx.set(new Uint32Array(draco.HEAPU32.buffer, iptr, numIndices));
+          draco._free(iptr);
+          dracoAccessorCache[prim.indices] = { data: idx, comps: 1, count: numIndices };
+        }
+      } catch (e) { /* leave this primitive undecoded; it just yields no points */ }
+      finally {
+        if (mesh) draco.destroy(mesh);
+        draco.destroy(db);
+        draco.destroy(decoder);
+      }
+    }
+    function decodeAllDraco() {
+      var seen = [], dracoPrims = [];
+      prims.forEach(function (p) {
+        var pr = p.prim;
+        if (pr.extensions && pr.extensions.KHR_draco_mesh_compression && seen.indexOf(pr) === -1) {
+          seen.push(pr); dracoPrims.push(pr);
+        }
+      });
+      if (!dracoPrims.length) return Promise.resolve();
+      return loadDraco().then(function (draco) {
+        dracoPrims.forEach(function (pr) { decodeDracoPrim(draco, pr); });
+      }).catch(function () { /* decoder unavailable — those prims stay empty */ });
+    }
+
+    return decodeAllDraco().then(function () {
     return Promise.all(imgPromises).then(async function (images) {
       var total = 0;
       prims.forEach(function (p) { total += gltf.accessors[p.prim.attributes.POSITION].count; });
@@ -277,6 +386,7 @@ export function glbToPoints(arrayBuffer) {
       g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
       return g;
+    }).catch(function () { return null; });
     }).catch(function () { return null; });
   } catch (e) { return null; }
 }
