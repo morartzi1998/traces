@@ -311,8 +311,10 @@
   width: 100%;
   background: var(--color-polaroid) url("../assets/images/polaroid-paper-1.png") center / cover;
   border: none;
-  /* thick lower frame like the welcome-screen polaroids */
-  padding: 10px 10px 42px;
+  /* thick lower frame like the welcome-screen polaroids — deep enough that a
+     title wrapping to two lines still sits inside the frame, never over the
+     photo */
+  padding: 10px 10px 56px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   position: relative;
@@ -362,10 +364,12 @@
 
 .gal-caption {
   position: absolute;
-  bottom: 0;
+  /* sits inside the frame's bottom band (see .gal-card padding-bottom); grows
+     UP from here, so one line hugs the bottom and a two-line title fills the
+     band without ever reaching the photo above it */
+  bottom: 11px;
   left: 14px;
   right: 12px;
-  min-height: 42px;
   font-family: var(--font-caption);
   font-size: var(--fs-caption);
   line-height: 1.12;
@@ -373,15 +377,12 @@
   /* a capital first letter on every card title, whatever case it was typed */
   text-transform: capitalize;
   /* a long title wraps to at most TWO lines and then ellipsises, rather than
-     being truncated on a single line — two lines are preferred, the ellipsis
-     is only the fallback when even two aren't enough. Anchored to the bottom
-     of the caption band so a one-line title still sits where it always did. */
+     being truncated on a single line — two lines preferred, ellipsis the
+     fallback when even two aren't enough */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  align-content: end;
-  padding-bottom: 12px;
 }
 
 /* owner-only line under each card confirming whether this capture actually
