@@ -6,20 +6,20 @@
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ac">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ac">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727ac">
-<script src="../js/cursor.js?v=20260727ac" defer></script>
-<script src="../js/grain.js?v=20260727ac" defer></script>
-<script src="../js/owner.js?v=20260727ac"></script>
-<script src="../js/config.js?v=20260727ac"></script>
-<script src="../js/archive.js?v=20260727ac"></script>
-<script src="../js/blobstore.js?v=20260727ac"></script>
-<script src="../js/remote-captures.js?v=20260727ac"></script>
-<script src="../js/designer-archive.js?v=20260727ac"></script>
-<script src="../js/community-seed.js?v=20260727ac"></script>
-<script src="../js/gallery-title.js?v=20260727ac" defer></script>
-<script src="../js/flow.js?v=20260727ac" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ad">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ad">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727ad">
+<script src="../js/cursor.js?v=20260727ad" defer></script>
+<script src="../js/grain.js?v=20260727ad" defer></script>
+<script src="../js/owner.js?v=20260727ad"></script>
+<script src="../js/config.js?v=20260727ad"></script>
+<script src="../js/archive.js?v=20260727ad"></script>
+<script src="../js/blobstore.js?v=20260727ad"></script>
+<script src="../js/remote-captures.js?v=20260727ad"></script>
+<script src="../js/designer-archive.js?v=20260727ad"></script>
+<script src="../js/community-seed.js?v=20260727ad"></script>
+<script src="../js/gallery-title.js?v=20260727ad" defer></script>
+<script src="../js/flow.js?v=20260727ad" defer></script>
 </head>
 <body>
 
@@ -58,6 +58,22 @@
     // opening any capture from here (including the fixed showcase cards,
     // which carry no visibility flag of their own) should show the
     // community's blue-purple backdrop on the object view too
+    // remember the EXACT order the visitor is looking at (live remote
+    // captures included) so the object screen's prev/next arrows browse this
+    // same set — object.html's own community list is only the local cache +
+    // seed and would drop the remote ones, sending the arrows off into a
+    // different ring that felt like the archive
+    function stashCommunityOrder() {
+      try {
+        var ids = [];
+        document.querySelectorAll("#galGrid .gal-item").forEach(function (art) {
+          var k = art.dataset && art.dataset.hideKey;
+          if (k) ids.push(k);
+        });
+        if (ids.length) sessionStorage.setItem("traces-community-order", JSON.stringify(ids));
+      } catch (e) {}
+    }
+
     window.openCommunityObject = function (key) {
       // set the item + community flag directly and navigate — not via
       // openObject(), which deliberately clears the community flag
@@ -65,6 +81,7 @@
         sessionStorage.setItem("traces-item", key);
         sessionStorage.setItem("traces-from-community", "1");
       } catch (e) {}
+      stashCommunityOrder();
       goTo("object.html");
     };
 
@@ -207,6 +224,7 @@
             sessionStorage.setItem("traces-item", entry.id);
             sessionStorage.setItem("traces-from-community", "1");
           } catch (er) {}
+          stashCommunityOrder();
           goTo("object.html");
         });
         art.querySelector(".gal-hide").addEventListener("click", function () {
