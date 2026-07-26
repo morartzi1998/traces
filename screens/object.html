@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727af">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727af">
-<link rel="stylesheet" href="../css/object.css?v=20260727af">
-<script src="../js/cursor.js?v=20260727af" defer></script>
-<script src="../js/grain.js?v=20260727af" defer></script>
-<script src="../js/tilt3d.js?v=20260727af" defer></script>
-<script src="../js/owner.js?v=20260727af"></script>
-<script src="../js/config.js?v=20260727af"></script>
-<script src="../js/archive.js?v=20260727af"></script>
-<script src="../js/blobstore.js?v=20260727af"></script>
-<script src="../js/particle-loader.js?v=20260727af"></script>
-<script src="../js/remote-captures.js?v=20260727af"></script>
-<script src="../js/community-seed.js?v=20260727af"></script>
-<script src="../js/flow.js?v=20260727af" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727af"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ag">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ag">
+<link rel="stylesheet" href="../css/object.css?v=20260727ag">
+<script src="../js/cursor.js?v=20260727ag" defer></script>
+<script src="../js/grain.js?v=20260727ag" defer></script>
+<script src="../js/tilt3d.js?v=20260727ag" defer></script>
+<script src="../js/owner.js?v=20260727ag"></script>
+<script src="../js/config.js?v=20260727ag"></script>
+<script src="../js/archive.js?v=20260727ag"></script>
+<script src="../js/blobstore.js?v=20260727ag"></script>
+<script src="../js/particle-loader.js?v=20260727ag"></script>
+<script src="../js/remote-captures.js?v=20260727ag"></script>
+<script src="../js/community-seed.js?v=20260727ag"></script>
+<script src="../js/flow.js?v=20260727ag" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ag"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727af" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ag" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727af";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727af";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ag";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ag";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727af";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ag";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727af";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ag";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -974,6 +974,10 @@
               ? d.versions.map(function (v) {
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
+                    // an exact date typed in "edit years" (e.g. 2026-03-14) —
+                    // shown on the timeline for same-year scans; year stays
+                    // derived from it for the annotation scrub
+                    dateLabel: v.dateLabel || null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
                     feeling: v.feeling || "",
@@ -1020,6 +1024,7 @@
               ? c.versions.map(function (v) {
                   return { year: v.year != null ? v.year : new Date(v.created || Date.now()).getFullYear(),
                     yearExplicit: v.year != null,
+                    dateLabel: v.dateLabel || null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
                     feeling: v.feeling || "",
@@ -2079,7 +2084,12 @@
         var vIdx = displayedVersionIndex === -1 ? versions.length - 1 : displayedVersionIndex;
         var ver = versions[vIdx] || null;
         var oldVersion = displayedVersionIndex !== -1;
-        document.getElementById("whiteTitle").textContent = (ver && ver.title) || item.title;
+        var displayName = (ver && ver.title) || item.title;
+        document.getElementById("whiteTitle").textContent = displayName;
+        // keep the stage header in lockstep with the card: the two were read
+        // from slightly different sources and could disagree (header showing a
+        // version's title while the card fell back to "untitled capture")
+        document.getElementById("objTitle").textContent = displayName;
         var vNote = document.getElementById("whiteVersionNote");
         vNote.hidden = !(oldVersion && ver);
         vNote.textContent = (oldVersion && ver) ? "[" + ver.year + " scan]" : "";
@@ -2808,7 +2818,7 @@
           });
           if (window.isOwnerDevice && window.isOwnerDevice()) {
             var vMeta = vList.map(function (v) {
-              return { created: v.created, year: v.year, title: v.title,
+              return { created: v.created, year: v.year, dateLabel: v.dateLabel || null, title: v.title,
                 feeling: v.created === vSel.created ? vSel.feeling : undefined };
             });
             serverPatchIds(key).forEach(function (sid) { patchServerVersionsMeta(sid, vMeta); });
@@ -3089,7 +3099,9 @@
           btn.type = "button";
           btn.dataset.year = v.year;
           btn.dataset.index = i;
-          btn.innerHTML = "<span>" + v.year + "</span><i class=\"obj-dot\"></i>";
+          // an exact date (typed in "edit years") shows in full so two scans
+          // from the SAME year read as distinct moments, not two "2026"s
+          btn.innerHTML = "<span>" + (v.dateLabel || v.year) + "</span><i class=\"obj-dot\"></i>";
           // a custom tooltip (not the native title attribute) - the browser's
           // own tooltip box looked jarring against the rest of the interface,
           // and on some mobile browsers it was popping up mid long-press,
@@ -3146,7 +3158,11 @@
         var yearsWrap = objTimeline.querySelector(".obj-years");
         clearPendingDelete();
         objTimeline.querySelectorAll(".obj-year-editbtn, .obj-year-actions").forEach(function (el) { el.remove(); });
-        var work = versions.map(function (v) { return { v: v, year: String(v.year == null ? "" : v.year) }; });
+        // the field holds a year, OR — when two scans share a year — an exact
+        // date (2026-03-14). Prefill whichever the version already carries.
+        var work = versions.map(function (v) {
+          return { v: v, year: String(v.dateLabel != null ? v.dateLabel : (v.year == null ? "" : v.year)) };
+        });
         function draw() {
           yearsWrap.innerHTML = "";
           work.forEach(function (w, i) {
@@ -3171,8 +3187,9 @@
             var input = document.createElement("input");
             input.className = "obj-year-input";
             input.type = "text";
-            input.inputMode = "numeric";
             input.value = w.year;
+            input.setAttribute("aria-label", "Year, or an exact date for a same-year scan");
+            input.title = "a year (2026), or an exact date when two scans share a year (e.g. 2026-03-14)";
             input.addEventListener("input", function () { w.year = input.value; });
             row.appendChild(movers);
             row.appendChild(input);
@@ -3189,11 +3206,20 @@
         save.type = "button"; save.className = "obj-year-action"; save.textContent = "save";
         save.addEventListener("click", function () {
           var newVersions = work.map(function (w) {
-            var yr = String(w.year).trim();
-            var num = parseInt(yr, 10);
-            // years stay numbers whenever they can — the annotation scrub
-            // ("notes from this year back") compares them numerically
-            return Object.assign({}, w.v, { year: isNaN(num) ? (yr || w.v.year) : num });
+            var raw = String(w.year).trim();
+            // pull the 4-digit year out of whatever was typed — a bare year,
+            // or an exact date like 2026-03-14 / "March 2026". The year stays
+            // a NUMBER (the annotation scrub compares years numerically); if
+            // the field carried more than the year, keep the whole thing as
+            // the exact-date label shown on the timeline.
+            var m = raw.match(/\d{4}/);
+            var num = m ? parseInt(m[0], 10) : NaN;
+            var yearVal = isNaN(num) ? (raw || w.v.year) : num;
+            var isJustYear = raw === String(yearVal);
+            return Object.assign({}, w.v, {
+              year: yearVal,
+              dateLabel: isJustYear ? null : (raw || null),
+            });
           });
           catalog[k].versions = newVersions;
           // the record's own top-level fields are what a fresh page load (and
@@ -3218,6 +3244,7 @@
             var mergedV = newVersions.map(function (nv) {
               var sv = by[nv.created] || { created: nv.created, model: nv.model, img: nv.img, points: nv.points };
               sv.year = nv.year;
+              sv.dateLabel = nv.dateLabel || null;
               if (nv.title) sv.title = nv.title;
               return sv;
             });
@@ -3233,7 +3260,7 @@
           mergeStoreVersions(window.Community);
           // the server gets ONLY the meta (order/years/titles) — its own
           // hosted file URLs must never be replaced by this device's idb refs
-          var meta = newVersions.map(function (v) { return { created: v.created, year: v.year, title: v.title }; });
+          var meta = newVersions.map(function (v) { return { created: v.created, year: v.year, dateLabel: v.dateLabel || null, title: v.title }; });
           if (window.isOwnerDevice && window.isOwnerDevice()) {
             serverPatchIds(k).forEach(function (sid) { patchServerVersionsMeta(sid, meta); });
           }
