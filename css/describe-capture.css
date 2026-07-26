@@ -210,7 +210,8 @@
   margin: 6px 0 10px;
   padding-left: 30px;
   list-style: disc;
-  text-transform: lowercase;
+  /* the instruction reads as a real sentence — a capital first letter, and
+     its last word is glued (nbsp in the markup) so it never wraps alone */
 }
 
 .annotations-empty {

@@ -1701,7 +1701,8 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   list-style: disc;
   font-size: 1.25rem;
   line-height: 1.4;
-  text-transform: lowercase;
+  /* a real sentence: capital first letter, last word glued (nbsp) so it
+     never wraps alone onto its own line */
   opacity: 0.85;
 }
 
