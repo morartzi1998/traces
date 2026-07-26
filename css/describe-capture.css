@@ -99,18 +99,20 @@
   font-family: var(--font-caption);
   display: flex;
   flex-direction: column;
-  padding: 24px 34px 22px 36px;
+  /* padding + type scale with viewport height so the whole form fits a big
+     exhibition display without a scrollbar (only scrolls as a last resort) */
+  padding: clamp(14px, 2.4vh, 24px) 34px clamp(14px, 2.2vh, 22px) 36px;
   overflow-y: auto;
-  font-size: 20px;
+  font-size: clamp(15px, 1.7vh, 20px);
 }
 
 .sidebar h1 {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: clamp(20px, 3vh, 28px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin-bottom: 14px;
+  margin-bottom: clamp(8px, 1.4vh, 14px);
 }
 
 .sidebar .rule {
@@ -129,7 +131,7 @@
 
 .field-label {
   text-transform: uppercase;
-  margin: 16px 0 8px;
+  margin: clamp(8px, 1.6vh, 16px) 0 clamp(4px, 0.8vh, 8px);
 }
 
 /* Checkbox rows */
@@ -272,9 +274,12 @@
 .btn {
   flex: 1;
   font-family: var(--font-drawn);
-  font-size: 20px;
+  font-size: clamp(15px, 1.7vh, 20px);
   text-transform: uppercase;
-  padding: 12px 10px;
+  /* symmetric padding + centred label, so a two-line button reads evenly
+     the same way it does on the small screen */
+  text-align: center;
+  padding: clamp(9px, 1.3vh, 13px) 12px;
   border: 1px solid var(--color-ink-blue);
   background: transparent;
   color: var(--color-ink-blue);
