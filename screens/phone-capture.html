@@ -6,11 +6,11 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727as">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727as">
-<script src="../js/cursor.js?v=20260727as" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727as" defer></script>
-<script src="../js/normalize-image.js?v=20260727as" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727at">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727at">
+<script src="../js/cursor.js?v=20260727at" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727at" defer></script>
+<script src="../js/normalize-image.js?v=20260727at" defer></script>
 </head>
 <body>
 
@@ -22,6 +22,10 @@
       <p class="pc-sub">Take one clear photo — the model builds on your computer.</p>
       <label class="pc-btn pc-btn--solid" for="pcInput">Take a photo</label>
       <input type="file" id="pcInput" accept="image/*" capture="environment" hidden>
+      <!-- no `capture` attribute: opens the phone's photo library instead of
+           forcing the camera, so a picture already taken can be used -->
+      <label class="pc-btn" for="pcGallery">Choose from gallery</label>
+      <input type="file" id="pcGallery" accept="image/*" hidden>
     </div>
 
     <div class="pc-card" id="pcSending" hidden>
@@ -86,7 +90,7 @@
         });
       }
 
-      document.getElementById("pcInput").addEventListener("change", function (e) {
+      function onPhoto(e) {
         var file = e.target.files && e.target.files[0];
         if (!file || !sessionId || !api) return;
         showOnly(sending);
@@ -119,7 +123,10 @@
             }).then(function () { showOnly(done); });
           })
           .catch(function () { fail("Couldn't reach the server — check your connection."); });
-      });
+      }
+      // both the camera and the gallery picker feed the same upload
+      document.getElementById("pcInput").addEventListener("change", onPhoto);
+      document.getElementById("pcGallery").addEventListener("change", onPhoto);
 
       document.getElementById("pcRetry").addEventListener("click", function () {
         showOnly(start);

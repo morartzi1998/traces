@@ -175,10 +175,16 @@
   border: 2px solid var(--color-ink-blue);
   background: transparent;
   font-family: inherit;
-  font-size: 20px;
+  font-size: clamp(15px, 1.7vh, 20px);
   color: var(--color-ink-blue);
   padding: 9px 14px;
   border-radius: 0;
+}
+
+/* a capital first letter on each word of the TITLE (not the free-text
+   description, where sentence flow matters) — matches the card captions */
+.text-input {
+  text-transform: capitalize;
 }
 
 .text-input::placeholder,
@@ -267,7 +273,10 @@
 
 .actions {
   display: flex;
-  gap: 14px;
+  /* stack the actions so each is a full-width button with its whole label on
+     ONE line, instead of two narrow side-by-side buttons that wrap */
+  flex-direction: column;
+  gap: 12px;
   margin-top: 14px;
 }
 
@@ -279,6 +288,7 @@
   /* symmetric padding + centred label, so a two-line button reads evenly
      the same way it does on the small screen */
   text-align: center;
+  white-space: nowrap;
   padding: clamp(9px, 1.3vh, 13px) 12px;
   border: 1px solid var(--color-ink-blue);
   background: transparent;
