@@ -6,19 +6,19 @@
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ah">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ah">
-<link rel="stylesheet" href="../css/upload.css?v=20260727ah">
-<script src="../js/owner.js?v=20260727ah"></script>
-<script src="../js/config.js?v=20260727ah"></script>
-<script src="../js/cursor.js?v=20260727ah" defer></script>
-<script src="../js/grain.js?v=20260727ah" defer></script>
-<script src="../js/blobstore.js?v=20260727ah"></script>
-<script src="../js/flow.js?v=20260727ah" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727ah" defer></script>
-<script src="../js/normalize-image.js?v=20260727ah" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260727ah"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ah"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ai">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ai">
+<link rel="stylesheet" href="../css/upload.css?v=20260727ai">
+<script src="../js/owner.js?v=20260727ai"></script>
+<script src="../js/config.js?v=20260727ai"></script>
+<script src="../js/cursor.js?v=20260727ai" defer></script>
+<script src="../js/grain.js?v=20260727ai" defer></script>
+<script src="../js/blobstore.js?v=20260727ai"></script>
+<script src="../js/flow.js?v=20260727ai" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727ai" defer></script>
+<script src="../js/normalize-image.js?v=20260727ai" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260727ai"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ai"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,12 +27,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ah" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ai" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ah";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727ah";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727ah";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ai";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727ai";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727ai";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud

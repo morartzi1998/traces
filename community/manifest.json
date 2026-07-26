@@ -8,7 +8,7 @@
     "by": "mara",
     "country": "portugal",
     "meta": "5 days ago",
-    "feeling": "found this at a flea market outside porto and could not leave without it - the smell of old wood still gets me every time i open it.",
+    "feeling": "found this at a flea market outside porto and could not leave without it - the smell of old wood still gets me every time i open it. it took two buses and a very patient friend to get it home, and it has not moved from that wall since.",
     "annotations": [
       {
         "x": 0.4,
@@ -17,6 +17,22 @@
         "type": "story",
         "since": 2022,
         "text": "the carving on the doors took the restorer three weeks - said it was some of the finest joinery he'd seen from that era."
+      },
+      {
+        "x": 0.3,
+        "y": 0.58,
+        "title": "brass key",
+        "type": "story",
+        "since": 2019,
+        "text": "the original key still turns, though you have to lift the door slightly on its hinge first - a trick the seller taught me and i've never had to teach anyone else."
+      },
+      {
+        "x": 0.52,
+        "y": 0.78,
+        "title": "bottom drawer",
+        "type": "story",
+        "since": 2020,
+        "text": "it sticks in the summer when the wood swells, so i keep the things i rarely need down there. it's become a small archive of its own by accident."
       }
     ],
     "points": "../community/points/communityAntiqueCabinet.bin"
@@ -30,7 +46,7 @@
     "by": "joans",
     "country": "germany",
     "meta": "11 days ago",
-    "feeling": "my great-grandfather built this table by hand - it's outlived three house moves and two countries.",
+    "feeling": "my great-grandfather built this table by hand - it's outlived three house moves and two countries. nobody in the family will admit to wanting it, and nobody will let it go either.",
     "annotations": [
       {
         "x": 0.5,
@@ -39,6 +55,22 @@
         "type": "remark",
         "since": 2020,
         "text": "there's a faint water ring on the corner from a glass someone left there in the 80s. we never sanded it out on purpose."
+      },
+      {
+        "x": 0.33,
+        "y": 0.6,
+        "title": "hand-cut joints",
+        "type": "story",
+        "since": 2018,
+        "text": "not a single nail in the whole thing - every corner is a dovetail he cut by eye. you can still see where the chisel slipped once and he decided it was close enough."
+      },
+      {
+        "x": 0.5,
+        "y": 0.82,
+        "title": "initials underneath",
+        "type": "story",
+        "since": 2018,
+        "text": "his initials and a year are carved into the underside of the top, facing the floor where no guest would ever see them. he built it to be used, not admired."
       }
     ],
     "points": "../community/points/communityAntiqueSideTable.bin"
@@ -52,7 +84,7 @@
     "by": "amel",
     "country": "morocco",
     "meta": "19 days ago",
-    "feeling": "my mother wove this one herself the winter before i was born. it's been under every dining table i've ever owned.",
+    "feeling": "my mother wove this one herself the winter before i was born. it's been under every dining table i've ever owned, and it has quietly survived every spill those tables have seen.",
     "annotations": [
       {
         "x": 0.5,
@@ -61,6 +93,22 @@
         "type": "story",
         "since": 2019,
         "text": "one corner is sun-bleached almost white from years by the window - i like to think of it as the rug's own suntan."
+      },
+      {
+        "x": 0.4,
+        "y": 0.45,
+        "title": "the knot count",
+        "type": "story",
+        "since": 2016,
+        "text": "she counted the rows out loud in the evenings - it took her the better part of four months. i can find the exact line where the winter turned to spring and her hands got faster."
+      },
+      {
+        "x": 0.6,
+        "y": 0.7,
+        "title": "the border",
+        "type": "story",
+        "since": 2016,
+        "text": "the repeating shape along the edge is meant to keep the bad out and the warmth in. i didn't learn what it meant until long after she was gone."
       }
     ],
     "points": "../community/points/communityPatternedRug.bin"
@@ -74,7 +122,7 @@
     "by": "renn",
     "country": "sweden",
     "meta": "6 days ago",
-    "feeling": "inherited from my grandfather's study - every shelf still smells faintly of pipe tobacco.",
+    "feeling": "inherited from my grandfather's study - every shelf still smells faintly of pipe tobacco, and no amount of airing has ever fully taken it out. i've decided i don't want it to.",
     "annotations": [
       {
         "x": 0.62,
@@ -83,6 +131,22 @@
         "type": "story",
         "since": 2021,
         "text": "he kept the books he never actually read up there, just the ones with the nicest spines. i've kept the same rule."
+      },
+      {
+        "x": 0.4,
+        "y": 0.5,
+        "title": "wavy glass",
+        "type": "story",
+        "since": 2021,
+        "text": "the door still has its original glass - look through it at an angle and the whole room bends. modern glass is too honest for a cabinet this old."
+      },
+      {
+        "x": 0.5,
+        "y": 0.72,
+        "title": "ink stain",
+        "type": "story",
+        "since": 2021,
+        "text": "there's a dark bloom on the third shelf from a bottle he knocked over sometime in the seventies. he never sanded it out, so neither will i."
       }
     ],
     "points": "../community/points/communityAntiqueBookcase.bin",
@@ -97,7 +161,7 @@
     "by": "yuki",
     "country": "japan",
     "meta": "9 days ago",
-    "feeling": "handwoven for our first cat - she outgrew it in a year but refuses to sleep anywhere else.",
+    "feeling": "handwoven for our first cat - she outgrew it in a year but refuses to sleep anywhere else, folding herself in half to fit. we've since bought her three larger beds. all three are empty.",
     "annotations": [
       {
         "x": 0.48,
@@ -106,6 +170,22 @@
         "type": "remark",
         "since": 2023,
         "text": "she's worked one of the wicker ears down to almost nothing over the years. we've stopped trying to stop her."
+      },
+      {
+        "x": 0.45,
+        "y": 0.6,
+        "title": "the hollow",
+        "type": "story",
+        "since": 2022,
+        "text": "the reed has given way exactly to the shape of her, right in the middle. it's the softest part of the whole thing now, worn in by nothing but stubbornness."
+      },
+      {
+        "x": 0.6,
+        "y": 0.4,
+        "title": "the repair",
+        "type": "story",
+        "since": 2023,
+        "text": "one ear came loose last spring and i rewove it with whatever reed i could find - a slightly different colour, if you know to look. she has never once noticed."
       }
     ],
     "points": "../community/points/communityBearShapedWickerBed.bin",
@@ -120,7 +200,7 @@
     "by": "theo",
     "country": "greece",
     "meta": "3 days ago",
-    "feeling": "built this the summer i got my first computer - still has the same wobble in the left leg.",
+    "feeling": "built this the summer i got my first computer - still has the same wobble in the left leg that i've never quite fixed. every desk since has felt too steady, somehow.",
     "annotations": [
       {
         "x": 0.3,
@@ -129,6 +209,22 @@
         "type": "story",
         "since": 2019,
         "text": "cut it a centimeter short and never fixed it - folded paper under it instead. the fold's still there, just thinner now."
+      },
+      {
+        "x": 0.35,
+        "y": 0.55,
+        "title": "cable hole",
+        "type": "story",
+        "since": 2015,
+        "text": "i burned this through myself with a soldering iron at two in the morning because i couldn't wait until daylight to route the cables properly. it's still exactly the wrong size."
+      },
+      {
+        "x": 0.6,
+        "y": 0.35,
+        "title": "monitor ghost",
+        "type": "story",
+        "since": 2015,
+        "text": "there's a pale square in the varnish where the old crt sat for years and kept the sun off. the desk remembers the shape of a screen that's been gone a decade."
       }
     ],
     "points": "../community/points/communityComputerDesk.bin",
@@ -143,7 +239,7 @@
     "by": "lior",
     "country": "israel",
     "meta": "2 days ago",
-    "feeling": "reads every book i own in this chair now - the whole porch was rearranged around it.",
+    "feeling": "i read every book i own in this chair now - the whole porch was rearranged around it, and then the whole evening was too. people come over and quietly compete for it.",
     "annotations": [
       {
         "x": 0.55,
@@ -152,6 +248,22 @@
         "type": "remark",
         "since": 2024,
         "text": "the cushion's gone flat exactly where my head rests - i can find the right angle for reading without even looking."
+      },
+      {
+        "x": 0.4,
+        "y": 0.3,
+        "title": "the creak",
+        "type": "story",
+        "since": 2020,
+        "text": "one link in the chain announces every single time you shift your weight. i've oiled it, i've replaced it, and it always comes back. the chair likes having the last word."
+      },
+      {
+        "x": 0.55,
+        "y": 0.68,
+        "title": "book ledge",
+        "type": "story",
+        "since": 2021,
+        "text": "i wired a small shelf onto the frame for whatever i'm halfway through. there are usually three books on it and i am usually lying about how far into each one i am."
       }
     ],
     "points": "../community/points/communityHangingPodChair.bin",
@@ -166,7 +278,7 @@
     "by": "sara",
     "country": "denmark",
     "meta": "1 day ago",
-    "feeling": "all three of my kids ate their first solid food in this exact chair.",
+    "feeling": "all three of my kids ate their first solid food in this exact chair, in the same corner of the same kitchen. it's scratched and stained in ways i can date like tree rings.",
     "annotations": [
       {
         "x": 0.5,
@@ -175,6 +287,22 @@
         "type": "story",
         "since": 2020,
         "text": "three sets of tiny fork scratches on the tray, layered over each other. i can almost tell whose is whose by now."
+      },
+      {
+        "x": 0.45,
+        "y": 0.55,
+        "title": "teeth marks",
+        "type": "story",
+        "since": 2014,
+        "text": "the middle one went through a phase of biting the rail whenever a spoon came near. you can still feel the little crescents with your thumb."
+      },
+      {
+        "x": 0.55,
+        "y": 0.78,
+        "title": "height notches",
+        "type": "story",
+        "since": 2012,
+        "text": "there are pencil lines down one leg where we kept moving the footrest as they grew. three sets of them, in three slightly different hands."
       }
     ],
     "points": "../community/points/communityHighChair.bin",

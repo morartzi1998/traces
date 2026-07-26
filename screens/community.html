@@ -6,20 +6,20 @@
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ah">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ah">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727ah">
-<script src="../js/cursor.js?v=20260727ah" defer></script>
-<script src="../js/grain.js?v=20260727ah" defer></script>
-<script src="../js/owner.js?v=20260727ah"></script>
-<script src="../js/config.js?v=20260727ah"></script>
-<script src="../js/archive.js?v=20260727ah"></script>
-<script src="../js/blobstore.js?v=20260727ah"></script>
-<script src="../js/remote-captures.js?v=20260727ah"></script>
-<script src="../js/designer-archive.js?v=20260727ah"></script>
-<script src="../js/community-seed.js?v=20260727ah"></script>
-<script src="../js/gallery-title.js?v=20260727ah" defer></script>
-<script src="../js/flow.js?v=20260727ah" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ai">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ai">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727ai">
+<script src="../js/cursor.js?v=20260727ai" defer></script>
+<script src="../js/grain.js?v=20260727ai" defer></script>
+<script src="../js/owner.js?v=20260727ai"></script>
+<script src="../js/config.js?v=20260727ai"></script>
+<script src="../js/archive.js?v=20260727ai"></script>
+<script src="../js/blobstore.js?v=20260727ai"></script>
+<script src="../js/remote-captures.js?v=20260727ai"></script>
+<script src="../js/designer-archive.js?v=20260727ai"></script>
+<script src="../js/community-seed.js?v=20260727ai"></script>
+<script src="../js/gallery-title.js?v=20260727ai" defer></script>
+<script src="../js/flow.js?v=20260727ai" defer></script>
 </head>
 <body>
 
@@ -398,6 +398,11 @@
           var list = results[0];
           var fullHidden = hiddenKeys();
           (list || []).filter(function (d) { return fullHidden.indexOf(d.key) === -1; }).forEach(function (d) {
+            // a showcase item the owner has edited now lives as a real shared
+            // record (drawn by the remote pass) — don't also draw the static
+            // seed for the same key, or the edited card and the original both
+            // show up
+            if (grid.querySelector('.gal-item[data-hide-key="' + d.key + '"]')) return;
             grid.appendChild(buildCard({
               id: d.key, title: d.title, img: d.img, kind: d.kind,
               metaText: d.meta, who: d.by + "'s capture from " + d.country,
@@ -421,6 +426,11 @@
         (list || []).forEach(function (c) {
           var localId = c.id.replace(/-community$/, "");
           if (localCommunityIds[localId] || fullHidden.indexOf(localId) !== -1) return;
+          // an edited showcase item's shared record supersedes its static seed
+          // card — drop the seed card if it was already drawn, so only the
+          // edited (authoritative) version remains
+          var seedCard = grid.querySelector('.gal-item[data-hide-key="' + localId + '"]');
+          if (seedCard) seedCard.remove();
           grid.insertBefore(buildCard(buildEntry(Object.assign({}, c, { id: localId, remote: true }))), grid.firstChild);
         });
         // this browser's own cards rendered as "not shared yet" before this

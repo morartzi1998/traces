@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ah">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ah">
-<link rel="stylesheet" href="../css/object.css?v=20260727ah">
-<script src="../js/cursor.js?v=20260727ah" defer></script>
-<script src="../js/grain.js?v=20260727ah" defer></script>
-<script src="../js/tilt3d.js?v=20260727ah" defer></script>
-<script src="../js/owner.js?v=20260727ah"></script>
-<script src="../js/config.js?v=20260727ah"></script>
-<script src="../js/archive.js?v=20260727ah"></script>
-<script src="../js/blobstore.js?v=20260727ah"></script>
-<script src="../js/particle-loader.js?v=20260727ah"></script>
-<script src="../js/remote-captures.js?v=20260727ah"></script>
-<script src="../js/community-seed.js?v=20260727ah"></script>
-<script src="../js/flow.js?v=20260727ah" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ah"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ai">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ai">
+<link rel="stylesheet" href="../css/object.css?v=20260727ai">
+<script src="../js/cursor.js?v=20260727ai" defer></script>
+<script src="../js/grain.js?v=20260727ai" defer></script>
+<script src="../js/tilt3d.js?v=20260727ai" defer></script>
+<script src="../js/owner.js?v=20260727ai"></script>
+<script src="../js/config.js?v=20260727ai"></script>
+<script src="../js/archive.js?v=20260727ai"></script>
+<script src="../js/blobstore.js?v=20260727ai"></script>
+<script src="../js/particle-loader.js?v=20260727ai"></script>
+<script src="../js/remote-captures.js?v=20260727ai"></script>
+<script src="../js/community-seed.js?v=20260727ai"></script>
+<script src="../js/flow.js?v=20260727ai" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ai"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ah" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ai" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ah";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ah";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ai";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ai";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ah";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ai";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ah";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ai";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -886,6 +886,12 @@
             // fetch the mesh when someone actually toggles to it
             points: d.points || null, dual: !!d.points, openOn: d.openOn || null,
             feeling: d.feeling || "", annotations: d.annotations || [], links: [],
+            // a showcase item is a real capture like any other — the owner can
+            // rename it, re-photograph it, annotate it. isSeed marks that it
+            // has no server record YET; the first owner edit promotes it to a
+            // real community record (publishSeedRecord) so the change persists
+            // for every visitor instead of evaporating against the static file.
+            isSeed: true, by: d.by || "", country: d.country || "",
           };
         });
       }
@@ -1343,6 +1349,7 @@
         if (window.isOwnerDevice && window.isOwnerDevice()) {
           serverPatchIds(k).forEach(function (sid) { patchServerRecord(sid, fields); });
         }
+        persistSeedEdit(k);
       }
 
       // annotations follow the exact same path as links: local stores first,
@@ -1360,6 +1367,9 @@
         if (window.isOwnerDevice && window.isOwnerDevice()) {
           serverPatchIds(k).forEach(function (sid) { patchServerRecord(sid, fields); });
         }
+        // a still-static showcase item has no record to patch — promote it so
+        // the new note reaches every visitor
+        persistSeedEdit(k);
       }
 
       // every capture attached to this space — through a placed link marker
@@ -2911,6 +2921,9 @@
         exitWhiteEdit();
         document.getElementById("objTitle").textContent = item.title;
         fillWhite(item);
+        // a first edit on a static showcase item promotes it to a real shared
+        // record, so the rename / description sticks for every visitor
+        persistSeedEdit(key);
       });
       // re-scanning a real capture (from either "Update capture" in the menu
       // or "Update scan" in the white panel) should go through an actual new
@@ -3685,6 +3698,9 @@
               if (catalog[key]) catalog[key].img = url;
               if (window.Archive && Archive.get(key)) Archive.update(key, { img: url });
               if (window.Community && Community.get(key)) Community.update(key, { img: url });
+              // a showcase seed has no local/remote record for the patch above
+              // to land on — promote it now so the new display image persists
+              persistSeedEdit(key);
             });
           });
         }
@@ -3813,6 +3829,58 @@
         // community capture's new display image never reaching visitors.
         if (!ids.length) { ids.push(k); ids.push(k + "-community"); }
         return ids;
+      }
+
+      // a repo-relative asset path (../community/…) resolved to an absolute
+      // URL, so a seed promoted to a shared record points at something every
+      // OTHER device can actually fetch, not a path relative to their page
+      function absAssetUrl(ref) {
+        if (!ref) return ref || null;
+        if (/^https?:/i.test(ref) || ref.indexOf("idb:") === 0 || ref.indexOf("data:") === 0) return ref;
+        try { return new URL(ref, location.href).href; } catch (e) { return ref; }
+      }
+
+      // promote a static showcase seed to a real community record the first
+      // time the owner edits it (and re-push the whole thing on later edits),
+      // so a rename / new photo / annotation sticks for every visitor and
+      // overrides the manifest — the "everything at the same standard" rule.
+      // Sends the CURRENT catalog state, so whatever was just edited travels.
+      function publishSeedRecord(k) {
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        var c = catalog[k];
+        if (!api || !c) return Promise.resolve(false);
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return Promise.resolve(false);
+        var rec = {
+          id: k + "-community",
+          kind: c.kind || "object",
+          title: c.title || "untitled capture",
+          feeling: c.feeling || "",
+          img: absAssetUrl(c.img),
+          model: absAssetUrl(c.model),
+          points: absAssetUrl(c.points),
+          dual: !!c.points,
+          openOn: c.openOn || null,
+          pointSize: c.pointSize || null,
+          tilt: c.tilt || null,
+          meshTilt: c.meshTilt || null,
+          annotations: Array.isArray(c.annotations) ? c.annotations : [],
+          links: Array.isArray(c.links) ? c.links : [],
+          by: c.by || "", country: c.country || "",
+          created: c.created || Date.now(),
+        };
+        return fetch(api + "/captures", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rec),
+        }).then(function (r) {
+          if (r.ok) { c.onServerCommunity = true; c.isSeed = false; }
+          return r.ok;
+        }).catch(function () { return false; });
+      }
+      // convenience: after any owner edit, if this capture is still a bare
+      // seed, push it up as a real shared record
+      function persistSeedEdit(k) {
+        if (catalog[k] && catalog[k].isSeed) return publishSeedRecord(k);
+        return Promise.resolve(false);
       }
       // reorder/rename/redate the server's version list WITHOUT touching its
       // file references. The catalog's own version objects carry this
@@ -4548,8 +4616,13 @@
         var hiddenReady = window.RemoteCaptures ? withTimeout(RemoteCaptures.listHiddenShowcase(), 7000, []) : Promise.resolve([]);
         Promise.all([seedReady, remoteArchiveReady, remoteCommunityReady, hiddenReady]).then(function (results) {
           var seedList = results[0], remoteList = results[1].concat(results[2]), globalHidden = results[3] || [];
-          mergeCommunitySeedIntoCatalog(seedList);
+          // remote records FIRST: an edited showcase item lives on the server
+          // now, and its real record must win over the static seed of the same
+          // key (mergeCommunitySeedIntoCatalog skips a key already present), so
+          // the owner's rename / new photo / annotations show instead of the
+          // manifest defaults
           mergeRemoteCapturesIntoCatalog(remoteList);
+          mergeCommunitySeedIntoCatalog(seedList);
           // the stashed order from the community screen is already the full,
           // hidden-filtered set the visitor saw — don't append seed or
           // re-filter it here, or we'd double up and reorder the exact ring
