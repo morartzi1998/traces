@@ -52,12 +52,16 @@ export function mountPhotoParticles(container, imageSrc, opts) {
         // thin the rim out entirely for some cells so the outline stays soft
         // and irregular (wispy) rather than a clean rounded rectangle
         if (edge < 0.06 && Math.random() > edge * 8) continue;
+        // scatter the start over a soft DISC (not the full square) so the
+        // very first frame already reads as an organic blob rather than a
+        // rectangle filling the whole canvas — denser toward the middle
+        var sa = Math.random() * Math.PI * 2, sr = Math.sqrt(Math.random());
         parts.push({
           tx: (x + 0.5) / gw, ty: (y + 0.5) / gh, // target, image-relative
           r: px[o], g: px[o + 1], b: px[o + 2],
           edge: edge,
           // scattered start + its own drift personality
-          sx: Math.random(), sy: Math.random(),
+          sx: 0.5 + Math.cos(sa) * sr * 0.46, sy: 0.5 + Math.sin(sa) * sr * 0.46,
           ph: Math.random() * Math.PI * 2,
           sp: 0.5 + Math.random(), // drift speed factor
           dl: Math.random() * 0.25, // per-particle assembly delay (stagger)

@@ -154,6 +154,14 @@
   bottom: calc(11vh + 46px);
 }
 
+/* the cycling "…" after the percentage / "Assembling" — a fixed-width slot so
+   the line never jumps as the dot count changes (0→3) */
+.proc-dots {
+  display: inline-block;
+  width: 1.1em;
+  text-align: left;
+}
+
 .proc-status {
   position: absolute;
   left: 50%;

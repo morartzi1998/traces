@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bb">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bb">
-<link rel="stylesheet" href="../css/object.css?v=20260727bb">
-<script src="../js/cursor.js?v=20260727bb" defer></script>
-<script src="../js/grain.js?v=20260727bb" defer></script>
-<script src="../js/tilt3d.js?v=20260727bb" defer></script>
-<script src="../js/owner.js?v=20260727bb"></script>
-<script src="../js/config.js?v=20260727bb"></script>
-<script src="../js/archive.js?v=20260727bb"></script>
-<script src="../js/blobstore.js?v=20260727bb"></script>
-<script src="../js/particle-loader.js?v=20260727bb"></script>
-<script src="../js/remote-captures.js?v=20260727bb"></script>
-<script src="../js/community-seed.js?v=20260727bb"></script>
-<script src="../js/flow.js?v=20260727bb" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bb"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bc">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bc">
+<link rel="stylesheet" href="../css/object.css?v=20260727bc">
+<script src="../js/cursor.js?v=20260727bc" defer></script>
+<script src="../js/grain.js?v=20260727bc" defer></script>
+<script src="../js/tilt3d.js?v=20260727bc" defer></script>
+<script src="../js/owner.js?v=20260727bc"></script>
+<script src="../js/config.js?v=20260727bc"></script>
+<script src="../js/archive.js?v=20260727bc"></script>
+<script src="../js/blobstore.js?v=20260727bc"></script>
+<script src="../js/particle-loader.js?v=20260727bc"></script>
+<script src="../js/remote-captures.js?v=20260727bc"></script>
+<script src="../js/community-seed.js?v=20260727bc"></script>
+<script src="../js/flow.js?v=20260727bc" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bc"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bb" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bc" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bb";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bb";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bc";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bc";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bb";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bc";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bb";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727bc";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3664,12 +3664,15 @@
           if (inCommunity) Community.update(key, { openOn: repOpenOn });
         }
         // 1) update the local record(s) so this browser and the gallery show
-        // the new thumbnail right away
-        if ((inArchive || inCommunity) && window.BlobStore) {
+        // the new thumbnail right away. The blob is stored (and catalog img
+        // repointed) even for a capture that isn't in a local store yet — a
+        // remote item Mor is curating — so the change is at least reflected in
+        // THIS session's grids immediately, not only after the server round-trip.
+        if (window.BlobStore) {
           var thumbKey = "thumb:" + key;
           window.BlobStore.set(thumbKey, window.BlobStore.dataURLToBlob(dataUrl)).then(function () {
             var ref = "idb:" + thumbKey;
-            catalog[key].img = ref;
+            if (catalog[key]) catalog[key].img = ref;
             if (inArchive) Archive.update(key, { img: ref });
             if (inCommunity) Community.update(key, { img: ref });
           }).catch(function () {});
