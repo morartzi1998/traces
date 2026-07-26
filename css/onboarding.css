@@ -88,3 +88,14 @@
 .onb-btn:hover {
   opacity: 0.85;
 }
+
+/* Touch devices (iPhone / iPad): the two first-run screens (this one and the
+   capture-method screen) are both vertically centred, so they align only when
+   their content columns are the SAME height. The desktop tuning makes this
+   column ~74px taller than the capture screen's on a touch device — the vh
+   part of the actions margin over-scales on a tall phone/tablet — which
+   floated the heading up and the buttons down relative to it. Trim that here
+   (a fine-pointer desktop keeps the full margin). */
+@media (pointer: coarse) {
+  .onb-actions { margin-top: calc(7.1vh - 36px); }
+}
