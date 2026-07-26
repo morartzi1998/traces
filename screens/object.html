@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ab">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ab">
-<link rel="stylesheet" href="../css/object.css?v=20260727ab">
-<script src="../js/cursor.js?v=20260727ab" defer></script>
-<script src="../js/grain.js?v=20260727ab" defer></script>
-<script src="../js/tilt3d.js?v=20260727ab" defer></script>
-<script src="../js/owner.js?v=20260727ab"></script>
-<script src="../js/config.js?v=20260727ab"></script>
-<script src="../js/archive.js?v=20260727ab"></script>
-<script src="../js/blobstore.js?v=20260727ab"></script>
-<script src="../js/particle-loader.js?v=20260727ab"></script>
-<script src="../js/remote-captures.js?v=20260727ab"></script>
-<script src="../js/community-seed.js?v=20260727ab"></script>
-<script src="../js/flow.js?v=20260727ab" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ab"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ac">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ac">
+<link rel="stylesheet" href="../css/object.css?v=20260727ac">
+<script src="../js/cursor.js?v=20260727ac" defer></script>
+<script src="../js/grain.js?v=20260727ac" defer></script>
+<script src="../js/tilt3d.js?v=20260727ac" defer></script>
+<script src="../js/owner.js?v=20260727ac"></script>
+<script src="../js/config.js?v=20260727ac"></script>
+<script src="../js/archive.js?v=20260727ac"></script>
+<script src="../js/blobstore.js?v=20260727ac"></script>
+<script src="../js/particle-loader.js?v=20260727ac"></script>
+<script src="../js/remote-captures.js?v=20260727ac"></script>
+<script src="../js/community-seed.js?v=20260727ac"></script>
+<script src="../js/flow.js?v=20260727ac" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ac"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ab" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ac" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ab";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ab";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ac";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ac";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ab";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ac";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ab";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ac";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1456,7 +1456,11 @@
       // Everyone else gets a strictly read-only view.
       function canEditCapture(k) {
         if (window.isOwnerDevice && window.isOwnerDevice()) return true;
-        return !!((window.Archive && Archive.get(k)) || (window.Community && Community.get(k)));
+        // a capture is editable only if it's the viewer's OWN — i.e. it lives
+        // in THIS device's archive. The community store is a local cache of
+        // the WHOLE shared feed (everyone's captures), so testing it here let
+        // any visitor edit strangers' community captures. Own archive only.
+        return !!(window.Archive && Archive.get(k));
       }
 
       // "Connect previous captured object": if we're already looking at a
@@ -2100,10 +2104,14 @@
           : (item.annotations || []);
         document.getElementById("whiteAnnCount").textContent = anns.length;
         // the how-to line only earns its space when adding a note is actually
-        // the next step: nothing pinned yet, on the CURRENT scan, and this
-        // person may edit — a visitor (or an old scan) just gets the count
+        // the next step: nothing pinned yet, on the CURRENT scan, and this is
+        // the viewer's OWN capture (created on this device). A stranger's
+        // community capture — even opened on the owner's device — just shows
+        // the count and "none yet", never a "how to add" instruction for a
+        // capture that isn't theirs to annotate.
+        var ownCapture = !!(window.Archive && Archive.get(key));
         document.getElementById("whiteAnnotationsHint").hidden =
-          !!anns.length || oldVersion || !canEditCapture(key);
+          !!anns.length || oldVersion || !ownCapture;
         document.getElementById("whiteAnnotationsEmptyRuleTop").hidden = !!anns.length;
         document.getElementById("whiteAnnotationsEmptyRuleBottom").hidden = !!anns.length;
         document.getElementById("whiteAnnotationsFilledRule").hidden = !anns.length;
@@ -2769,16 +2777,21 @@
         var vSel = displayedVersionIndex >= 0 ? vList[displayedVersionIndex] : null;
         if (vSel) {
           var vt = document.getElementById("whiteTitleInput").value.trim();
-          if (vt) vSel.title = vt;
+          // a title typed here is "the name of the scan" in the person's head —
+          // one name, not a per-version secret. Keep the capture's own title in
+          // sync with it too, so the header, the gallery card and every other
+          // version all show the new name instead of it sticking to just this
+          // one node in the timeline (which read as "the rename didn't work").
+          if (vt) { vSel.title = vt; item.title = vt; }
           vSel.feeling = document.getElementById("whiteFeelingInput").value.trim();
           [window.Archive, window.Community].forEach(function (store) {
             if (!store || !store.get(key)) return;
             var rec = store.get(key);
             var hit = (rec.versions || []).filter(function (v) { return v.created === vSel.created; })[0];
-            if (!hit) return;
-            hit.title = vSel.title;
-            hit.feeling = vSel.feeling;
-            store.update(key, { versions: rec.versions });
+            if (hit) { hit.title = vSel.title; hit.feeling = vSel.feeling; }
+            var patch = { versions: rec.versions };
+            if (vt) patch.title = vt; // the capture's headline name, for gallery/header
+            store.update(key, patch);
           });
           if (window.isOwnerDevice && window.isOwnerDevice()) {
             var vMeta = vList.map(function (v) {
@@ -3315,12 +3328,19 @@
             // the Adjust entry CLOSES the menu as it opens its panel — this
             // observer fires on that close a beat later and was shutting the
             // panel the instant it appeared (the sliders never showed at all)
-            if (adjustPanelOpening) adjustPanelOpening = false;
-            else closeAdjustPanel();
-            if (timelineHasHistory()) {
-              objTimeline.hidden = false;
-              void objTimeline.offsetWidth;
-              objTimeline.classList.remove("obj-timeline--faded");
+            if (adjustPanelOpening) {
+              // the menu closed only to hand off to the Adjust panel, which
+              // sits in the SAME top-left spot as the timeline — leave the
+              // timeline hidden so the sliders/edit-years don't render on top
+              // of the year markers (they were overlapping into one another)
+              adjustPanelOpening = false;
+            } else {
+              closeAdjustPanel();
+              if (timelineHasHistory()) {
+                objTimeline.hidden = false;
+                void objTimeline.offsetWidth;
+                objTimeline.classList.remove("obj-timeline--faded");
+              }
             }
           }
         }).observe(menu, { attributes: true, attributeFilter: ["hidden"] });
@@ -3425,7 +3445,16 @@
       var menuAdjust = document.getElementById("menuAdjust");
       var menuAdjustRow = menuAdjust.closest("li");
       var objAdjustPanel = document.getElementById("objAdjustPanel");
-      function closeAdjustPanel() { objAdjustPanel.hidden = true; }
+      function closeAdjustPanel() {
+        objAdjustPanel.hidden = true;
+        // the panel borrowed the timeline's top-left slot while it was open;
+        // bring the timeline back once there's history worth showing again
+        if (timelineHasHistory()) {
+          objTimeline.hidden = false;
+          void objTimeline.offsetWidth;
+          objTimeline.classList.remove("obj-timeline--faded");
+        }
+      }
       // the mesh's saved straightening for whatever is on stage right now —
       // an old version carries its own (each scan bakes its own lean)
       function currentMeshTilt() {
