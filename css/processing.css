@@ -5,12 +5,13 @@
   min-height: 100vh;  min-height: 100dvh;
   overflow: hidden;
   background-color: #131210;
-  /* faint drafting grid with node dots at the intersections */
+  /* just the node dots, no ruled grid lines: the horizontal/vertical rules
+     read as stray lines across the loading scan (especially showing through
+     the sparse cloud) on a big display — the dots keep the drafting feel
+     without any line cutting through the object */
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.16) 1.1px, transparent 1.4px),
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 74px 74px, 74px 74px, 74px 74px;
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 1.1px, transparent 1.4px);
+  background-size: 74px 74px;
 }
 
 /* the reconstructing capture sits in the centre of the drafting grid */
