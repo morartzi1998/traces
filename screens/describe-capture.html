@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727az">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727az">
-<script src="../js/cursor.js?v=20260727az" defer></script>
-<script src="../js/grain.js?v=20260727az" defer></script>
-<script src="../js/tilt3d.js?v=20260727az" defer></script>
-<script src="../js/annotations.js?v=20260727az" defer></script>
-<script src="../js/owner.js?v=20260727az"></script>
-<script src="../js/config.js?v=20260727az"></script>
-<script src="../js/archive.js?v=20260727az"></script>
-<script src="../js/blobstore.js?v=20260727az"></script>
-<script src="../js/remote-captures.js?v=20260727az"></script>
-<script src="../js/flow.js?v=20260727az" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727az"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ba">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727ba">
+<script src="../js/cursor.js?v=20260727ba" defer></script>
+<script src="../js/grain.js?v=20260727ba" defer></script>
+<script src="../js/tilt3d.js?v=20260727ba" defer></script>
+<script src="../js/annotations.js?v=20260727ba" defer></script>
+<script src="../js/owner.js?v=20260727ba"></script>
+<script src="../js/config.js?v=20260727ba"></script>
+<script src="../js/archive.js?v=20260727ba"></script>
+<script src="../js/blobstore.js?v=20260727ba"></script>
+<script src="../js/remote-captures.js?v=20260727ba"></script>
+<script src="../js/flow.js?v=20260727ba" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ba"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727az" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ba" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727az";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727az";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727az";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ba";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ba";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ba";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -70,8 +70,12 @@
   <div class="screen">
 
     <div class="capture-canvas" data-crosshair id="captureCanvas">
+      <!-- hidden until boot() decides what this capture actually is: a flat
+           photo unhides it, a 3D model / point cloud leaves it hidden. Without
+           this the placeholder chandelier painted for a frame before the real
+           capture replaced it — the "lamp flashes for a second" on load. -->
       <img class="capture-object" src="../assets/images/photo-chandelier-large.png"
-           alt="Captured object: an old living room chandelier">
+           alt="Captured object: an old living room chandelier" hidden>
       <model-viewer class="capture-model" id="captureModel" camera-controls tone-mapping="neutral" disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
       <div class="capture-points" id="capturePoints" hidden></div>
@@ -196,18 +200,25 @@
             mv.src = model;
           }
         } else {
-          // otherwise, if the user uploaded a flat image, show that
+          // otherwise, if the user uploaded a flat image, show that (this is
+          // the only path that reveals the .capture-object img — every other
+          // path keeps it hidden, so the placeholder never flashes)
+          var objEl = document.querySelector(".capture-object");
           try {
             var up = sessionStorage.getItem("traces-upload-img");
             if (up && up.indexOf("idb:") === 0) {
               window.BlobStore.get(up.slice(4)).then(function (blob) {
-                if (blob) document.querySelector(".capture-object").src = URL.createObjectURL(blob);
+                if (blob) { objEl.src = URL.createObjectURL(blob); objEl.hidden = false; }
               });
             } else if (up) {
-              document.querySelector(".capture-object").src = up;
+              objEl.src = up;
+              objEl.hidden = false;
+            } else {
+              // no capture data at all — fall back to the default placeholder
+              objEl.hidden = false;
             }
           } catch (e) {}
-          initTilt3D(document.getElementById("captureCanvas"), document.querySelector(".capture-object"));
+          initTilt3D(document.getElementById("captureCanvas"), objEl);
         }
         }
         try {
@@ -488,7 +499,6 @@
           // the community copy reuses the very same IndexedDB blobs by reference
           if (alsoCommunity && window.Community) Community.add(Object.assign({}, cap));
           var isOwner = window.isOwnerDevice && window.isOwnerDevice();
-          var syncDone = Promise.resolve();
           // provisional stopgap so this capture is visible from any device,
           // not just this browser
           if (window.RemoteCaptures) {
@@ -497,22 +507,22 @@
             // visitor's own archive isn't affected — their capture stays in
             // both places, exactly like sharing normally works for them (and
             // visitors never publish to the private "archive" scope at all).
-            var pubs = [];
-            if (isOwner && !alsoCommunity) pubs.push(RemoteCaptures.publish(cap, "archive"));
-            if (alsoCommunity) pubs.push(RemoteCaptures.publish(cap, "community"));
-            // a large model/thumbnail upload can take real time - a plain
-            // fetch() gets silently aborted the instant the page navigates
-            // away, which was quietly dropping the sync every time. Wait for
-            // it (or let it fail) before leaving, instead of racing it.
-            syncDone = withTimeout(Promise.all(pubs), 120000);
+            if (isOwner && !alsoCommunity) RemoteCaptures.publish(cap, "archive");
+            if (alsoCommunity) RemoteCaptures.publish(cap, "community");
           }
           // retract the scratch Archive record used above (for the id and
           // blob moves) now that Community already holds its own copy
           if (isOwner && alsoCommunity && window.Archive) Archive.remove(cap.id);
-          syncDone.then(function () {
-            clearSession(cap.id);
-            goTo("gallery.html");
-          });
+          // A brand-NEW capture no longer freezes the Save button on the
+          // upload: it's already saved locally, so leave for the gallery at
+          // once and let the upload finish in the background. The upload is
+          // fired above; if navigation cuts it short, the gallery's (and
+          // community's) own "sync missing" catch-up on load re-pushes any
+          // capture the server doesn't have yet. (An UPDATE still waits —
+          // sync-missing only pushes entirely-absent captures, so a new
+          // version's blobs would be dropped if we didn't.)
+          clearSession(cap.id);
+          goTo("gallery.html");
         }, function () { clearSession(cap.id); goTo("gallery.html"); });
       }
 

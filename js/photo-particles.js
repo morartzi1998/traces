@@ -41,9 +41,21 @@ export function mountPhotoParticles(container, imageSrc, opts) {
       for (var x = 0; x < gw; x++) {
         var o = (y * gw + x) * 4;
         if (px[o + 3] < 24) continue; // transparent corner of a cut-out
+        // how far this cell sits from the image centre, normalised so a
+        // corner is ~1. An elliptical falloff off this melts the hard
+        // rectangular boundary away: cells out toward the edges/corners fade
+        // and thin, so the assembled picture reads as an organic living mass
+        // of colour, never a photo fenced inside a square.
+        var dcx = (x + 0.5) / gw - 0.5, dcy = (y + 0.5) / gh - 0.5;
+        var rd = Math.sqrt(dcx * dcx + dcy * dcy) / 0.7071;
+        var edge = 1 - smoothstep(0.5, 0.98, rd); // 1 in the body, →0 at the rim
+        // thin the rim out entirely for some cells so the outline stays soft
+        // and irregular (wispy) rather than a clean rounded rectangle
+        if (edge < 0.06 && Math.random() > edge * 8) continue;
         parts.push({
           tx: (x + 0.5) / gw, ty: (y + 0.5) / gh, // target, image-relative
           r: px[o], g: px[o + 1], b: px[o + 2],
+          edge: edge,
           // scattered start + its own drift personality
           sx: Math.random(), sy: Math.random(),
           ph: Math.random() * Math.PI * 2,
@@ -101,7 +113,10 @@ export function mountPhotoParticles(container, imageSrc, opts) {
         // twinkle keeps the colours visibly shifting the whole time
         var tw = 0.7 + 0.3 * Math.sin(t * 1.9 + p.ph * 2.3);
         var lift = Math.round(70 * (1 - e));
-        ctx.globalAlpha = (0.5 + 0.5 * e) * tw;
+        // the elliptical edge falloff makes the rim fade to nothing, so the
+        // whole thing reads as an organic blob of colour rather than a framed
+        // rectangle (rim particles stay a touch visible so the outline breathes)
+        ctx.globalAlpha = (0.5 + 0.5 * e) * tw * (0.12 + 0.88 * p.edge);
         ctx.fillStyle = "rgb(" + Math.min(255, p.r + lift) + "," + Math.min(255, p.g + lift) + "," + Math.min(255, p.b + lift) + ")";
         // a gentle size pulse on top of the assembly growth — the dots keep
         // breathing rather than freezing into a fixed grid
@@ -122,6 +137,11 @@ export function mountPhotoParticles(container, imageSrc, opts) {
       },
     };
   });
+}
+
+function smoothstep(a, b, x) {
+  var t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
 }
 
 function loadImage(src) {
