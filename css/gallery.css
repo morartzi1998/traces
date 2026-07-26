@@ -5,9 +5,10 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  /* room top and bottom so the grid clears the fixed corner chrome; slim
-     side padding so the polaroids fill the width instead of leaving big gaps */
-  padding: 9vh 2.5vw 8vh;
+  /* room top and bottom so the grid clears the fixed corner chrome; a
+     comfortable side margin so items (a single one especially) sit inset
+     with breathing room instead of hugging the screen edge */
+  padding: 9vh clamp(28px, 4.5vw, 120px) 8vh;
   gap: 2.5vh;
 }
 
