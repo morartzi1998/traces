@@ -26,16 +26,23 @@
   font-weight: 400;
   line-height: 1.25;
   /* the first option carries 24px of top padding, so trim that here to match
-     the onboarding screen's heading-to-first-field gap exactly */
-  margin-bottom: calc(8vh - 24px);
+     the onboarding screen's heading-to-first-field gap exactly. On a big
+     exhibition screen the old 8vh gap (plus the 8vh back-button gap) inflated
+     the whole stack tall enough to fill the display, so the vertically-centred
+     column had no air left and the heading jammed against the top — a smaller
+     gap keeps the stack compact enough that real breathing room stays above
+     and below it. */
+  margin-bottom: max(8px, calc(5vh - 24px));
 }
 
 /* Accordion options */
 
 .up-option {
   border-bottom: 1px solid var(--color-cream);
-  /* deep enough that the hover hint never lies across the row divider */
-  padding: 24px 0 36px;
+  /* deep enough that the hover hint never lies across the row divider;
+     shrinks on a short (big-exhibition) viewport so the three rows plus an
+     open QR still fit with air rather than stretching to the screen edges */
+  padding: 20px 0 clamp(24px, 3vh, 36px);
 }
 
 /* Each row already owns equal vertical padding. Adding another viewport-based
@@ -97,7 +104,7 @@
 
 .up-option-body {
   /* room for the hover hint that sits between the row title and this body */
-  padding-top: 38px;
+  padding-top: clamp(26px, 3.4vh, 38px);
 }
 
 /* Drop zone */
@@ -130,7 +137,10 @@
 .up-back {
   display: block;
   width: 100%;
-  margin-top: 8vh;
+  /* was a fixed 8vh (~86px on a big screen) — part of what inflated the stack
+     past the viewport height; a lighter, capped gap keeps the button clearly
+     separated without pushing the column into the screen edges */
+  margin-top: clamp(28px, 5vh, 72px);
   background: transparent;
   border: 1px solid var(--color-cream);
   color: var(--color-cream);
