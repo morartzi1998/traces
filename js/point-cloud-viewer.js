@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727av";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727av";
+import * as THREE from "./vendor/three/three.module.js?v=20260727aw";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727aw";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -278,7 +278,45 @@ export function mountPointCloudViewer(container, geometry, opts) {
   if (ivOk) {
     camera.position.set(opts.initialView.position.x, opts.initialView.position.y, opts.initialView.position.z);
   } else {
-    camera.position.copy(sphere.center).add(new THREE.Vector3(0, 0, sphere.radius * 2.4 || 3));
+    // Default framing. A hard-coded +Z view collapses a genuinely FLAT
+    // capture whose broad face happens to point sideways (a rug, a panel, a
+    // painting, a scan taken edge-out) into a single thin line of points —
+    // exactly the "line made of particles" the loading screen showed for
+    // some uploads. Look at the object down its THINNEST axis instead, so
+    // its widest face always fills the frame. A normal boxy object never
+    // trips the flatness test below and keeps the familiar straight-on view,
+    // so nothing that already framed well moves.
+    var viewDir = new THREE.Vector3(0, 0, 1);
+    var upVec = new THREE.Vector3(0, 1, 0);
+    geometry.computeBoundingBox();
+    var bbox = geometry.boundingBox;
+    if (bbox) {
+      var ext = new THREE.Vector3();
+      bbox.getSize(ext);
+      var maxExt = Math.max(ext.x, ext.y, ext.z);
+      var minExt = Math.min(ext.x, ext.y, ext.z);
+      // only a genuinely sheet-like capture (one axis a small fraction of the
+      // widest) swings to a face-on view. The flattest real *3D* object here —
+      // a cabinet — sits at ~0.37, while an actual flat sheet (a rug) is
+      // ~0.05, so 0.15 separates them with a wide margin and never reframes a
+      // boxy object that already looked right.
+      if (maxExt > 0 && minExt < maxExt * 0.15) {
+        if (ext.z <= ext.x && ext.z <= ext.y) {
+          // thin front-to-back: the default straight-on view already
+          // presents the whole face
+          viewDir.set(0, 0, 1); upVec.set(0, 1, 0);
+        } else if (ext.x <= ext.y && ext.x <= ext.z) {
+          // thin side-to-side: swing round to look at its wide Y-Z face
+          viewDir.set(1, 0, 0); upVec.set(0, 1, 0);
+        } else {
+          // thin top-to-bottom (lying flat, like a rug on the floor):
+          // look straight down on it — Z becomes screen-up
+          viewDir.set(0, 1, 0); upVec.set(0, 0, -1);
+        }
+      }
+    }
+    camera.up.copy(upVec);
+    camera.position.copy(sphere.center).add(viewDir.multiplyScalar(sphere.radius * 2.4 || 3));
   }
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
