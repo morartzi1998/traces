@@ -6,26 +6,26 @@
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727v">
-<link rel="stylesheet" href="../css/processing.css?v=20260727v">
-<script src="../js/owner.js?v=20260727v"></script>
-<script src="../js/config.js?v=20260727v"></script>
-<script src="../js/cursor.js?v=20260727v" defer></script>
-<script src="../js/grain.js?v=20260727v" defer></script>
-<script src="../js/blobstore.js?v=20260727v"></script>
-<script src="../js/flow.js?v=20260727v" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727v"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727w">
+<link rel="stylesheet" href="../css/processing.css?v=20260727w">
+<script src="../js/owner.js?v=20260727w"></script>
+<script src="../js/config.js?v=20260727w"></script>
+<script src="../js/cursor.js?v=20260727w" defer></script>
+<script src="../js/grain.js?v=20260727w" defer></script>
+<script src="../js/blobstore.js?v=20260727w"></script>
+<script src="../js/flow.js?v=20260727w" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727w"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727v" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727w" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727v";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727v";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727w";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727w";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__serializeGeometry = serializeGeometry;
@@ -51,7 +51,7 @@
          as the fallback when no photo exists to sample) -->
     <div class="proc-particles" id="procPhotoParticles" hidden></div>
     <script type="module">
-      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727v";
+      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727w";
       window.__mountPhotoParticles = mountPhotoParticles;
     </script>
 
@@ -151,7 +151,19 @@
           })(0);
         });
       }
+      // No abstract sphere any more. When there's a real photo the particles
+      // condense INTO that photo (above); when there isn't — a ready-made
+      // scan or a model upload — the honest thing on screen is just the
+      // reconstruction/preparation percentage, not a generic drifting circle
+      // that looks like a result but isn't. The moment the real scan/model is
+      // ready it replaces this (revealModelNow / the point-cloud mount), and
+      // the "Proceed" button appears. So the fallback loader is the % text
+      // that's already on screen — keep the canvas hidden and do nothing else.
       function startSphereAssembling() {
+        particleCanvas.hidden = true;
+        cloud.hidden = true;
+      }
+      function __unusedSphereAssembling() {
         var canvas = particleCanvas;
         canvas.hidden = false;
         cloud.hidden = true;
