@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727y">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727y">
-<link rel="stylesheet" href="../css/object.css?v=20260727y">
-<script src="../js/cursor.js?v=20260727y" defer></script>
-<script src="../js/grain.js?v=20260727y" defer></script>
-<script src="../js/tilt3d.js?v=20260727y" defer></script>
-<script src="../js/owner.js?v=20260727y"></script>
-<script src="../js/config.js?v=20260727y"></script>
-<script src="../js/archive.js?v=20260727y"></script>
-<script src="../js/blobstore.js?v=20260727y"></script>
-<script src="../js/particle-loader.js?v=20260727y"></script>
-<script src="../js/remote-captures.js?v=20260727y"></script>
-<script src="../js/community-seed.js?v=20260727y"></script>
-<script src="../js/flow.js?v=20260727y" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727y"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727z">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727z">
+<link rel="stylesheet" href="../css/object.css?v=20260727z">
+<script src="../js/cursor.js?v=20260727z" defer></script>
+<script src="../js/grain.js?v=20260727z" defer></script>
+<script src="../js/tilt3d.js?v=20260727z" defer></script>
+<script src="../js/owner.js?v=20260727z"></script>
+<script src="../js/config.js?v=20260727z"></script>
+<script src="../js/archive.js?v=20260727z"></script>
+<script src="../js/blobstore.js?v=20260727z"></script>
+<script src="../js/particle-loader.js?v=20260727z"></script>
+<script src="../js/remote-captures.js?v=20260727z"></script>
+<script src="../js/community-seed.js?v=20260727z"></script>
+<script src="../js/flow.js?v=20260727z" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727z"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727y" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727z" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727y";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727y";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727z";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727z";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727y";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727z";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (Draco-compressed, malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727y";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727z";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -623,7 +623,7 @@
     <div class="obj-stage" id="objStage"
          aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">
       <img class="obj-photo" id="objPhoto" src="" alt="">
-      <model-viewer class="obj-model" id="objModel" camera-controls disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
+      <model-viewer class="obj-model" id="objModel" camera-controls tone-mapping="neutral" disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
       <div class="obj-points" id="objPoints" hidden></div>
       <!-- a drifting particle cloud shown while a (often tens-of-MB) scan is
@@ -696,7 +696,7 @@
             <img class="obj-link-card-img" id="linkCardImg" alt="">
             <!-- when the connected capture has a real mesh, preview it live
                  and slowly turning instead of a cropped flat photo -->
-            <model-viewer class="obj-link-card-img obj-link-card-model" id="linkCardModel"
+            <model-viewer class="obj-link-card-img obj-link-card-model" id="linkCardModel" tone-mapping="neutral"
               auto-rotate auto-rotate-delay="0" rotation-per-second="25deg" camera-controls
               interaction-prompt="none" shadow-intensity="0" disable-pan hidden></model-viewer>
             <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
