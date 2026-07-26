@@ -8,12 +8,14 @@
   padding: 1.8vw 3.2vw 2.2vw;
 }
 
-/* identical column + centring to the upload screen */
+/* TOP-anchored to the exact same height as the capture-method screen — both
+   use --flow-heading-top, so their headings always line up (see base.css) */
 .onb-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: var(--flow-heading-top);
   width: min(620px, 90vw);
   margin: 0 auto;
 }
@@ -23,7 +25,7 @@
   font-weight: 400;
   line-height: 1.25;
   text-align: left;
-  margin-bottom: 8vh;
+  margin-bottom: var(--flow-heading-gap);
 }
 
 .onb-form {
@@ -51,15 +53,10 @@
 .onb-actions {
   display: flex;
   gap: 40px;
-  /* Match the upload screen's full vertical footprint: the extra viewport
-     breath before the final actions lets this shorter form share the same
-     visual top and bottom boundaries as the three-option capture stack.
-     Both columns centre in the same space, so equal column heights mean
-     equal heading tops AND equal button bottoms — this margin is the
-     tuning knob, sized so the difference measures 0 at 900px-tall and
-     690px-tall windows alike (the upload rows deepened by 36px total when
-     their hover hints got clearance, which this absorbs). */
-  margin-top: calc(38px + 7.1vh);
+  /* both screens are top-anchored now, so this is just a comfortable gap
+     before the buttons — no longer a knob for matching the other screen's
+     height (the shared --flow-heading-top handles alignment) */
+  margin-top: clamp(32px, 6vh, 72px);
 }
 
 .onb-btn {
@@ -89,13 +86,6 @@
   opacity: 0.85;
 }
 
-/* Touch devices (iPhone / iPad): the two first-run screens (this one and the
-   capture-method screen) are both vertically centred, so they align only when
-   their content columns are the SAME height. The desktop tuning makes this
-   column ~74px taller than the capture screen's on a touch device — the vh
-   part of the actions margin over-scales on a tall phone/tablet — which
-   floated the heading up and the buttons down relative to it. Trim that here
-   (a fine-pointer desktop keeps the full margin). */
-@media (pointer: coarse) {
-  .onb-actions { margin-top: calc(7.1vh - 36px); }
-}
+/* (the old touch-device tuning here is gone: both first-run screens are now
+   top-anchored via --flow-heading-top, so their headings align on every
+   device without a per-pointer margin correction) */

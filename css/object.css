@@ -1699,10 +1699,12 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   margin: 6px 0 14px;
   padding-left: 28px;
   list-style: disc;
-  font-size: 1.25rem;
+  /* small, matched to the describe screen's annotation hint — the fixed
+     1.25rem here read noticeably bigger than that one (the "sizes don't
+     match" report). A real sentence: capital first letter, last word glued
+     (nbsp) so it never wraps alone onto its own line. */
+  font-size: clamp(0.95rem, 1.5vh, 1.1rem);
   line-height: 1.4;
-  /* a real sentence: capital first letter, last word glued (nbsp) so it
-     never wraps alone onto its own line */
   opacity: 0.85;
 }
 

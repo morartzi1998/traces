@@ -6,19 +6,19 @@
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ba">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ba">
-<link rel="stylesheet" href="../css/upload.css?v=20260727ba">
-<script src="../js/owner.js?v=20260727ba"></script>
-<script src="../js/config.js?v=20260727ba"></script>
-<script src="../js/cursor.js?v=20260727ba" defer></script>
-<script src="../js/grain.js?v=20260727ba" defer></script>
-<script src="../js/blobstore.js?v=20260727ba"></script>
-<script src="../js/flow.js?v=20260727ba" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727ba" defer></script>
-<script src="../js/normalize-image.js?v=20260727ba" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260727ba"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ba"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bb">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bb">
+<link rel="stylesheet" href="../css/upload.css?v=20260727bb">
+<script src="../js/owner.js?v=20260727bb"></script>
+<script src="../js/config.js?v=20260727bb"></script>
+<script src="../js/cursor.js?v=20260727bb" defer></script>
+<script src="../js/grain.js?v=20260727bb" defer></script>
+<script src="../js/blobstore.js?v=20260727bb"></script>
+<script src="../js/flow.js?v=20260727bb" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727bb" defer></script>
+<script src="../js/normalize-image.js?v=20260727bb" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260727bb"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bb"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,12 +27,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ba" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bb" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ba";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727ba";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727ba";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bb";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727bb";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727bb";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -98,7 +98,7 @@
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="phone">
           <span>Connect your phone</span>
           <span class="up-toggle" aria-hidden="true">+</span>
-          <span class="up-option-tip">scan with your phone's camera, then take the photo there</span>
+          <span class="up-option-tip">a sharp, well-lit photo, held straight (not tilted), from the angle that shows the most detail</span>
         </button>
         <div class="up-option-body" id="acc-phone" hidden>
           <div class="up-qr-wrap" id="phoneQrWrap" aria-label="Scan with your phone to connect"></div>
@@ -136,7 +136,7 @@
         <button class="up-option-head" type="button" aria-expanded="false" data-acc="upload">
           <span>Upload Image</span>
           <span class="up-toggle" aria-hidden="true">+</span>
-          <span class="up-option-tip">best to upload an object / space with a clear background</span>
+          <span class="up-option-tip">a sharp, clear photo shot straight-on (not tilted), from the most detailed angle, on a clean background</span>
         </button>
         <div class="up-option-body" id="acc-upload" hidden>
 

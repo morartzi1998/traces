@@ -16,7 +16,13 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* TOP-anchored (not centred): the heading sits at a fixed height below the
+     nav — the SAME height as the onboarding screen's — so the two first-run
+     screens always line up regardless of how much content each one holds.
+     (Centring made the heading float to a different height on each screen the
+     moment their content lengths differed.) */
+  justify-content: flex-start;
+  padding-top: var(--flow-heading-top);
   width: min(620px, 90vw);
   margin: 0 auto;
 }
@@ -25,24 +31,18 @@
   font-size: clamp(1.6rem, 2.6vw, 2.5rem);
   font-weight: 400;
   line-height: 1.25;
-  /* the first option carries 24px of top padding, so trim that here to match
-     the onboarding screen's heading-to-first-field gap exactly. On a big
-     exhibition screen the old 8vh gap (plus the 8vh back-button gap) inflated
-     the whole stack tall enough to fill the display, so the vertically-centred
-     column had no air left and the heading jammed against the top — a smaller
-     gap keeps the stack compact enough that real breathing room stays above
-     and below it. */
-  margin-bottom: max(8px, calc(5vh - 24px));
+  /* the first option carries 24px of top padding, so trim that off the shared
+     gap to keep the heading-to-first-row distance matched to onboarding */
+  margin-bottom: calc(var(--flow-heading-gap) - 24px);
 }
 
 /* Accordion options */
 
 .up-option {
   border-bottom: 1px solid var(--color-cream);
-  /* deep enough that the hover hint never lies across the row divider;
-     shrinks on a short (big-exhibition) viewport so the three rows plus an
-     open QR still fit with air rather than stretching to the screen edges */
-  padding: 20px 0 clamp(24px, 3vh, 36px);
+  /* deep enough that the two-line hover hint sits fully ABOVE the row divider
+     instead of crossing it (the reported "hover text over the line") */
+  padding: 20px 0 clamp(46px, 5vh, 56px);
 }
 
 /* Each row already owns equal vertical padding. Adding another viewport-based
@@ -73,8 +73,11 @@
    row, same quiet style as .up-qr-hint (no box, no color swap) */
 .up-option-tip {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 10px);
   left: 0;
+  /* stay within the row's own width and off to the right of the toggle so it
+     wraps to at most ~two lines that sit inside the row's bottom padding */
+  max-width: 82%;
   color: var(--color-cream);
   font-family: inherit;
   font-size: 0.8rem;

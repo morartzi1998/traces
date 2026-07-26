@@ -121,6 +121,13 @@
 
 :root {
   --color-bg: #161616;
+  /* shared vertical anchor for the first-run flow screens (onboarding /
+     capture-method): the heading is TOP-anchored at this exact distance below
+     the top nav on every one of them, so their headings always line up at the
+     same height no matter how much content sits underneath. Change it here,
+     once, and every screen moves together — never tune them individually. */
+  --flow-heading-top: clamp(56px, 12vh, 150px);
+  --flow-heading-gap: clamp(28px, 5vh, 60px);
   --color-cream: #f0eeea;
   --color-caption-blue: #0a25b4;
   --color-polaroid: #f0eeea;
