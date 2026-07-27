@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727cg";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727cg";
+import * as THREE from "./vendor/three/three.module.js?v=20260727ch";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ch";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -553,6 +553,14 @@ export function mountPointCloudViewer(container, geometry, opts) {
       controls.dispose();
       material.dispose();
       renderer.dispose();
+      // renderer.dispose() alone does NOT free the underlying WebGL context —
+      // the browser keeps it alive until GC, and it caps live contexts at ~16.
+      // Browsing through a dozen-plus point clouds (each mount makes a fresh
+      // context) silently hit that ceiling, and from then on new viewers
+      // couldn't get a context at all: the cloud just span on "loading"
+      // forever ("doesn't load in various places"). forceContextLoss releases
+      // it immediately so navigation can go on indefinitely.
+      try { renderer.forceContextLoss(); } catch (e) {}
       if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     },
   };
