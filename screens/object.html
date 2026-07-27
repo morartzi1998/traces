@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ck">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ck">
-<link rel="stylesheet" href="../css/object.css?v=20260727ck">
-<script src="../js/cursor.js?v=20260727ck" defer></script>
-<script src="../js/grain.js?v=20260727ck" defer></script>
-<script src="../js/tilt3d.js?v=20260727ck" defer></script>
-<script src="../js/owner.js?v=20260727ck"></script>
-<script src="../js/config.js?v=20260727ck"></script>
-<script src="../js/archive.js?v=20260727ck"></script>
-<script src="../js/blobstore.js?v=20260727ck"></script>
-<script src="../js/particle-loader.js?v=20260727ck"></script>
-<script src="../js/remote-captures.js?v=20260727ck"></script>
-<script src="../js/community-seed.js?v=20260727ck"></script>
-<script src="../js/flow.js?v=20260727ck" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ck"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cl">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cl">
+<link rel="stylesheet" href="../css/object.css?v=20260727cl">
+<script src="../js/cursor.js?v=20260727cl" defer></script>
+<script src="../js/grain.js?v=20260727cl" defer></script>
+<script src="../js/tilt3d.js?v=20260727cl" defer></script>
+<script src="../js/owner.js?v=20260727cl"></script>
+<script src="../js/config.js?v=20260727cl"></script>
+<script src="../js/archive.js?v=20260727cl"></script>
+<script src="../js/blobstore.js?v=20260727cl"></script>
+<script src="../js/particle-loader.js?v=20260727cl"></script>
+<script src="../js/remote-captures.js?v=20260727cl"></script>
+<script src="../js/community-seed.js?v=20260727cl"></script>
+<script src="../js/flow.js?v=20260727cl" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cl"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ck" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cl" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ck";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ck";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cl";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cl";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ck";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cl";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ck";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cl";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -763,6 +763,7 @@
           <div class="obj-white-choices" id="whiteKind">
             <label><input type="checkbox" id="whiteObj" checked disabled> object</label>
             <label><input type="checkbox" id="whiteSpace" disabled> space</label>
+            <label><input type="checkbox" id="whitePet" disabled> pet</label>
           </div>
         </div>
 
@@ -771,7 +772,7 @@
           <p class="obj-white-label wo-edit">Give a title to your capture</p>
           <input class="obj-white-input wo-edit" id="whiteTitleInput" type="text" dir="auto">
           <hr class="obj-white-rule wo-edit">
-          <p class="obj-white-label">What are you feeling or remembering about this object&nbsp;?</p>
+          <p class="obj-white-label" id="whiteFeelingPrompt">What are you feeling or remembering about this object&nbsp;?</p>
           <p class="obj-white-feeling wo-read" id="whiteFeeling" dir="auto"></p>
           <textarea class="obj-white-text wo-edit" id="whiteFeelingInput" dir="auto" placeholder="what's special about this?"></textarea>
         </div>
@@ -2186,9 +2187,14 @@
         var shownFeeling = oldVersion ? versionFeeling : (item.feeling || "");
         feelingEl.textContent = shownFeeling || "no description yet";
         feelingEl.classList.toggle("obj-white-feeling--empty", !shownFeeling);
-        var kindBoxes = document.querySelectorAll("#whiteKind input");
-        kindBoxes[0].checked = item.kind !== "space";
-        kindBoxes[1].checked = item.kind === "space";
+        document.getElementById("whiteObj").checked = (item.kind !== "space" && item.kind !== "pet");
+        document.getElementById("whiteSpace").checked = item.kind === "space";
+        document.getElementById("whitePet").checked = item.kind === "pet";
+        // the description prompt names what was captured, so it reads naturally
+        // for a space or a pet instead of always saying "object"
+        var kindWord = item.kind === "space" ? "space" : item.kind === "pet" ? "pet" : "object";
+        var promptEl = document.getElementById("whiteFeelingPrompt");
+        if (promptEl) promptEl.innerHTML = "What are you feeling or remembering about this " + kindWord + "&nbsp;?";
         document.getElementById("whitePrivate").checked = item.visibility !== "community";
         document.getElementById("whiteCommunity").checked = item.visibility === "community";
         // the list mirrors the stage exactly: each scan's own tagged notes,
@@ -2953,19 +2959,30 @@
       });
 
       // ----- edit the capture in place (no jump to the scan screen) -----
-      var whiteEditIds = ["whiteObj", "whiteSpace", "whitePrivate", "whiteCommunity"];
+      var whiteEditIds = ["whiteObj", "whiteSpace", "whitePet", "whitePrivate", "whiteCommunity"];
       function setWhiteInputsDisabled(dis) {
         whiteEditIds.forEach(function (id) { document.getElementById(id).disabled = dis; });
       }
       function exitWhiteEdit() { white.classList.remove("editing"); setWhiteInputsDisabled(true); }
 
-      // object/space and private/community behave as exclusive pairs while editing
+      // private/community behave as an exclusive pair while editing
       function pair(aId, bId) {
         var a = document.getElementById(aId), b = document.getElementById(bId);
         a.addEventListener("change", function () { if (a.checked) b.checked = false; });
         b.addEventListener("change", function () { if (b.checked) a.checked = false; });
       }
-      pair("whiteObj", "whiteSpace");
+      // object/space/pet is a single choice — checking one clears the others
+      // (they're checkboxes, so exclusivity is enforced here rather than by
+      // the browser's radio grouping)
+      function exclusiveGroup(ids) {
+        ids.forEach(function (id) {
+          document.getElementById(id).addEventListener("change", function () {
+            if (this.checked) ids.forEach(function (o) { if (o !== id) document.getElementById(o).checked = false; });
+            else this.checked = true; // never leave the group with nothing chosen
+          });
+        });
+      }
+      exclusiveGroup(["whiteObj", "whiteSpace", "whitePet"]);
       pair("whitePrivate", "whiteCommunity");
 
       document.getElementById("whiteEditBtn").addEventListener("click", function () {
@@ -2975,8 +2992,9 @@
         var vSel = displayedVersionIndex >= 0 ? (item.versions || [])[displayedVersionIndex] : null;
         document.getElementById("whiteTitleInput").value = vSel ? (vSel.title || item.title) : item.title;
         document.getElementById("whiteFeelingInput").value = vSel ? (vSel.feeling || "") : (item.feeling || "");
-        document.getElementById("whiteObj").checked = item.kind !== "space";
+        document.getElementById("whiteObj").checked = (item.kind !== "space" && item.kind !== "pet");
         document.getElementById("whiteSpace").checked = item.kind === "space";
+        document.getElementById("whitePet").checked = item.kind === "pet";
         // the description block hides on a story-less old scan — editing IS
         // how a story gets written, so it must be visible now
         var ds = document.querySelector(".obj-white-section--description");
@@ -3022,7 +3040,8 @@
         var t = document.getElementById("whiteTitleInput").value.trim();
         if (t) item.title = t;
         item.feeling = document.getElementById("whiteFeelingInput").value.trim();
-        item.kind = document.getElementById("whiteSpace").checked ? "space" : "object";
+        item.kind = document.getElementById("whiteSpace").checked ? "space"
+          : document.getElementById("whitePet").checked ? "pet" : "object";
         item.visibility = document.getElementById("whiteCommunity").checked ? "community" : "private";
         persist(key);
         // the edits above only updated this page's own catalog/overlay —
