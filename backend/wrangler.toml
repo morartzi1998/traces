@@ -2,6 +2,13 @@ name = "traces-tripo"
 main = "tripo-worker.js"
 compatibility_date = "2024-11-01"
 
+# TRIPO_API_KEY_2 (the exhibition key) was added straight in the Cloudflare
+# dashboard, so it lives remotely but not in this file. By default a deploy
+# would DELETE any remote var missing here — which would break exhibition
+# scanning. keep_vars keeps dashboard-set vars/secrets intact on every deploy,
+# so the key survives without ever being written into this (committed) file.
+keep_vars = true
+
 # The Tripo API key is a SECRET — do not put it here. Set it with:
 #   npx wrangler secret put TRIPO_API_KEY
 
