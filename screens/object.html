@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cf">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cf">
-<link rel="stylesheet" href="../css/object.css?v=20260727cf">
-<script src="../js/cursor.js?v=20260727cf" defer></script>
-<script src="../js/grain.js?v=20260727cf" defer></script>
-<script src="../js/tilt3d.js?v=20260727cf" defer></script>
-<script src="../js/owner.js?v=20260727cf"></script>
-<script src="../js/config.js?v=20260727cf"></script>
-<script src="../js/archive.js?v=20260727cf"></script>
-<script src="../js/blobstore.js?v=20260727cf"></script>
-<script src="../js/particle-loader.js?v=20260727cf"></script>
-<script src="../js/remote-captures.js?v=20260727cf"></script>
-<script src="../js/community-seed.js?v=20260727cf"></script>
-<script src="../js/flow.js?v=20260727cf" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cf"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cg">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cg">
+<link rel="stylesheet" href="../css/object.css?v=20260727cg">
+<script src="../js/cursor.js?v=20260727cg" defer></script>
+<script src="../js/grain.js?v=20260727cg" defer></script>
+<script src="../js/tilt3d.js?v=20260727cg" defer></script>
+<script src="../js/owner.js?v=20260727cg"></script>
+<script src="../js/config.js?v=20260727cg"></script>
+<script src="../js/archive.js?v=20260727cg"></script>
+<script src="../js/blobstore.js?v=20260727cg"></script>
+<script src="../js/particle-loader.js?v=20260727cg"></script>
+<script src="../js/remote-captures.js?v=20260727cg"></script>
+<script src="../js/community-seed.js?v=20260727cg"></script>
+<script src="../js/flow.js?v=20260727cg" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cg"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cf" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cg" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cf";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cf";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cg";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cg";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cf";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cg";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cf";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cg";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1460,9 +1460,10 @@
         cloudHealTried[k] = 1;
         // the mesh may be hosted (http) or still only local (idb: blob) —
         // the shared helper proxies the cross-origin case so the bytes
-        // actually arrive (a raw fetch of a hosted GLB fails CORS)
+        // actually arrive (a raw fetch of a hosted GLB fails CORS). Returned
+        // so the backlog runner can await each heal before starting the next.
         var bufReady = fetchModelBuffer(String(it.model));
-        bufReady
+        return bufReady
           .then(function (buf) {
             if (!buf) return;
             var big = buf.byteLength > 8 * 1024 * 1024;
@@ -1479,7 +1480,14 @@
                   if (!d || !d.url) return;
                   var fields = { points: d.url, dual: true };
                   if (big) fields.openOn = "points";
-                  patchServerRecord(k, fields);
+                  // patch BOTH scope records: a community capture's server id
+                  // carries a "-community" suffix, and an owner-populated
+                  // community item has NO archive twin — patching only the base
+                  // id left the community record (the one visitors actually
+                  // read) still point-cloud-less, so the healed cloud never
+                  // reached them. patchServerRecord no-ops on an id that
+                  // doesn't exist, so patching both is safe either way.
+                  [k, k + "-community"].forEach(function (sid) { patchServerRecord(sid, fields); });
                   it.points = d.url;
                   it.dual = true;
                   if (big) it.openOn = "points";
@@ -1490,6 +1498,32 @@
             });
           })
           .catch(function () {});
+      }
+
+      // heal EVERY community capture that reached the server with a mesh but no
+      // point cloud, not just the one on screen — so the owner opening the view
+      // once quietly back-fills particles for the whole feed (visitor uploads
+      // that never derived a cloud, older owner-populated meshes). Runs only on
+      // Mor's device, one capture at a time (each pulls a whole GLB and samples
+      // it — doing all at once would choke the tab), and only touches records
+      // still missing points, so once the backlog is cleared it does nothing.
+      var communityBacklogRun = false;
+      function healCommunityBacklog(records) {
+        if (communityBacklogRun) return;
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
+        if (!window.__glbToPoints || !window.__serializeGeometry) return;
+        communityBacklogRun = true;
+        var queue = (records || [])
+          .filter(function (c) { return c && c.model && !c.points; })
+          .map(function (c) { return String(c.id).replace(/-community$/, ""); })
+          .filter(function (k) { return catalog[k] && catalog[k].model && !catalog[k].points; });
+        (function next() {
+          if (!queue.length) return;
+          var k = queue.shift();
+          var p = maybeHealDerivedCloud(k);
+          var done = function () { setTimeout(next, 2000); };
+          if (p && p.then) { p.then(done, done); } else { done(); }
+        })();
       }
 
       // who may change this capture's annotations/links on THIS device:
@@ -4838,6 +4872,11 @@
           // own first capture, else the public showcase's first
           if (!catalog[key]) key = order[0] || showcaseOrder[0] || communityOrder[0] || key;
           if (catalog[key]) show(key);
+          // once the view she opened is up, quietly back-fill particles for any
+          // community capture still missing them (owner device only). Delayed so
+          // the on-screen capture's own load isn't fighting the backlog for
+          // bandwidth from the first second.
+          setTimeout(function () { healCommunityBacklog(results[2] || []); }, 6000);
         });
       }
       if (document.readyState === "loading") {
