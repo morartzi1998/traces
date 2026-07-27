@@ -368,3 +368,13 @@
 .phone-confirm-process:hover {
   opacity: 0.85;
 }
+
+/* Mobile: match the onboarding screen — top-anchor the heading at the shared
+   --flow-heading-top so the name and capture-method screens' headings align
+   exactly, rather than depending on centred columns of equal height. */
+@media (max-width: 720px) {
+  .up-main {
+    justify-content: flex-start;
+    padding-top: var(--flow-heading-top);
+  }
+}

@@ -90,3 +90,18 @@
 /* (the old touch-device tuning here is gone: both first-run screens are now
    top-anchored via --flow-heading-top, so their headings align on every
    device without a per-pointer margin correction) */
+
+/* Mobile: top-anchor the heading at the shared --flow-heading-top instead of
+   the desktop's centred-column-with-spacer trick (whose hand-tuned height
+   didn't hold at phone proportions, leaving the name and capture-method
+   headings a few px out of line). A fixed top makes both flow screens' headings
+   land at the exact same height on a phone, so moving between them doesn't shift. */
+@media (max-width: 720px) {
+  .onb-main {
+    justify-content: flex-start;
+    padding-top: var(--flow-heading-top);
+  }
+  .onb-actions {
+    margin-top: clamp(32px, 5vh, 56px);
+  }
+}
