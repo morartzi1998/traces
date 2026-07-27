@@ -271,10 +271,14 @@
        the Community/About nav) instead of the content clustering high with a
        deep empty band beneath the plus. The larger top padding clears the
        oversized logo so the two visible gaps read as equal. */
-    padding-top: 7.9rem;
-    padding-bottom: 3.5rem;
-    justify-content: center;
-    gap: clamp(1.75rem, 5vh, 3.5rem);
+    /* space-between keeps the headline near the top and the plus near the
+       bottom with only a small margin at each end (the slack sits BETWEEN the
+       blocks, around the photo, not pooled above the headline and below the
+       plus). The larger top padding is eaten by the oversized TRACES logo, so
+       the visible top and bottom margins end up close to equal. */
+    padding-top: 6.5rem;
+    padding-bottom: 3rem;
+    justify-content: space-between;
     align-items: flex-start;
   }
 
