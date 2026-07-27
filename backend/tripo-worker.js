@@ -367,7 +367,15 @@ export default {
           offset += chunk.byteLength;
         }
         return new Response(whole, {
-          headers: cors({ "Content-Type": meta.contentType || "application/octet-stream" }),
+          // each fileId is a fresh crypto.randomUUID at upload time and its
+          // bytes never change, so the file is safely immutable — let the
+          // browser cache it forever instead of re-downloading the whole
+          // model / point cloud on every view and every reload (this was the
+          // "everything loads forever" on a slow connection)
+          headers: cors({
+            "Content-Type": meta.contentType || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          }),
         });
       }
 

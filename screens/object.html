@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bt">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bt">
-<link rel="stylesheet" href="../css/object.css?v=20260727bt">
-<script src="../js/cursor.js?v=20260727bt" defer></script>
-<script src="../js/grain.js?v=20260727bt" defer></script>
-<script src="../js/tilt3d.js?v=20260727bt" defer></script>
-<script src="../js/owner.js?v=20260727bt"></script>
-<script src="../js/config.js?v=20260727bt"></script>
-<script src="../js/archive.js?v=20260727bt"></script>
-<script src="../js/blobstore.js?v=20260727bt"></script>
-<script src="../js/particle-loader.js?v=20260727bt"></script>
-<script src="../js/remote-captures.js?v=20260727bt"></script>
-<script src="../js/community-seed.js?v=20260727bt"></script>
-<script src="../js/flow.js?v=20260727bt" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bt"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bu">
+<link rel="stylesheet" href="../css/object.css?v=20260727bu">
+<script src="../js/cursor.js?v=20260727bu" defer></script>
+<script src="../js/grain.js?v=20260727bu" defer></script>
+<script src="../js/tilt3d.js?v=20260727bu" defer></script>
+<script src="../js/owner.js?v=20260727bu"></script>
+<script src="../js/config.js?v=20260727bu"></script>
+<script src="../js/archive.js?v=20260727bu"></script>
+<script src="../js/blobstore.js?v=20260727bu"></script>
+<script src="../js/particle-loader.js?v=20260727bu"></script>
+<script src="../js/remote-captures.js?v=20260727bu"></script>
+<script src="../js/community-seed.js?v=20260727bu"></script>
+<script src="../js/flow.js?v=20260727bu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bt" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bu" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bt";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bt";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727bu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bu";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bt";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bt";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727bu";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2535,9 +2535,29 @@
           // worker store (see remote-captures.js) has a real, fetchable URL
           // there instead — same downstream handling either way
           var pointsKey = points.indexOf("idb:") === 0 ? points.slice(4) : null;
+          // a server point cloud (a plain URL) is fetched once and then cached
+          // in IndexedDB keyed by its URL, so re-opening the capture — or a
+          // reload after an auto-refresh — reads the bytes locally instead of
+          // re-downloading several MB every time (the file never changes)
+          var fetchServerCloud = function () {
+            var ck = "srvcloud:" + points;
+            if (!window.BlobStore) {
+              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+            }
+            return window.BlobStore.get(ck).then(function (cached) {
+              if (cached) return cached;
+              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; })
+                .then(function (blob) {
+                  if (blob) window.BlobStore.set(ck, blob).catch(function () {});
+                  return blob;
+                });
+            }).catch(function () {
+              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+            });
+          };
           var pointsBlob = pointsKey && window.BlobStore
             ? window.BlobStore.get(pointsKey)
-            : fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+            : fetchServerCloud();
           // a failed cloud fetch (flaky connection, a dropped request) used
           // to end as a silently EMPTY stage — fall back to whatever else
           // this capture has (its mesh, else its photo) instead. The reason
