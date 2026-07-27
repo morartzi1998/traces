@@ -6,19 +6,19 @@
 <title>Traces — Capture your object</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ci">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ci">
-<link rel="stylesheet" href="../css/upload.css?v=20260727ci">
-<script src="../js/owner.js?v=20260727ci"></script>
-<script src="../js/config.js?v=20260727ci"></script>
-<script src="../js/cursor.js?v=20260727ci" defer></script>
-<script src="../js/grain.js?v=20260727ci" defer></script>
-<script src="../js/blobstore.js?v=20260727ci"></script>
-<script src="../js/flow.js?v=20260727ci" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727ci" defer></script>
-<script src="../js/normalize-image.js?v=20260727ci" defer></script>
-<script src="../js/vendor/qrcode.js?v=20260727ci"></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ci"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cj">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cj">
+<link rel="stylesheet" href="../css/upload.css?v=20260727cj">
+<script src="../js/owner.js?v=20260727cj"></script>
+<script src="../js/config.js?v=20260727cj"></script>
+<script src="../js/cursor.js?v=20260727cj" defer></script>
+<script src="../js/grain.js?v=20260727cj" defer></script>
+<script src="../js/blobstore.js?v=20260727cj"></script>
+<script src="../js/flow.js?v=20260727cj" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727cj" defer></script>
+<script src="../js/normalize-image.js?v=20260727cj" defer></script>
+<script src="../js/vendor/qrcode.js?v=20260727cj"></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cj"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -27,12 +27,12 @@
 <!-- model-viewer only reads glTF/GLB — a .ply upload is converted to GLB
      client-side (three.js) before it ever reaches the rest of the flow -->
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ci" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cj" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ci";
-  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727ci";
-  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727ci";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cj";
+  import { PLYLoader } from "../js/vendor/three/PLYLoader.js?v=20260727cj";
+  import { buildVoxelGlb, exportScene, serializeGeometry, removeOutliers } from "../js/voxelize-shared.js?v=20260727cj";
 
   // this is only used for the small accordion thumbnail preview now — the
   // real display (processing.html onward) renders the raw point cloud
@@ -232,6 +232,12 @@
       // the phone (a new task id in the same session) refreshes it rather than
       // re-opening it every poll
       var lastConfirmTaskId = null;
+      // the id (photoUrl in the confirm-first flow, else task id) of a shot the
+      // user explicitly Cancelled. The relayed photo stays live in the session
+      // backend, so without this the very next poll (2.5s later) would see the
+      // same id and re-open the confirm — "Cancel only lasts a second and a
+      // half". Ignored until the phone sends a genuinely new shot.
+      var cancelledConfirmId = null;
 
       function startPhoneSession() {
         var wrap = document.getElementById("phoneQrWrap");
@@ -243,6 +249,7 @@
         }
         // a brand-new QR session starts with nothing confirmed yet
         lastConfirmTaskId = null;
+        cancelledConfirmId = null;
         var existingConfirm = document.getElementById("phoneConfirm");
         if (existingConfirm) existingConfirm.hidden = true;
         phoneSessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
@@ -269,8 +276,11 @@
                 if (payload.photoUrl) {
                   // nothing has been generated (or paid for) yet — the photo
                   // just waits here for a human yes. Re-shooting on the phone
-                  // refreshes this same card with the newer shot.
-                  if (payload.photoUrl !== lastConfirmTaskId) {
+                  // refreshes this same card with the newer shot. A shot the
+                  // user Cancelled is left alone until the phone sends a new one.
+                  if (payload.photoUrl === cancelledConfirmId) {
+                    // dismissed — waiting for a fresh shot from the phone
+                  } else if (payload.photoUrl !== lastConfirmTaskId) {
                     lastConfirmTaskId = payload.photoUrl;
                     hint.textContent = "photo received — confirm on your computer";
                     showPhoneConfirm(payload.thumb || payload.photoUrl, payload);
@@ -278,11 +288,15 @@
                 } else if (payload.thumb) {
                   // older phone page: its generation is already running —
                   // keep the original confirm-then-continue behaviour
-                  prepPhoneCapture(payload.taskId, payload.thumb);
-                  if (payload.taskId !== lastConfirmTaskId) {
-                    lastConfirmTaskId = payload.taskId;
-                    hint.textContent = "photo received — confirm on your computer";
-                    showPhoneConfirm(payload.thumb, payload);
+                  if (payload.taskId === cancelledConfirmId) {
+                    // dismissed — leave it fully alone (no prep, no re-open)
+                  } else {
+                    prepPhoneCapture(payload.taskId, payload.thumb);
+                    if (payload.taskId !== lastConfirmTaskId) {
+                      lastConfirmTaskId = payload.taskId;
+                      hint.textContent = "photo received — confirm on your computer";
+                      showPhoneConfirm(payload.thumb, payload);
+                    }
                   }
                 } else {
                   // no preview available: keep the original straight-to-
@@ -421,6 +435,9 @@
         // the confirm with the new shot
         document.getElementById("phoneConfirmCancel").onclick = function () {
           overlay.hidden = true;
+          // remember exactly which shot was dismissed so the poll won't
+          // re-open it; a fresh shot (new id) still shows normally
+          cancelledConfirmId = lastConfirmTaskId;
           lastConfirmTaskId = null;
           var h = document.getElementById("phoneQrHint");
           if (h) h.textContent = "cancelled — take another photo on your phone";
