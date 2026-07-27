@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bv">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bv">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bv">
-<script src="../js/cursor.js?v=20260727bv" defer></script>
-<script src="../js/grain.js?v=20260727bv" defer></script>
-<script src="../js/owner.js?v=20260727bv"></script>
-<script src="../js/config.js?v=20260727bv"></script>
-<script src="../js/archive.js?v=20260727bv"></script>
-<script src="../js/blobstore.js?v=20260727bv"></script>
-<script src="../js/remote-captures.js?v=20260727bv"></script>
-<script src="../js/designer-archive.js?v=20260727bv"></script>
-<script src="../js/gallery-title.js?v=20260727bv" defer></script>
-<script src="../js/flow.js?v=20260727bv" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bw">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bw">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727bw">
+<script src="../js/cursor.js?v=20260727bw" defer></script>
+<script src="../js/grain.js?v=20260727bw" defer></script>
+<script src="../js/owner.js?v=20260727bw"></script>
+<script src="../js/config.js?v=20260727bw"></script>
+<script src="../js/archive.js?v=20260727bw"></script>
+<script src="../js/blobstore.js?v=20260727bw"></script>
+<script src="../js/remote-captures.js?v=20260727bw"></script>
+<script src="../js/designer-archive.js?v=20260727bw"></script>
+<script src="../js/gallery-title.js?v=20260727bw" defer></script>
+<script src="../js/flow.js?v=20260727bw" defer></script>
 </head>
 <body>
 
@@ -351,15 +351,12 @@
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
         if (!(window.Archive && window.Community)) return;
         try { if (localStorage.getItem(_sterileCleanupFlag)) return; } catch (e) {}
-        var apiBase = (window.TRACES_API || "").replace(/\/$/, "");
+        // LOCAL ONLY: a capture Mor uploaded to the community feed shouldn't sit
+        // in her private archive, so drop it from the local archive here. We do
+        // NOT touch the server — the community record must stay live for
+        // visitors, and a wrong DELETE is not worth the risk.
         Community.all().forEach(function (c) {
-          if (!c || !c.id) return;
-          if (window.Archive.get(c.id)) window.Archive.remove(c.id);
-          // the archive-scope server record (id = c.id; the community record is
-          // c.id + "-community", left alone). 404s harmlessly if none leaked.
-          if (apiBase) {
-            try { fetch(apiBase + "/captures/" + encodeURIComponent(c.id), { method: "DELETE" }).catch(function () {}); } catch (e) {}
-          }
+          if (c && c.id && window.Archive.get(c.id)) window.Archive.remove(c.id);
         });
         try { localStorage.setItem(_sterileCleanupFlag, "1"); } catch (e) {}
       }
