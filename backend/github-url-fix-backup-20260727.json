@@ -1,0 +1,38 @@
+[
+  {
+    "id": "communityAntiqueBookcase-community",
+    "title": "antique bookcase",
+    "before": {
+      "img": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/d6e1e8bb-04ab-4ef9-a75f-5362f5a76535",
+      "model": "https://morartzi1998.github.io/traces/community/models/antique-bookcase.glb",
+      "points": "https://morartzi1998.github.io/traces/community/points/communityAntiqueBookcase.bin"
+    }
+  },
+  {
+    "id": "communityAntiqueCabinet-community",
+    "title": "antique cabinet",
+    "before": {
+      "img": "https://morartzi1998.github.io/traces/community/images/antique-cabinet.png",
+      "model": "https://morartzi1998.github.io/traces/community/models/antique-cabinet.glb",
+      "points": "https://morartzi1998.github.io/traces/community/points/communityAntiqueCabinet.bin"
+    }
+  },
+  {
+    "id": "communityAntiqueSideTable-community",
+    "title": "antique side table",
+    "before": {
+      "img": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/cdcbe329-1006-4bbd-a62f-b634f28fb460",
+      "model": "https://morartzi1998.github.io/traces/community/models/antique-side-table.glb",
+      "points": "https://morartzi1998.github.io/traces/community/points/communityAntiqueSideTable.bin"
+    }
+  },
+  {
+    "id": "communityHangingPodChair-community",
+    "title": "hanging pod chair",
+    "before": {
+      "img": "https://traces-tripo.traces-morartzi.workers.dev/captures/file/c1d40da0-711c-4ffa-bed5-2f22684571d2",
+      "model": "https://morartzi1998.github.io/traces/community/models/hanging-pod-chair.glb",
+      "points": "https://morartzi1998.github.io/traces/community/points/communityHangingPodChair.bin"
+    }
+  }
+]
