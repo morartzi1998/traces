@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ct">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ct">
-<link rel="stylesheet" href="../css/object.css?v=20260727ct">
-<script src="../js/cursor.js?v=20260727ct" defer></script>
-<script src="../js/grain.js?v=20260727ct" defer></script>
-<script src="../js/tilt3d.js?v=20260727ct" defer></script>
-<script src="../js/owner.js?v=20260727ct"></script>
-<script src="../js/config.js?v=20260727ct"></script>
-<script src="../js/archive.js?v=20260727ct"></script>
-<script src="../js/blobstore.js?v=20260727ct"></script>
-<script src="../js/particle-loader.js?v=20260727ct"></script>
-<script src="../js/remote-captures.js?v=20260727ct"></script>
-<script src="../js/community-seed.js?v=20260727ct"></script>
-<script src="../js/flow.js?v=20260727ct" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ct"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cu">
+<link rel="stylesheet" href="../css/object.css?v=20260727cu">
+<script src="../js/cursor.js?v=20260727cu" defer></script>
+<script src="../js/grain.js?v=20260727cu" defer></script>
+<script src="../js/tilt3d.js?v=20260727cu" defer></script>
+<script src="../js/owner.js?v=20260727cu"></script>
+<script src="../js/config.js?v=20260727cu"></script>
+<script src="../js/archive.js?v=20260727cu"></script>
+<script src="../js/blobstore.js?v=20260727cu"></script>
+<script src="../js/particle-loader.js?v=20260727cu"></script>
+<script src="../js/remote-captures.js?v=20260727cu"></script>
+<script src="../js/community-seed.js?v=20260727cu"></script>
+<script src="../js/flow.js?v=20260727cu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ct" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cu" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ct";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ct";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cu";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ct";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ct";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cu";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2742,10 +2742,24 @@
             // to another capture showed the previous object under the new title
             // for a beat. The loading particles cover it now; "load" fades it back.
             modelViewer.style.opacity = "0";
-            // safety net: if "load" doesn't fire (already-cached src), clear the
-            // loader anyway so the stage never sits stuck on the particle cloud
+            // safety net for the rare case where "load" never fires (an
+            // already-cached src can skip the event). It must NEVER reveal the
+            // viewer before the NEW mesh is actually in: model-viewer keeps the
+            // PREVIOUS model painted until the new src finishes, so a blind
+            // timed reveal showed the last object under the new title whenever
+            // the new mesh took longer than the timeout (a 58MB scan easily
+            // does — the "arrows show the previous object, toggling fixes it"
+            // report). Poll instead: only reveal once modelViewer.loaded is
+            // true for THIS navigation, otherwise keep the loader (and its
+            // drifting particles) up and check again. The "load" listener above
+            // still handles the normal case and clears this timer.
             clearTimeout(modelLoadFallback);
-            modelLoadFallback = setTimeout(function () { if (key === k) { modelViewer.style.opacity = ""; endLoading(); } }, 6000);
+            var revealWhenLoaded = function () {
+              if (key !== k) return;                 // navigated away — abandon
+              if (modelViewer.loaded) { modelViewer.style.opacity = ""; endLoading(); return; }
+              modelLoadFallback = setTimeout(revealWhenLoaded, 600);
+            };
+            modelLoadFallback = setTimeout(revealWhenLoaded, 600);
             // a capture saved from the "ready-made scan" flow keeps its GLB in
             // IndexedDB (too large for localStorage) — fetch it in on demand
             if (model.indexOf("idb:") === 0) {
