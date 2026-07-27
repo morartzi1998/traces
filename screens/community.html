@@ -6,20 +6,20 @@
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bx">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bx">
-<script src="../js/cursor.js?v=20260727bx" defer></script>
-<script src="../js/grain.js?v=20260727bx" defer></script>
-<script src="../js/owner.js?v=20260727bx"></script>
-<script src="../js/config.js?v=20260727bx"></script>
-<script src="../js/archive.js?v=20260727bx"></script>
-<script src="../js/blobstore.js?v=20260727bx"></script>
-<script src="../js/remote-captures.js?v=20260727bx"></script>
-<script src="../js/designer-archive.js?v=20260727bx"></script>
-<script src="../js/community-seed.js?v=20260727bx"></script>
-<script src="../js/gallery-title.js?v=20260727bx" defer></script>
-<script src="../js/flow.js?v=20260727bx" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727by">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727by">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727by">
+<script src="../js/cursor.js?v=20260727by" defer></script>
+<script src="../js/grain.js?v=20260727by" defer></script>
+<script src="../js/owner.js?v=20260727by"></script>
+<script src="../js/config.js?v=20260727by"></script>
+<script src="../js/archive.js?v=20260727by"></script>
+<script src="../js/blobstore.js?v=20260727by"></script>
+<script src="../js/remote-captures.js?v=20260727by"></script>
+<script src="../js/designer-archive.js?v=20260727by"></script>
+<script src="../js/community-seed.js?v=20260727by"></script>
+<script src="../js/gallery-title.js?v=20260727by" defer></script>
+<script src="../js/flow.js?v=20260727by" defer></script>
 </head>
 <body>
 
@@ -145,6 +145,25 @@
         if (d < 30) return d + " days ago";
         var m = Math.floor(d / 30);
         return m === 1 ? "a month ago" : m + " months ago";
+      }
+
+      // a delete that "comes back": the shared store (Cloudflare KV) is only
+      // eventually consistent, so a just-deleted capture can still return in the
+      // next fetch. A local tombstone of deleted ids (base id, "-community"
+      // stripped) hides them immediately and across reloads until the server
+      // catches up. Shared shape with the archive page's own tombstone.
+      var DELETED_KEY = "traces-deleted-captures";
+      function deletedIds() {
+        try { return JSON.parse(localStorage.getItem(DELETED_KEY)) || []; } catch (e) { return []; }
+      }
+      function markDeleted(id) {
+        var base = String(id || "").replace(/-community$/, "");
+        if (!base) return;
+        var list = deletedIds();
+        if (list.indexOf(base) === -1) { list.push(base); try { localStorage.setItem(DELETED_KEY, JSON.stringify(list)); } catch (e) {} }
+      }
+      function notDeleted(id) {
+        return deletedIds().indexOf(String(id || "").replace(/-community$/, "")) === -1;
       }
 
       // one polaroid card shared by the fixed showcase, the visitor's own
@@ -367,6 +386,7 @@
           // only gets a delete control for Mor herself — a random visitor
           // shouldn't be able to remove another person's shared capture
           remove: (!c.remote || isOwner) ? function () {
+            markDeleted(c.id); // stays gone across reloads while KV catches up
             if (c.remote) {
               // a remote item lives only in the shared worker store, under
               // its own "<id>-community" record id — never in this browser's
@@ -389,7 +409,7 @@
       // server confirms anything - "not shared yet" is the honest starting
       // state, corrected to "shared" (or caught up entirely) once the
       // remote-merge below resolves, same as the archive's own sync line
-      var items = (window.Community ? Community.all() : []).filter(function (c) { return hidden.indexOf(c.id) === -1; });
+      var items = (window.Community ? Community.all() : []).filter(function (c) { return hidden.indexOf(c.id) === -1 && notDeleted(c.id); });
       items.forEach(function (c) { grid.insertBefore(buildCard(buildEntry(Object.assign({ syncStatus: "local-only" }, c))), grid.firstChild); });
       if (window.alignGalleryTitle) window.alignGalleryTitle();
 
@@ -458,7 +478,7 @@
         var fullHidden = hiddenKeys();
         (list || []).forEach(function (c) {
           var localId = c.id.replace(/-community$/, "");
-          if (localCommunityIds[localId] || fullHidden.indexOf(localId) !== -1) return;
+          if (localCommunityIds[localId] || fullHidden.indexOf(localId) !== -1 || !notDeleted(localId)) return;
           // an edited showcase item's shared record supersedes its static seed
           // card — drop the seed card if it was already drawn, so only the
           // edited (authoritative) version remains

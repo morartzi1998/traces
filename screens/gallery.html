@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bx">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bx">
-<script src="../js/cursor.js?v=20260727bx" defer></script>
-<script src="../js/grain.js?v=20260727bx" defer></script>
-<script src="../js/owner.js?v=20260727bx"></script>
-<script src="../js/config.js?v=20260727bx"></script>
-<script src="../js/archive.js?v=20260727bx"></script>
-<script src="../js/blobstore.js?v=20260727bx"></script>
-<script src="../js/remote-captures.js?v=20260727bx"></script>
-<script src="../js/designer-archive.js?v=20260727bx"></script>
-<script src="../js/gallery-title.js?v=20260727bx" defer></script>
-<script src="../js/flow.js?v=20260727bx" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727by">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727by">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727by">
+<script src="../js/cursor.js?v=20260727by" defer></script>
+<script src="../js/grain.js?v=20260727by" defer></script>
+<script src="../js/owner.js?v=20260727by"></script>
+<script src="../js/config.js?v=20260727by"></script>
+<script src="../js/archive.js?v=20260727by"></script>
+<script src="../js/blobstore.js?v=20260727by"></script>
+<script src="../js/remote-captures.js?v=20260727by"></script>
+<script src="../js/designer-archive.js?v=20260727by"></script>
+<script src="../js/gallery-title.js?v=20260727by" defer></script>
+<script src="../js/flow.js?v=20260727by" defer></script>
 </head>
 <body>
 
@@ -360,19 +360,38 @@
         });
         try { localStorage.setItem(_sterileCleanupFlag, "1"); } catch (e) {}
       }
+      // a delete that "comes back": the shared store (Cloudflare KV) is only
+      // eventually consistent (~a minute), so a capture deleted on the server
+      // can still come back in the very next fetch and reappear. Keep a local
+      // tombstone of deleted ids so the client hides them immediately and stays
+      // hidden across reloads, regardless of how long the server takes to catch
+      // up. Keyed by the base id (the "-community" suffix stripped).
+      var DELETED_KEY = "traces-deleted-captures";
+      function deletedIds() {
+        try { return JSON.parse(localStorage.getItem(DELETED_KEY)) || []; } catch (e) { return []; }
+      }
+      function markDeleted(id) {
+        var base = String(id || "").replace(/-community$/, "");
+        if (!base) return;
+        var list = deletedIds();
+        if (list.indexOf(base) === -1) { list.push(base); try { localStorage.setItem(DELETED_KEY, JSON.stringify(list)); } catch (e) {} }
+      }
+      function notDeleted(c) {
+        return deletedIds().indexOf(String(c.id || "").replace(/-community$/, "")) === -1;
+      }
       function render() {
         // the grid gets rebuilt below, but management mode's own state
         // (the screen class, the backdrop) lives outside it
         exitManageMode();
         enforceSterileArchive();
-        var allItems = (window.Archive ? Archive.all() : []);
+        var allItems = (window.Archive ? Archive.all() : []).filter(notDeleted);
         var localIds = {};
         allItems.forEach(function (c) { localIds[c.id] = true; });
         var hiddenDesigner = designerHiddenKeys();
         // this browser's own local copy of something it already made takes
         // priority — only show the remote copy of captures made elsewhere
         var remoteOnly = remoteArchiveItems
-          .filter(function (c) { return !localIds[c.id] && hiddenDesigner.indexOf(c.id) === -1; });
+          .filter(function (c) { return !localIds[c.id] && hiddenDesigner.indexOf(c.id) === -1 && notDeleted(c); });
         var realItems = allItems.filter(function (c) { return !c.hidden; });
         function mapShowcase(list) {
           return (list || [])
@@ -462,6 +481,7 @@
               }
             },
             remove: function () {
+              markDeleted(c.id); // stays hidden even while the server catches up
               if (window.Archive) Archive.remove(c.id);
               // this local record may already be sitting on the shared
               // server too (published from here or synced from another
@@ -490,6 +510,7 @@
             hasTimeline: (c.versions || []).length >= 2,
             hide: function () { hideDesignerItem(c.id); },
             remove: function () {
+              markDeleted(c.id); // survives reload while the server catches up
               // optimistic: remoteArchiveItems is only fetched once at load,
               // so without this the very next render() would just rebuild
               // the same card from the stale cached list, making delete look

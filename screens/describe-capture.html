@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bx">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727bx">
-<script src="../js/cursor.js?v=20260727bx" defer></script>
-<script src="../js/grain.js?v=20260727bx" defer></script>
-<script src="../js/tilt3d.js?v=20260727bx" defer></script>
-<script src="../js/annotations.js?v=20260727bx" defer></script>
-<script src="../js/owner.js?v=20260727bx"></script>
-<script src="../js/config.js?v=20260727bx"></script>
-<script src="../js/archive.js?v=20260727bx"></script>
-<script src="../js/blobstore.js?v=20260727bx"></script>
-<script src="../js/remote-captures.js?v=20260727bx"></script>
-<script src="../js/flow.js?v=20260727bx" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bx"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727by">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727by">
+<script src="../js/cursor.js?v=20260727by" defer></script>
+<script src="../js/grain.js?v=20260727by" defer></script>
+<script src="../js/tilt3d.js?v=20260727by" defer></script>
+<script src="../js/annotations.js?v=20260727by" defer></script>
+<script src="../js/owner.js?v=20260727by"></script>
+<script src="../js/config.js?v=20260727by"></script>
+<script src="../js/archive.js?v=20260727by"></script>
+<script src="../js/blobstore.js?v=20260727by"></script>
+<script src="../js/remote-captures.js?v=20260727by"></script>
+<script src="../js/flow.js?v=20260727by" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727by"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bx" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727by" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bx";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bx";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bx";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727by";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727by";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727by";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -465,12 +465,24 @@
               // fails, keep what was there rather than blanking it)
               var newTitle = title.trim() || existing.title || "untitled capture";
               var newFeeling = feeling.trim() || existing.feeling || "";
+              // the scan that WAS latest before this re-scan — its geometry is
+              // what the existing annotations were pinned to
+              var prevLatestCreated = versions.length ? versions[versions.length - 1].created : null;
               versions.push({ created: vCreated, model: refs.model, img: refs.img, points: pointsRef,
                 title: newTitle, feeling: newFeeling });
               var patch = {
                 versions: versions, model: refs.model, img: refs.img, points: pointsRef,
                 title: newTitle, feeling: newFeeling, kind: kind,
               };
+              // an annotation is anchored to a specific scan's surface, so it
+              // must NOT carry onto the new scan — tag every still-untagged
+              // annotation to the previous latest version, so it stays pinned
+              // to the OLD scan (and the new scan starts clean)
+              patch.annotations = (existing.annotations || []).map(function (a) {
+                return (a && a.forVersion == null && prevLatestCreated != null)
+                  ? Object.assign({}, a, { forVersion: prevLatestCreated })
+                  : a;
+              });
               // a re-scan that wasn't itself a point cloud (e.g. a plain
               // photo re-upload on an existing capture) has no fresh choice
               // to apply here - leave whatever size the capture already had
