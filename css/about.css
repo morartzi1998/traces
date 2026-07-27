@@ -15,8 +15,13 @@ body {
 
 .ab-main {
   /* the pile is fixed on the left; reserve just enough room to clear it, then
-     let the story sit in a single left-aligned column beside it (not centred in
-     the leftover space, which left an odd empty band) */
+     let the story sit in a column beside it. On a big screen the whole
+     composition (pile + text) is capped and centred as one group, so it no
+     longer clings to the left edge leaving a wide empty band on the other side
+     — on a normal screen the cap is wider than the viewport, so nothing moves
+     and it looks exactly as before. */
+  max-width: 1240px;
+  margin-inline: auto;
   padding-left: min(38vw, 560px);
   padding-right: 3vw;
 }
@@ -25,7 +30,11 @@ body {
 
 .ab-pile {
   position: fixed;
-  left: 3.4vw;
+  /* anchor the pile to the LEFT edge of the centred 1240px band (half = 620px)
+     once the screen is wide enough for the band to sit inside it; on a narrower
+     screen it stays at the original 3.4vw so the desktop/laptop look is
+     unchanged. Keeps the pile beside the text as one centred group. */
+  left: max(3.4vw, calc(50% - 620px));
   top: 14vh;
   width: min(340px, 30vw);
   height: 78vh;
