@@ -374,7 +374,6 @@
    exactly, rather than depending on centred columns of equal height. */
 @media (max-width: 720px) {
   .up-main {
-    justify-content: flex-start;
-    padding-top: var(--flow-heading-top);
+    justify-content: center;
   }
 }

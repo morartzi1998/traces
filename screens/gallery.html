@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bs">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bs">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bs">
-<script src="../js/cursor.js?v=20260727bs" defer></script>
-<script src="../js/grain.js?v=20260727bs" defer></script>
-<script src="../js/owner.js?v=20260727bs"></script>
-<script src="../js/config.js?v=20260727bs"></script>
-<script src="../js/archive.js?v=20260727bs"></script>
-<script src="../js/blobstore.js?v=20260727bs"></script>
-<script src="../js/remote-captures.js?v=20260727bs"></script>
-<script src="../js/designer-archive.js?v=20260727bs"></script>
-<script src="../js/gallery-title.js?v=20260727bs" defer></script>
-<script src="../js/flow.js?v=20260727bs" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bt">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bt">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727bt">
+<script src="../js/cursor.js?v=20260727bt" defer></script>
+<script src="../js/grain.js?v=20260727bt" defer></script>
+<script src="../js/owner.js?v=20260727bt"></script>
+<script src="../js/config.js?v=20260727bt"></script>
+<script src="../js/archive.js?v=20260727bt"></script>
+<script src="../js/blobstore.js?v=20260727bt"></script>
+<script src="../js/remote-captures.js?v=20260727bt"></script>
+<script src="../js/designer-archive.js?v=20260727bt"></script>
+<script src="../js/gallery-title.js?v=20260727bt" defer></script>
+<script src="../js/flow.js?v=20260727bt" defer></script>
 </head>
 <body>
 
@@ -335,10 +335,27 @@
       // her own "your archive") this fetch runs for every visitor
       var showcaseRealItems = [];
 
+      // captures Mor shared to the community used to be retracted from her
+      // archive (the old "sterile archive" rule), so they vanished from here
+      // while staying in the community. The local Community store holds only
+      // her OWN shares — strangers' captures arrive from the live feed at
+      // render time and are never written to it — so any community capture
+      // missing from the archive is one of hers that disappeared. Put it back.
+      var _communityHealDone = false;
+      function healOwnCommunityIntoArchive() {
+        if (_communityHealDone) return;
+        _communityHealDone = true;
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
+        if (!(window.Archive && window.Community)) return;
+        Community.all().forEach(function (c) {
+          if (c && c.id && !Archive.get(c.id)) Archive.add(Object.assign({}, c));
+        });
+      }
       function render() {
         // the grid gets rebuilt below, but management mode's own state
         // (the screen class, the backdrop) lives outside it
         exitManageMode();
+        healOwnCommunityIntoArchive();
         var allItems = (window.Archive ? Archive.all() : []);
         var localIds = {};
         allItems.forEach(function (c) { localIds[c.id] = true; });

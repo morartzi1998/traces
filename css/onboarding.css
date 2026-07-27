@@ -98,10 +98,13 @@
    land at the exact same height on a phone, so moving between them doesn't shift. */
 @media (max-width: 720px) {
   .onb-main {
-    justify-content: flex-start;
-    padding-top: var(--flow-heading-top);
+    justify-content: center;
   }
+  /* the name form is a little shorter than the capture-method column, so a
+     centred name screen sat a few px lower than the capture screen. Reserve
+     the matching extra height here (the desktop spacer is tuned for desktop
+     heights) so both screens' headings centre at the SAME height on a phone. */
   .onb-actions {
-    margin-top: clamp(32px, 5vh, 56px);
+    margin-top: calc(clamp(52px, 8.2vh, 96px) + 15px);
   }
 }
