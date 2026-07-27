@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cv">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cv">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727cv">
-<script src="../js/cursor.js?v=20260727cv" defer></script>
-<script src="../js/grain.js?v=20260727cv" defer></script>
-<script src="../js/owner.js?v=20260727cv"></script>
-<script src="../js/config.js?v=20260727cv"></script>
-<script src="../js/archive.js?v=20260727cv"></script>
-<script src="../js/blobstore.js?v=20260727cv"></script>
-<script src="../js/remote-captures.js?v=20260727cv"></script>
-<script src="../js/designer-archive.js?v=20260727cv"></script>
-<script src="../js/gallery-title.js?v=20260727cv" defer></script>
-<script src="../js/flow.js?v=20260727cv" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cw">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cw">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727cw">
+<script src="../js/cursor.js?v=20260727cw" defer></script>
+<script src="../js/grain.js?v=20260727cw" defer></script>
+<script src="../js/owner.js?v=20260727cw"></script>
+<script src="../js/config.js?v=20260727cw"></script>
+<script src="../js/archive.js?v=20260727cw"></script>
+<script src="../js/blobstore.js?v=20260727cw"></script>
+<script src="../js/remote-captures.js?v=20260727cw"></script>
+<script src="../js/designer-archive.js?v=20260727cw"></script>
+<script src="../js/gallery-title.js?v=20260727cw" defer></script>
+<script src="../js/flow.js?v=20260727cw" defer></script>
 </head>
 <body>
 
@@ -640,15 +640,23 @@
       // neither reads from it nor pushes their own captures into it, so
       // their archive stays truly theirs instead of showing her real items.
       var isOwner = window.isOwnerDevice && window.isOwnerDevice();
-      var remoteReady = (window.RemoteCaptures && isOwner) ? RemoteCaptures.list("archive") : Promise.resolve([]);
+      // an exhibition kiosk (?kiosk=1, see js/owner.js) also PUSHES its local
+      // archive to the shared store so the owner can watch it in the live log —
+      // but it must NOT show Mor's shared archive to visitors as if it were
+      // theirs, and carries no owner UI. It only needs the server list to
+      // dedupe its own uploads.
+      var isKiosk = window.isKioskDevice && window.isKioskDevice();
+      var remoteReady = (window.RemoteCaptures && (isOwner || isKiosk)) ? RemoteCaptures.list("archive") : Promise.resolve([]);
       remoteReady.then(function (list) {
-        remoteArchiveItems = list || [];
+        // only the OWNER merges the shared pool into what's displayed; a kiosk
+        // (and any regular visitor) shows only its own local captures
+        remoteArchiveItems = isOwner ? (list || []) : [];
         render();
         // anything captured in this browser before the shared store was
         // reachable never made it there — send it now, once, quietly, with
         // its "only on this device" label turning into a live percentage
         // while it uploads so it reads as active rather than just stuck
-        if (window.RemoteCaptures && isOwner) {
+        if (window.RemoteCaptures && (isOwner || isKiosk)) {
           RemoteCaptures.syncMissing(window.Archive ? Archive.all() : [], list, "archive", function (capId, pct, done, success) {
             var el = grid.querySelector('.gal-sync-status[data-cap-id="' + capId + '"]');
             // carry the real versions along (not just the id) - a later

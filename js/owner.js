@@ -26,6 +26,32 @@ window.isOwnerDevice = function () {
   try { return localStorage.getItem("traces-owner-device") === "1"; } catch (e) { return false; }
 };
 
+/*
+  Exhibition "kiosk mode": ?kiosk=1 marks THIS browser as an exhibition kiosk.
+  Its only effect is that whatever visitors save to the local archive gets
+  uploaded to the shared store (the archive-page sync, normally owner-only),
+  so the owner can watch it in the private live log alongside community shares.
+  It deliberately does NOT set the owner flag, so there is no owner UI at all —
+  no edit menus, no "my device" badge — the community stays locked to editing
+  and the visitor experience is untouched. Opt-in and dormant otherwise:
+  nothing changes unless a device is explicitly opened with ?kiosk=1.
+  ?kiosk=0 clears it again.
+*/
+(function () {
+  try {
+    var kflag = new URLSearchParams(window.location.search).get("kiosk");
+    if (kflag === "1") {
+      localStorage.setItem("traces-kiosk", "1");
+    } else if (kflag === "0") {
+      localStorage.removeItem("traces-kiosk");
+    }
+  } catch (e) {}
+})();
+
+window.isKioskDevice = function () {
+  try { return localStorage.getItem("traces-kiosk") === "1"; } catch (e) { return false; }
+};
+
 // a tiny, easy-to-spot way to confirm (without opening dev tools) whether
 // THIS particular browser is currently flagged as one of Mor's own devices
 // - only ever shown when true, so a regular visitor never sees it at all
