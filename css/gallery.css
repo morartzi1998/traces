@@ -188,6 +188,19 @@
   position: relative;
 }
 
+/* the community feed centres its LAST (incomplete) row while full rows still
+   span the width — so the first polaroid stays left (the heading lines up with
+   it) and only a short trailing row pulls to the middle. flex-wrap +
+   justify-content:center does exactly that. The archive keeps its auto-fill
+   grid: there a lone capture must stay in the first-column slot for its own
+   heading alignment, so it must NOT centre. */
+.gal--community .gal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+}
+
 @media (max-width: 1120px) {
   .gal-item { width: clamp(180px, 27vw, 320px); }
 }
