@@ -194,17 +194,27 @@
   text-transform: uppercase;
 }
 
-/* Same adaptive-legibility trick as the corner chrome (see chrome.css): the
-   on-stage title, the hamburger button and the little meta line float over a
-   3D scene that may be a dark point cloud or a bright baked room, so blend
-   them against it instead of betting on one colour. The dropdown menu is left
-   out on purpose — it carries its own dark scrim already — and so is the blue
-   toggle pill; only the free-floating text and icon adapt. */
+/* Adaptive legibility on the object screen. Here the overlay floats over a
+   LIVE 3D scene — a dark point cloud or a bright baked room — and
+   mix-blend-mode can't read the WebGL / model-viewer canvas behind it (the
+   blend fell flat over a bright mesh and left the title washed out). So the
+   text stays cream and carries a soft dark halo instead: invisible over a dark
+   scene, a crisp readable outline over a bright one — adaptive readability
+   that works over any canvas. The corner chrome gets the same treatment on
+   this screen, overriding the feed's blend (which only works over plain DOM).
+   The dropdown menu keeps its own scrim and is deliberately left untouched. */
+.obj-screen .nav-corner,
 .obj-title,
-.obj-menu-btn,
 .obj-updated,
 .obj-rep-label {
-  mix-blend-mode: difference;
+  mix-blend-mode: normal;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.92), 0 0 9px rgba(0, 0, 0, 0.6);
+}
+/* the hamburger is drawn from bars, not text, so it takes a drop-shadow to
+   pick up the same dark outline over a bright scene */
+.obj-menu-btn {
+  mix-blend-mode: normal;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.92)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.5));
 }
 
 .obj-menu {
