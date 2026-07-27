@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cl">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cl">
-<link rel="stylesheet" href="../css/object.css?v=20260727cl">
-<script src="../js/cursor.js?v=20260727cl" defer></script>
-<script src="../js/grain.js?v=20260727cl" defer></script>
-<script src="../js/tilt3d.js?v=20260727cl" defer></script>
-<script src="../js/owner.js?v=20260727cl"></script>
-<script src="../js/config.js?v=20260727cl"></script>
-<script src="../js/archive.js?v=20260727cl"></script>
-<script src="../js/blobstore.js?v=20260727cl"></script>
-<script src="../js/particle-loader.js?v=20260727cl"></script>
-<script src="../js/remote-captures.js?v=20260727cl"></script>
-<script src="../js/community-seed.js?v=20260727cl"></script>
-<script src="../js/flow.js?v=20260727cl" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cl"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cm">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cm">
+<link rel="stylesheet" href="../css/object.css?v=20260727cm">
+<script src="../js/cursor.js?v=20260727cm" defer></script>
+<script src="../js/grain.js?v=20260727cm" defer></script>
+<script src="../js/tilt3d.js?v=20260727cm" defer></script>
+<script src="../js/owner.js?v=20260727cm"></script>
+<script src="../js/config.js?v=20260727cm"></script>
+<script src="../js/archive.js?v=20260727cm"></script>
+<script src="../js/blobstore.js?v=20260727cm"></script>
+<script src="../js/particle-loader.js?v=20260727cm"></script>
+<script src="../js/remote-captures.js?v=20260727cm"></script>
+<script src="../js/community-seed.js?v=20260727cm"></script>
+<script src="../js/flow.js?v=20260727cm" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cm"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cl" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cm" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cl";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cl";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cm";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cm";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cl";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cm";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cl";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cm";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2821,6 +2821,12 @@
         // dual capture — its (often tens-of-MB) mesh loads only when toggled
         var preferMesh = catalog[k].dual && catalog[k].model && catalog[k].openOn !== "points";
         swapScan(k, catalog[k].model, catalog[k].img, preferMesh ? null : catalog[k].points);
+        // warm the next/previous capture's point-cloud cache in the background
+        // so arrowing to them mounts from IndexedDB instead of re-downloading
+        // several MB — makes navigation feel instant, with no quality change.
+        // Delayed so it never competes with the capture that's loading now.
+        clearTimeout(prefetchTimer);
+        prefetchTimer = setTimeout(prefetchNeighbors, 2500);
         // the blue-purple backdrop is about HOW you got here, not what the
         // capture itself is — opening the same shared capture from your own
         // Archive should look like your Archive; only actually browsing
@@ -3229,6 +3235,33 @@
         // that used to fill that role is deleted)
         if (order.indexOf(key) === -1 && showcaseOrder.indexOf(key) !== -1) return showcaseOrder;
         return order;
+      }
+
+      // prefetch: quietly warm the point-cloud cache of the captures on either
+      // side of the current one, using the very same "srvcloud:" IndexedDB key
+      // swapScan reads from — so when the visitor arrows to a neighbour, its
+      // (several-MB) cloud is already on disk and mounts near-instantly instead
+      // of downloading fresh. Server URLs only (idb: refs are already local),
+      // one background fetch each, and a no-op when already cached, so it can't
+      // pile up. No effect on quality — it's the exact same file, just early.
+      var prefetchTimer = null;
+      function prefetchNeighbors() {
+        if (!window.BlobStore) return;
+        var o = activeOrder();
+        if (!o || o.length < 2) return;
+        var i = o.indexOf(key);
+        if (i === -1) return;
+        [o[(i + 1) % o.length], o[(i - 1 + o.length) % o.length]].forEach(function (nk) {
+          var it = catalog[nk];
+          if (!it || typeof it.points !== "string" || it.points.indexOf("idb:") === 0) return;
+          var ck = "srvcloud:" + it.points;
+          window.BlobStore.get(ck).then(function (cached) {
+            if (cached) return;
+            fetch(it.points).then(function (r) { return r.ok ? r.blob() : null; })
+              .then(function (b) { if (b) window.BlobStore.set(ck, b).catch(function () {}); })
+              .catch(function () {});
+          }).catch(function () {});
+        });
       }
       document.getElementById("objPrev").addEventListener("click", function () {
         var o = activeOrder();
