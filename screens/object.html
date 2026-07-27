@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cu">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cu">
-<link rel="stylesheet" href="../css/object.css?v=20260727cu">
-<script src="../js/cursor.js?v=20260727cu" defer></script>
-<script src="../js/grain.js?v=20260727cu" defer></script>
-<script src="../js/tilt3d.js?v=20260727cu" defer></script>
-<script src="../js/owner.js?v=20260727cu"></script>
-<script src="../js/config.js?v=20260727cu"></script>
-<script src="../js/archive.js?v=20260727cu"></script>
-<script src="../js/blobstore.js?v=20260727cu"></script>
-<script src="../js/particle-loader.js?v=20260727cu"></script>
-<script src="../js/remote-captures.js?v=20260727cu"></script>
-<script src="../js/community-seed.js?v=20260727cu"></script>
-<script src="../js/flow.js?v=20260727cu" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cu"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cv">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cv">
+<link rel="stylesheet" href="../css/object.css?v=20260727cv">
+<script src="../js/cursor.js?v=20260727cv" defer></script>
+<script src="../js/grain.js?v=20260727cv" defer></script>
+<script src="../js/tilt3d.js?v=20260727cv" defer></script>
+<script src="../js/owner.js?v=20260727cv"></script>
+<script src="../js/config.js?v=20260727cv"></script>
+<script src="../js/archive.js?v=20260727cv"></script>
+<script src="../js/blobstore.js?v=20260727cv"></script>
+<script src="../js/particle-loader.js?v=20260727cv"></script>
+<script src="../js/remote-captures.js?v=20260727cv"></script>
+<script src="../js/community-seed.js?v=20260727cv"></script>
+<script src="../js/flow.js?v=20260727cv" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cv"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cu" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cv" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cu";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cu";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cv";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cv";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cu";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cv";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cu";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cv";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3941,7 +3941,14 @@
             if (catalog[key]) catalog[key].img = ref;
             if (inArchive) Archive.update(key, { img: ref });
             if (inCommunity) Community.update(key, { img: ref });
-            showThumbToast("display image updated");
+            // Only claim "updated" once it's REALLY done. For the owner the
+            // real update is the shared-server upload below, which takes a
+            // moment — so here just say it's saving, and the confirmation fires
+            // in the upload's success callback. A visitor editing their own
+            // local capture has no server step, so for them this local save IS
+            // the update.
+            var willUpload = isOwner && (window.TRACES_API || "").length > 0;
+            showThumbToast(willUpload ? "saving image…" : "display image updated");
           }).catch(function () {});
         }
         // 2) update the SHARED server record too — but ONLY its img field (a
@@ -3984,6 +3991,10 @@
               // a showcase seed has no local/remote record for the patch above
               // to land on — promote it now so the new display image persists
               persistSeedEdit(key);
+              // NOW it's genuinely saved everywhere — confirm for real (the
+              // earlier toast only said "saving…"). On failure the upload's own
+              // retry/failure note takes over instead.
+              showThumbToast("display image updated");
             });
           });
         }
