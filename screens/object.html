@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cm">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cm">
-<link rel="stylesheet" href="../css/object.css?v=20260727cm">
-<script src="../js/cursor.js?v=20260727cm" defer></script>
-<script src="../js/grain.js?v=20260727cm" defer></script>
-<script src="../js/tilt3d.js?v=20260727cm" defer></script>
-<script src="../js/owner.js?v=20260727cm"></script>
-<script src="../js/config.js?v=20260727cm"></script>
-<script src="../js/archive.js?v=20260727cm"></script>
-<script src="../js/blobstore.js?v=20260727cm"></script>
-<script src="../js/particle-loader.js?v=20260727cm"></script>
-<script src="../js/remote-captures.js?v=20260727cm"></script>
-<script src="../js/community-seed.js?v=20260727cm"></script>
-<script src="../js/flow.js?v=20260727cm" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cm"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cn">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cn">
+<link rel="stylesheet" href="../css/object.css?v=20260727cn">
+<script src="../js/cursor.js?v=20260727cn" defer></script>
+<script src="../js/grain.js?v=20260727cn" defer></script>
+<script src="../js/tilt3d.js?v=20260727cn" defer></script>
+<script src="../js/owner.js?v=20260727cn"></script>
+<script src="../js/config.js?v=20260727cn"></script>
+<script src="../js/archive.js?v=20260727cn"></script>
+<script src="../js/blobstore.js?v=20260727cn"></script>
+<script src="../js/particle-loader.js?v=20260727cn"></script>
+<script src="../js/remote-captures.js?v=20260727cn"></script>
+<script src="../js/community-seed.js?v=20260727cn"></script>
+<script src="../js/flow.js?v=20260727cn" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cn"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cm" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cn" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cm";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cm";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cn";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cn";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cm";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cn";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cm";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cn";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2839,7 +2839,15 @@
         // else's": Mor reaching her own shared capture through the
         // Community screen still needs to manage it, same as opening it
         // from her own Archive would
-        var ownedHere = !!((window.Archive && Archive.get(k)) || (window.Community && Community.get(k)));
+        // "owned here" means a capture in the visitor's OWN private Archive —
+        // NOT one that merely sits in their local Community store. Every device
+        // that has ever browsed the community feed has those captures cached in
+        // Community, so counting Community.get(k) here handed the editing menu
+        // to every visitor on the shared exhibition kiosk. The real owner still
+        // manages her own shared captures through isOwnerHere (?owner=1), so
+        // dropping Community.get(k) locks strangers out without costing her
+        // anything.
+        var ownedHere = !!(window.Archive && Archive.get(k));
         var objMenuBtnEl = document.getElementById("objMenuBtn");
         // the editing menu (update, annotate, connect, set default view,
         // adjust, disconnect) is shown ONLY to the owner, or to a visitor on
