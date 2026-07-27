@@ -6,15 +6,18 @@
 <title>Traces — Connect a capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cp">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cp">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727cp">
-<script src="../js/cursor.js?v=20260727cp" defer></script>
-<script src="../js/grain.js?v=20260727cp" defer></script>
-<script src="../js/archive.js?v=20260727cp"></script>
-<script src="../js/blobstore.js?v=20260727cp"></script>
-<script src="../js/designer-archive.js?v=20260727cp"></script>
-<script src="../js/flow.js?v=20260727cp" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cq">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cq">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727cq">
+<script src="../js/cursor.js?v=20260727cq" defer></script>
+<script src="../js/grain.js?v=20260727cq" defer></script>
+<script src="../js/owner.js?v=20260727cq"></script>
+<script src="../js/config.js?v=20260727cq"></script>
+<script src="../js/archive.js?v=20260727cq"></script>
+<script src="../js/blobstore.js?v=20260727cq"></script>
+<script src="../js/remote-captures.js?v=20260727cq"></script>
+<script src="../js/designer-archive.js?v=20260727cq"></script>
+<script src="../js/flow.js?v=20260727cq" defer></script>
 </head>
 <body>
 
@@ -50,9 +53,16 @@
         return m === 1 ? "a month ago" : m + " months ago";
       }
 
-      // every connectable capture: the designer's showcase items plus
-      // whatever the visitor has captured themselves (archive + community),
-      // deduped so a capture only shows once even if it's in more than one list
+      // captures fetched live from the shared store (see loadRemote): on a
+      // fresh domain the per-origin local Archive/Community stores start empty,
+      // so without this the connect list showed nothing at all on
+      // traces-of-home.com. Merged in below, deduped against the local ones.
+      var remoteExtra = [];
+
+      // every connectable capture: the designer's showcase items, whatever the
+      // visitor has captured themselves (archive + community), and the live
+      // shared captures — deduped so a capture only shows once even if it's in
+      // more than one list
       function buildTargets() {
         var used = {};
         var targets = [];
@@ -68,7 +78,40 @@
             targets.push({ id: c.id, title: c.title || "untitled capture", img: c.img, meta: ago(c.created) });
           });
         });
+        remoteExtra.forEach(function (c) {
+          // a remote capture matching a local one (same id, ignoring the
+          // "-community" suffix) is already shown — don't duplicate it
+          var base = String(c.id || "").replace(/-community$/, "");
+          if (used[c.id] || used[base]) return;
+          used[c.id] = true;
+          targets.push({ id: c.id, title: c.title || "untitled capture", img: c.img, meta: ago(c.created) });
+        });
         return targets;
+      }
+
+      // pull the live shared captures so the connect list works on any domain,
+      // not just one where the visitor happens to have local copies. Owner
+      // devices also see the shared "archive" pool (their own real captures);
+      // everyone sees the shared community. Failure is silent — the local
+      // lists above still render.
+      function loadRemote() {
+        if (!window.RemoteCaptures) return;
+        var scopes = ["community"];
+        if (window.isOwnerDevice && window.isOwnerDevice()) scopes.unshift("archive");
+        Promise.all(scopes.map(function (s) { return window.RemoteCaptures.list(s); }))
+          .then(function (lists) {
+            var seen = {};
+            remoteExtra = [];
+            lists.forEach(function (arr) {
+              (arr || []).forEach(function (c) {
+                if (seen[c.id]) return;
+                seen[c.id] = true;
+                remoteExtra.push(c);
+              });
+            });
+            render();
+          })
+          .catch(function () {});
       }
 
       function render() {
@@ -98,6 +141,7 @@
       }
 
       render();
+      loadRemote();
     })();
 
     // Connecting an object to a space also needs a point IN the space marking
