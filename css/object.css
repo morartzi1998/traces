@@ -1,5 +1,12 @@
 /* Object view — a single capture in 3D: timeline, arrows, annotation tags */
 
+/* the object screen is one fixed viewport — the stage fills the height and the
+   side panels scroll INSIDE themselves, so the page itself must never scroll.
+   Locking html/body here stops a stray sub-pixel overflow (a tall memory card,
+   a 100vh vs visual-viewport rounding) from putting a scrollbar on the whole
+   screen. object.css is loaded only by object.html, so this is scoped to it. */
+html, body { overflow: hidden; }
+
 .obj-screen {
   position: relative;
   height: 100vh;
