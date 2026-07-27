@@ -266,9 +266,15 @@
        into one gap in the middle, so the content sat clustered high with a
        big empty band above the plus. space-evenly gives matching air above
        the headline, between the blocks, and below the plus. */
-    padding-top: 4.5rem;
+    /* group headline + photo + CTA as ONE block and centre it vertically, so
+       the air above (below the big TRACES logo) matches the air below (above
+       the Community/About nav) instead of the content clustering high with a
+       deep empty band beneath the plus. The larger top padding clears the
+       oversized logo so the two visible gaps read as equal. */
+    padding-top: 7.9rem;
     padding-bottom: 3.5rem;
-    justify-content: space-evenly;
+    justify-content: center;
+    gap: clamp(1.75rem, 5vh, 3.5rem);
     align-items: flex-start;
   }
 
@@ -357,7 +363,9 @@
   }
 
   .cta-text {
-    font-size: 1.05rem;
+    /* same size as the [5 days ago] scan-meta line, so the screen holds only
+       three text sizes: the headline, the caption, and this small label */
+    font-size: 0.8rem;
     text-align: center;
     text-transform: lowercase;
     text-decoration: underline;
