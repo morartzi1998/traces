@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Traces — Live log (private)</title>
+<link rel="icon" type="image/png" href="../assets/images/favicon.png">
+<link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
+<link rel="stylesheet" href="../css/base.css?v=20260727cp">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cp">
+<script src="../js/cursor.js?v=20260727cp" defer></script>
+<script src="../js/grain.js?v=20260727cp" defer></script>
+<script src="../js/owner.js?v=20260727cp"></script>
+<script src="../js/config.js?v=20260727cp"></script>
+<script src="../js/remote-captures.js?v=20260727cp"></script>
+<script src="../js/flow.js?v=20260727cp" defer></script>
+<style>
+  .adm {
+    min-height: 100vh;
+    padding: 8vh 4vw 6vh;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  .adm-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 20px;
+    margin-bottom: 6px;
+  }
+  .adm-title {
+    font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .adm-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  .adm-live-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #35c66b;
+    box-shadow: 0 0 0 0 rgba(53, 198, 107, 0.6);
+    animation: admpulse 1.8s ease-out infinite;
+  }
+  @keyframes admpulse {
+    0% { box-shadow: 0 0 0 0 rgba(53, 198, 107, 0.55); }
+    70% { box-shadow: 0 0 0 9px rgba(53, 198, 107, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(53, 198, 107, 0); }
+  }
+  .adm-note { opacity: 0.6; font-size: 0.85rem; max-width: 70ch; margin-bottom: 2.6vh; }
+  .adm-stats {
+    display: flex; flex-wrap: wrap; gap: 10px 26px;
+    margin-bottom: 2.4vh; font-size: 0.9rem;
+  }
+  .adm-stats b { font-weight: 600; letter-spacing: 0.02em; }
+  .adm-tools {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    margin-bottom: 3vh;
+  }
+  .adm-tools input[type="search"] {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(240,238,234,0.18);
+    color: var(--color-cream);
+    padding: 8px 12px; font: inherit; font-size: 0.9rem; min-width: 220px;
+    border-radius: 3px;
+  }
+  .adm-seg { display: inline-flex; border: 1px solid rgba(240,238,234,0.18); border-radius: 3px; overflow: hidden; }
+  .adm-seg button {
+    background: none; border: none; color: var(--color-cream);
+    padding: 7px 14px; font: inherit; font-size: 0.82rem; letter-spacing: 0.04em;
+    text-transform: uppercase; cursor: pointer; opacity: 0.55;
+  }
+  .adm-seg button.on { background: var(--color-cream); color: #12100e; opacity: 1; }
+  .adm-refresh {
+    background: none; border: 1px solid rgba(240,238,234,0.25); color: var(--color-cream);
+    padding: 7px 14px; font: inherit; font-size: 0.82rem; cursor: pointer; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .adm-refresh:hover { border-color: var(--color-cream); }
+  .adm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px;
+  }
+  .adm-card {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(240,238,234,0.14);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .adm-card.new { animation: admin-flash 2.2s ease-out; }
+  @keyframes admin-flash {
+    0% { border-color: #35c66b; box-shadow: 0 0 0 2px rgba(53,198,107,0.5); }
+    100% { border-color: rgba(240,238,234,0.14); box-shadow: none; }
+  }
+  .adm-thumb {
+    width: 100%; aspect-ratio: 1; object-fit: cover;
+    display: block; background: #23223a;
+  }
+  .adm-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .adm-cap-title { font-size: 0.98rem; line-height: 1.2; }
+  .adm-cap-who { font-size: 0.8rem; opacity: 0.75; }
+  .adm-cap-meta { font-size: 0.72rem; opacity: 0.5; margin-top: 2px; }
+  .adm-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+  .adm-badge {
+    font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(240,238,234,0.28);
+  }
+  .adm-badge--community { color: #b9c1ff; border-color: rgba(150,160,255,0.5); }
+  .adm-badge--archive { color: #ffd9a8; border-color: rgba(255,190,120,0.5); }
+  .adm-card-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .adm-open, .adm-remove {
+    flex: 1; text-align: center; font: inherit; font-size: 0.75rem;
+    padding: 6px 8px; border-radius: 3px; cursor: pointer; text-transform: uppercase;
+    letter-spacing: 0.04em; text-decoration: none;
+  }
+  .adm-open { background: none; border: 1px solid rgba(240,238,234,0.3); color: var(--color-cream); }
+  .adm-open:hover { border-color: var(--color-cream); }
+  .adm-remove { background: none; border: 1px solid rgba(230,90,90,0.5); color: #ff9b9b; }
+  .adm-remove:hover { background: rgba(230,90,90,0.15); border-color: #ff6b6b; }
+  .adm-empty, .adm-locked { opacity: 0.7; font-size: 1rem; margin-top: 6vh; text-align: center; }
+  .adm-locked a { color: var(--color-cream); }
+  .adm-flag { font-size: 0.72rem; opacity: 0.6; }
+</style>
+</head>
+<body>
+
+  <div class="adm">
+    <a class="logo nav-corner nav-corner--tl" href="../index.html">traces</a>
+
+    <div id="admGate" hidden>
+      <p class="adm-locked">
+        This page is private.<br>
+        Open it once as owner: <a id="admOwnerLink" href="?owner=1">traces-of-home.com/screens/admin-live.html?owner=1</a>
+      </p>
+    </div>
+
+    <div id="admMain" hidden>
+      <div class="adm-head">
+        <h1 class="adm-title">Live log</h1>
+        <span class="adm-live"><span class="adm-live-dot"></span><span id="admLiveText">watching…</span></span>
+      </div>
+      <p class="adm-note">
+        Every scan shared to the site, newest first — community uploads from visitors and your own archive.
+        Private to your devices. If something inappropriate is uploaded, use “remove” to take it down for everyone.
+      </p>
+
+      <div class="adm-stats" id="admStats"></div>
+
+      <div class="adm-tools">
+        <div class="adm-seg" id="admSeg">
+          <button data-scope="all" class="on">All</button>
+          <button data-scope="community">Community</button>
+          <button data-scope="archive">Archive</button>
+        </div>
+        <input type="search" id="admSearch" placeholder="search title / name / country…">
+        <button class="adm-refresh" id="admRefresh">refresh now</button>
+      </div>
+
+      <div class="adm-grid" id="admGrid"></div>
+      <p class="adm-empty" id="admEmpty" hidden>nothing yet.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var API = (window.TRACES_API || "").replace(/\/$/, "");
+      var gate = document.getElementById("admGate");
+      var main = document.getElementById("admMain");
+
+      // private: only ever renders on one of Mor's own (owner-flagged) devices,
+      // and it isn't linked from anywhere in the site's navigation. A stranger
+      // who guesses the URL just sees the locked notice.
+      if (!(window.isOwnerDevice && window.isOwnerDevice())) {
+        gate.hidden = false;
+        return;
+      }
+      main.hidden = false;
+
+      var grid = document.getElementById("admGrid");
+      var emptyEl = document.getElementById("admEmpty");
+      var statsEl = document.getElementById("admStats");
+      var liveText = document.getElementById("admLiveText");
+      var searchEl = document.getElementById("admSearch");
+      var seg = document.getElementById("admSeg");
+
+      var scopeFilter = "all";
+      var query = "";
+      var records = [];
+      var seenIds = {};            // ids we've already rendered (flag only truly new ones)
+      var removedIds = {};         // local tombstone so a delete sticks despite KV lag
+      var firstLoad = true;
+
+      function ago(ts) {
+        if (!ts) return "";
+        var s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return s + "s ago";
+        var m = Math.floor(s / 60); if (m < 60) return m + "m ago";
+        var h = Math.floor(m / 60); if (h < 24) return h + "h ago";
+        var d = Math.floor(h / 24); return d + "d ago";
+      }
+      function when(ts) {
+        if (!ts) return "";
+        try { return new Date(ts).toLocaleString(); } catch (e) { return ""; }
+      }
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+      }
+
+      function passes(r) {
+        if (scopeFilter !== "all" && r.scope !== scopeFilter) return false;
+        if (query) {
+          var hay = ((r.title || "") + " " + (r.by || "") + " " + (r.country || "")).toLowerCase();
+          if (hay.indexOf(query) === -1) return false;
+        }
+        return true;
+      }
+
+      function render() {
+        var rows = records
+          .filter(function (r) { return !removedIds[r.id]; })
+          .filter(passes)
+          .sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+
+        grid.innerHTML = "";
+        emptyEl.hidden = rows.length > 0;
+
+        rows.forEach(function (r) {
+          var card = document.createElement("div");
+          card.className = "adm-card" + (seenIds[r.id] ? "" : " new");
+          seenIds[r.id] = true;
+
+          var img = r.img || "../assets/images/photo-room.png";
+          var kind = r.kind || "object";
+          var who = r.by ? ("by " + r.by) : "your own capture";
+          var where = r.country ? (" · " + r.country) : "";
+          var openHref = "object.html";
+
+          card.innerHTML =
+            '<img class="adm-thumb" loading="lazy" decoding="async" alt="" src="' + esc(img) + '">' +
+            '<div class="adm-body">' +
+              '<div class="adm-cap-title" dir="auto">' + esc(r.title || "untitled") + '</div>' +
+              '<div class="adm-cap-who" dir="auto">' + esc(who) + esc(where) + '</div>' +
+              '<div class="adm-cap-meta">' + esc(ago(r.created)) + ' · ' + esc(when(r.created)) + '</div>' +
+              '<div class="adm-badges">' +
+                '<span class="adm-badge adm-badge--' + esc(r.scope || "community") + '">' + esc(r.scope || "community") + '</span>' +
+                '<span class="adm-badge">' + esc(kind) + '</span>' +
+                (r.model ? '<span class="adm-badge">mesh</span>' : '') +
+                (r.points ? '<span class="adm-badge">cloud</span>' : '') +
+              '</div>' +
+              '<div class="adm-card-actions">' +
+                '<a class="adm-open" href="#">open</a>' +
+                '<button class="adm-remove" type="button">remove</button>' +
+              '</div>' +
+            '</div>';
+
+          // open the capture in the object view (same routing the feeds use)
+          card.querySelector(".adm-open").addEventListener("click", function (e) {
+            e.preventDefault();
+            try {
+              sessionStorage.setItem("traces-item", r.id);
+              if (r.scope === "community") sessionStorage.setItem("traces-from-community", "1");
+              else sessionStorage.removeItem("traces-from-community");
+            } catch (err) {}
+            location.href = openHref;
+          });
+
+          card.querySelector(".adm-remove").addEventListener("click", function () {
+            var label = r.title || "this capture";
+            if (!window.confirm('Remove "' + label + '" for everyone? This deletes it from the shared site.')) return;
+            removedIds[r.id] = true;         // hide immediately
+            render();
+            if (API) {
+              fetch(API + "/captures/" + encodeURIComponent(r.id), { method: "DELETE" })
+                .catch(function () {})
+                .then(function () { load(); });
+            }
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      function setStats() {
+        var live = records.filter(function (r) { return !removedIds[r.id]; });
+        var comm = live.filter(function (r) { return r.scope === "community"; }).length;
+        var arch = live.filter(function (r) { return r.scope === "archive"; }).length;
+        statsEl.innerHTML =
+          '<span><b>' + live.length + '</b> total</span>' +
+          '<span><b>' + comm + '</b> community</span>' +
+          '<span><b>' + arch + '</b> archive</span>' +
+          '<span>updated <b>' + new Date().toLocaleTimeString() + '</b></span>';
+      }
+
+      function load() {
+        if (!API) { liveText.textContent = "no server configured"; return; }
+        return fetch(API + "/captures", { cache: "no-store" })
+          .then(function (res) { return res.ok ? res.json() : { captures: [] }; })
+          .then(function (d) {
+            records = d.captures || [];
+            liveText.textContent = "live · auto-refresh 20s";
+            setStats();
+            render();
+            firstLoad = false;
+          })
+          .catch(function () { liveText.textContent = "connection lost — retrying"; });
+      }
+
+      seg.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-scope]");
+        if (!b) return;
+        scopeFilter = b.dataset.scope;
+        seg.querySelectorAll("button").forEach(function (x) { x.classList.toggle("on", x === b); });
+        render();
+      });
+      searchEl.addEventListener("input", function () { query = searchEl.value.trim().toLowerCase(); render(); });
+      document.getElementById("admRefresh").addEventListener("click", load);
+      document.getElementById("admOwnerLink").setAttribute("href", location.pathname + "?owner=1");
+
+      load();
+      setInterval(load, 20000);
+    })();
+  </script>
+
+</body>
+</html>
