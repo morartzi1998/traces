@@ -22,6 +22,15 @@
 .nav-corner {
   position: fixed;
   z-index: 30;
+  /* Adaptive legibility: the pinned chrome floats over content of unknown
+     brightness — the near-black feed background, bright cream polaroids, or a
+     live 3D scene that can be a dark point cloud or a bright baked room. One
+     fixed text colour always loses against half of them, so instead we blend
+     the text against whatever sits behind it: over dark areas it stays bright,
+     over light areas it inverts to dark. Difference against a near-black
+     backdrop is almost a no-op, so the established look over the dark feed and
+     the blue "current page" marker are preserved; only bright backdrops flip. */
+  mix-blend-mode: difference;
 }
 
 .nav-corner--tl { top: 2.6vh; left: 2.8vw; }

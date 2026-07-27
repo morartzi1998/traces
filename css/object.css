@@ -194,6 +194,19 @@
   text-transform: uppercase;
 }
 
+/* Same adaptive-legibility trick as the corner chrome (see chrome.css): the
+   on-stage title, the hamburger button and the little meta line float over a
+   3D scene that may be a dark point cloud or a bright baked room, so blend
+   them against it instead of betting on one colour. The dropdown menu is left
+   out on purpose — it carries its own dark scrim already — and so is the blue
+   toggle pill; only the free-floating text and icon adapt. */
+.obj-title,
+.obj-menu-btn,
+.obj-updated,
+.obj-rep-label {
+  mix-blend-mode: difference;
+}
+
 .obj-menu {
   list-style: none;
   margin-top: 14px;
