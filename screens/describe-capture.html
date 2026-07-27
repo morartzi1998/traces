@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cc">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727cc">
-<script src="../js/cursor.js?v=20260727cc" defer></script>
-<script src="../js/grain.js?v=20260727cc" defer></script>
-<script src="../js/tilt3d.js?v=20260727cc" defer></script>
-<script src="../js/annotations.js?v=20260727cc" defer></script>
-<script src="../js/owner.js?v=20260727cc"></script>
-<script src="../js/config.js?v=20260727cc"></script>
-<script src="../js/archive.js?v=20260727cc"></script>
-<script src="../js/blobstore.js?v=20260727cc"></script>
-<script src="../js/remote-captures.js?v=20260727cc"></script>
-<script src="../js/flow.js?v=20260727cc" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cc"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cd">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727cd">
+<script src="../js/cursor.js?v=20260727cd" defer></script>
+<script src="../js/grain.js?v=20260727cd" defer></script>
+<script src="../js/tilt3d.js?v=20260727cd" defer></script>
+<script src="../js/annotations.js?v=20260727cd" defer></script>
+<script src="../js/owner.js?v=20260727cd"></script>
+<script src="../js/config.js?v=20260727cd"></script>
+<script src="../js/archive.js?v=20260727cd"></script>
+<script src="../js/blobstore.js?v=20260727cd"></script>
+<script src="../js/remote-captures.js?v=20260727cd"></script>
+<script src="../js/flow.js?v=20260727cd" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cd"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cc" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cd" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cc";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cc";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cc";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cd";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cd";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cd";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -265,7 +265,23 @@
     // would keep showing the placeholder chandelier image in every card
     function captureModelThumbnail() {
       var mv = document.getElementById("captureModel");
-      if (mv.hidden || !mv.loaded) return Promise.resolve(null);
+      if (mv.hidden) return Promise.resolve(null);
+      // a big ready-made scan (dozens of MB of glTF) often hasn't finished
+      // loading yet when Save is tapped — grabbing the frame right then used
+      // to return null, and the card silently fell back to the placeholder
+      // chandelier photo (every "why is my capture a chandelier?" report).
+      // Wait for the model to actually load first (with a ceiling so a truly
+      // stuck load still resolves rather than hanging Save forever).
+      var ready = mv.loaded
+        ? Promise.resolve(true)
+        : new Promise(function (resolve) {
+            var settled = false;
+            function done(ok) { if (!settled) { settled = true; resolve(ok); } }
+            mv.addEventListener("load", function () { done(true); }, { once: true });
+            setTimeout(function () { done(!!mv.loaded); }, 8000);
+          });
+      return ready.then(function (ok) {
+        if (!ok) return null;
       // give model-viewer's reveal/settle animation a moment to finish —
       // grabbing a frame right at "load" can catch it mid-fade-in
       return new Promise(function (r) { setTimeout(r, 600); }).then(function () {
@@ -277,6 +293,7 @@
           reader.onerror = function () { resolve(null); };
           reader.readAsDataURL(blob);
         });
+      });
       }).catch(function () { return null; });
     }
 
@@ -593,10 +610,17 @@
         ? window.__ensureDerivedCloud() : Promise.resolve(false);
       cloudReady.then(function (derived) {
         if (derived) window.__derivedMeshInfo = derived;
+        // `img` here is the on-screen placeholder (photo-chandelier-large.png)
+        // whenever this capture has no flat photo of its own — a model/cloud
+        // scan. Falling back to it would stamp the chandelier onto an unrelated
+        // capture's card, so for those paths fall back to "" (the card then
+        // uses its own neutral fallback) instead of the wrong placeholder photo.
+        var isPlaceholderImg = /photo-chandelier-large\.png(\?|$)/.test(img || "");
+        var modelFallback = isPlaceholderImg ? "" : img;
         if (isCloudSave) {
-          capturePointCloudThumbnail().then(function (thumb) { afterThumb(thumb || img); });
+          capturePointCloudThumbnail().then(function (thumb) { afterThumb(thumb || modelFallback); });
         } else if (!tripoThumb && model) {
-          captureModelThumbnail().then(function (thumb) { afterThumb(thumb || img); });
+          captureModelThumbnail().then(function (thumb) { afterThumb(thumb || modelFallback); });
         } else {
           afterThumb(img);
         }
