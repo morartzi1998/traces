@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ce">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ce">
-<link rel="stylesheet" href="../css/object.css?v=20260727ce">
-<script src="../js/cursor.js?v=20260727ce" defer></script>
-<script src="../js/grain.js?v=20260727ce" defer></script>
-<script src="../js/tilt3d.js?v=20260727ce" defer></script>
-<script src="../js/owner.js?v=20260727ce"></script>
-<script src="../js/config.js?v=20260727ce"></script>
-<script src="../js/archive.js?v=20260727ce"></script>
-<script src="../js/blobstore.js?v=20260727ce"></script>
-<script src="../js/particle-loader.js?v=20260727ce"></script>
-<script src="../js/remote-captures.js?v=20260727ce"></script>
-<script src="../js/community-seed.js?v=20260727ce"></script>
-<script src="../js/flow.js?v=20260727ce" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ce"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cf">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cf">
+<link rel="stylesheet" href="../css/object.css?v=20260727cf">
+<script src="../js/cursor.js?v=20260727cf" defer></script>
+<script src="../js/grain.js?v=20260727cf" defer></script>
+<script src="../js/tilt3d.js?v=20260727cf" defer></script>
+<script src="../js/owner.js?v=20260727cf"></script>
+<script src="../js/config.js?v=20260727cf"></script>
+<script src="../js/archive.js?v=20260727cf"></script>
+<script src="../js/blobstore.js?v=20260727cf"></script>
+<script src="../js/particle-loader.js?v=20260727cf"></script>
+<script src="../js/remote-captures.js?v=20260727cf"></script>
+<script src="../js/community-seed.js?v=20260727cf"></script>
+<script src="../js/flow.js?v=20260727cf" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cf"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ce" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cf" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ce";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ce";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cf";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cf";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ce";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cf";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ce";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cf";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2497,6 +2497,15 @@
       // never disposes the geometry it's handed, so a cached one stays valid
       // across re-mounts.
       var pointGeomCache = {};
+      // a monotonic token bumped on EVERY swapScan. The old `key !== k` guard
+      // only tells captures apart, not navigations — so exiting a capture and
+      // arrowing back to it (A→B→A) left TWO in-flight cloud fetches for A,
+      // both passing that guard, both mounting: the second overwrote pcViewer
+      // without disposing the first, leaking its canvas. Repeating it stacked
+      // clouds on top of each other (the "wrong object, fragments piling up"
+      // report). Every async cloud mount now also checks it's still the latest
+      // navigation, so only one viewer is ever live.
+      var pcLoadToken = 0;
       // the model reference currently parsed into <model-viewer>, so a toggle
       // back to the SAME mesh doesn't re-download and re-parse the whole GLB
       // (seconds on a big scan) and doesn't leave the loader stuck when
@@ -2520,6 +2529,10 @@
         // an empty stage until it lands read as broken rather than loading.
         // Cleared as soon as each branch below actually has something to show.
         beginLoading();
+        // claim this navigation — any cloud fetch started by an EARLIER
+        // swapScan that resolves after this point is now stale and must not
+        // mount (see pcLoadToken above)
+        var loadToken = ++pcLoadToken;
         // hide the mesh the instant any navigation starts so the PREVIOUS
         // object can't flash for a frame before its replacement lands. The
         // model branch re-shows it (opacity="") once the right model is in
@@ -2602,12 +2615,18 @@
             // belongs to the other representation and must be ignored
             var pcv = function (v) { return v && v.position ? v : null; };
             var mountCloud = function (geometry) {
-              if (key !== k) return;
+              // not the current capture, or superseded by a newer navigation →
+              // drop it, so a late fetch can't mount over the live viewer
+              if (key !== k || loadToken !== pcLoadToken) return;
               // an empty/degenerate cloud would mount to a blank stage that
               // reads as "stuck, nothing loaded" — treat it as a miss and fall
               // back to the mesh instead (with the label corrected below)
               var pos = geometry && geometry.getAttribute && geometry.getAttribute("position");
               if (!pos || pos.count < 10) { pointsFailed("no points in this scan"); return; }
+              // a viewer somehow still live (e.g. a same-capture re-entry that
+              // beat disposePcViewer) must be torn down first, or its canvas
+              // lingers under the new one — never leave two mounted at once
+              if (pcViewer) { pcViewer.dispose(); pcViewer = null; }
               // reveal the stage only now that the RIGHT cloud is about to be
               // mounted — must precede mountPointCloudViewer so it reads a real
               // (non-zero) container size for the canvas it creates
@@ -2630,11 +2649,11 @@
               // idb blob) isn't a thrown error - it never reached .catch(),
               // which used to leave the loading placeholder stuck forever
               if (!blob) { pointsFailed("download failed"); return null; }
-              if (key !== k) return null;
+              if (key !== k || loadToken !== pcLoadToken) return null;
               return blob.arrayBuffer();
             }).then(function (buf) {
               if (buf === null || buf === undefined) return;
-              if (key !== k) return;
+              if (key !== k || loadToken !== pcLoadToken) return;
               var geometry = window.__deserializeGeometry(buf);
               pointGeomCache[points] = geometry; // keep for instant re-shows
               mountCloud(geometry);
