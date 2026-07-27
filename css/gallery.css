@@ -364,13 +364,15 @@
 
 .gal-caption {
   position: absolute;
-  /* anchored just below the photo, so every caption starts at the SAME height
-     and one- and two-line titles line up across the grid. The band above
-     (.gal-card padding-bottom) is a proportional 48px — a one-line title sits
-     close under the photo with only a small, balanced margin beneath it (no
-     longer marooned high in an over-deep frame), while a two-line title fills
-     the band without reaching the photo. */
-  top: calc(100% - 42px);
+  /* vertically CENTRED in the lower band (48px, see .gal-card padding-bottom):
+     its midpoint sits at the band's midpoint whether the title is one line or
+     two, so a short title sits balanced in the caption area — not crowded up
+     under the photo with a pool of empty frame beneath it — and a two-line
+     title still fills the band without touching the photo. Centre = band/2
+     from the card bottom, then translateY(50%) recentres the box on that
+     point regardless of its own height. */
+  bottom: 24px;
+  transform: translateY(50%);
   left: 14px;
   right: 12px;
   font-family: var(--font-caption);
