@@ -6,20 +6,20 @@
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bz">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bz">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bz">
-<script src="../js/cursor.js?v=20260727bz" defer></script>
-<script src="../js/grain.js?v=20260727bz" defer></script>
-<script src="../js/owner.js?v=20260727bz"></script>
-<script src="../js/config.js?v=20260727bz"></script>
-<script src="../js/archive.js?v=20260727bz"></script>
-<script src="../js/blobstore.js?v=20260727bz"></script>
-<script src="../js/remote-captures.js?v=20260727bz"></script>
-<script src="../js/designer-archive.js?v=20260727bz"></script>
-<script src="../js/community-seed.js?v=20260727bz"></script>
-<script src="../js/gallery-title.js?v=20260727bz" defer></script>
-<script src="../js/flow.js?v=20260727bz" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ca">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ca">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727ca">
+<script src="../js/cursor.js?v=20260727ca" defer></script>
+<script src="../js/grain.js?v=20260727ca" defer></script>
+<script src="../js/owner.js?v=20260727ca"></script>
+<script src="../js/config.js?v=20260727ca"></script>
+<script src="../js/archive.js?v=20260727ca"></script>
+<script src="../js/blobstore.js?v=20260727ca"></script>
+<script src="../js/remote-captures.js?v=20260727ca"></script>
+<script src="../js/designer-archive.js?v=20260727ca"></script>
+<script src="../js/community-seed.js?v=20260727ca"></script>
+<script src="../js/gallery-title.js?v=20260727ca" defer></script>
+<script src="../js/flow.js?v=20260727ca" defer></script>
 </head>
 <body>
 
@@ -376,7 +376,10 @@
           model: c.model, points: c.points, created: c.created,
           by: c.by, country: c.country, feeling: c.feeling,
           annotations: c.annotations,
-          metaText: ago(c.created), who: (c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : ""),
+          // a static seed passes its own pre-formatted meta/byline (it has no
+          // timestamp); everything else derives them from the record
+          metaText: c.metaText || ago(c.created),
+          who: c.who || ((c.by ? c.by : "your") + "'s capture" + (c.country ? " from " + c.country : "")),
           syncStatus: c.syncStatus,
           // real shared captures live on the server under "<id>-community";
           // only the owner may re-photograph one from here
@@ -456,11 +459,16 @@
             // seed for the same key, or the edited card and the original both
             // show up
             if (grid.querySelector('.gal-item[data-hide-key="' + d.key + '"]')) return;
-            grid.appendChild(buildCard({
+            // route through buildEntry so the OWNER gets the "change image"
+            // control on a seed too (it needs serverId + the seed's own data,
+            // which buildEntry supplies) — a first edit promotes it to a real
+            // shared record. Its own pre-formatted meta/byline are preserved.
+            grid.appendChild(buildCard(buildEntry({
               id: d.key, title: d.title, img: d.img, kind: d.kind,
+              model: d.model, points: d.points, feeling: d.feeling, annotations: d.annotations,
+              by: d.by, country: d.country,
               metaText: d.meta, who: d.by + "'s capture from " + d.country,
-              hide: function () { hideItem(d.key); },
-            }));
+            })));
           });
           if (window.alignGalleryTitle) window.alignGalleryTitle();
         });
