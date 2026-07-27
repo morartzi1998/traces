@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bw">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727bw">
-<script src="../js/cursor.js?v=20260727bw" defer></script>
-<script src="../js/grain.js?v=20260727bw" defer></script>
-<script src="../js/tilt3d.js?v=20260727bw" defer></script>
-<script src="../js/annotations.js?v=20260727bw" defer></script>
-<script src="../js/owner.js?v=20260727bw"></script>
-<script src="../js/config.js?v=20260727bw"></script>
-<script src="../js/archive.js?v=20260727bw"></script>
-<script src="../js/blobstore.js?v=20260727bw"></script>
-<script src="../js/remote-captures.js?v=20260727bw"></script>
-<script src="../js/flow.js?v=20260727bw" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bw"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bx">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727bx">
+<script src="../js/cursor.js?v=20260727bx" defer></script>
+<script src="../js/grain.js?v=20260727bx" defer></script>
+<script src="../js/tilt3d.js?v=20260727bx" defer></script>
+<script src="../js/annotations.js?v=20260727bx" defer></script>
+<script src="../js/owner.js?v=20260727bx"></script>
+<script src="../js/config.js?v=20260727bx"></script>
+<script src="../js/archive.js?v=20260727bx"></script>
+<script src="../js/blobstore.js?v=20260727bx"></script>
+<script src="../js/remote-captures.js?v=20260727bx"></script>
+<script src="../js/flow.js?v=20260727bx" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bx"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bw" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bx" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bw";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bw";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bw";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bx";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bx";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727bx";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -228,9 +228,27 @@
         }
         }
         try {
-          var nm = sessionStorage.getItem("traces-upload-name");
           var titleInput = document.querySelector(".text-input");
-          if (nm && titleInput) titleInput.value = nm.replace(/\.[^.]+$/, "");
+          var feelingInput = document.querySelector(".text-area");
+          // re-scanning an existing capture ("Update scan"): pre-fill its title
+          // and story so the new scan doesn't wipe the words written for the
+          // original. A brand-new capture just seeds the title from the filename.
+          var updTarget = sessionStorage.getItem("traces-update-target");
+          var existingCap = updTarget
+            ? ((window.Archive && Archive.get(updTarget)) || (window.Community && Community.get(updTarget)))
+            : null;
+          if (existingCap) {
+            if (titleInput && existingCap.title) titleInput.value = existingCap.title;
+            if (feelingInput && existingCap.feeling) feelingInput.value = existingCap.feeling;
+            // carry the type (object/space) too, so it isn't reset on a re-scan
+            if (existingCap.kind) {
+              var kindEl = document.querySelector('input[name="capture-type"][value="' + existingCap.kind + '"]');
+              if (kindEl) kindEl.checked = true;
+            }
+          } else {
+            var nm = sessionStorage.getItem("traces-upload-name");
+            if (nm && titleInput) titleInput.value = nm.replace(/\.[^.]+$/, "");
+          }
         } catch (e) {}
       }
       if (document.readyState === "loading") {
@@ -442,11 +460,16 @@
               // its own story) — kept on the version so scrubbing the
               // timeline to it shows what was written about it, not about
               // whatever the capture is today
+              // safety net: an empty field must NEVER wipe the existing title
+              // or story on a re-scan (they're pre-filled now, but if that ever
+              // fails, keep what was there rather than blanking it)
+              var newTitle = title.trim() || existing.title || "untitled capture";
+              var newFeeling = feeling.trim() || existing.feeling || "";
               versions.push({ created: vCreated, model: refs.model, img: refs.img, points: pointsRef,
-                title: title.trim() || "untitled capture", feeling: feeling.trim() });
+                title: newTitle, feeling: newFeeling });
               var patch = {
                 versions: versions, model: refs.model, img: refs.img, points: pointsRef,
-                title: title.trim() || "untitled capture", feeling: feeling.trim(), kind: kind,
+                title: newTitle, feeling: newFeeling, kind: kind,
               };
               // a re-scan that wasn't itself a point cloud (e.g. a plain
               // photo re-upload on an existing capture) has no fresh choice
