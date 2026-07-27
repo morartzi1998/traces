@@ -85,6 +85,29 @@ window.BlobStore = (function () {
     });
   }
 
+  // like url(), but for a REMOTE file (a hosted http[s] thumbnail/model on the
+  // captures worker) it downloads the bytes ONCE and caches them in IndexedDB
+  // keyed by the URL, then hands back an object URL — so a grid of polaroids
+  // stops re-downloading every thumbnail on every scroll/navigation (the worker
+  // sends no cache header, so the browser wouldn't keep them otherwise).
+  // idb: refs resolve locally as before; bundled/static paths pass through
+  // untouched (the browser already caches those normally).
+  function cachedUrl(ref) {
+    if (!ref) return Promise.resolve(null);
+    if (ref.indexOf("idb:") === 0) return url(ref);
+    if (ref.indexOf("http") !== 0) return Promise.resolve(ref);
+    var key = "urlcache:" + ref;
+    return get(key).then(function (blob) {
+      if (blob) return URL.createObjectURL(blob);
+      return fetch(ref).then(function (r) { return r.ok ? r.blob() : null; })
+        .then(function (b) {
+          if (!b) return ref; // fall back to the live URL
+          set(key, b).catch(function () {});
+          return URL.createObjectURL(b);
+        }).catch(function () { return ref; });
+    }).catch(function () { return ref; });
+  }
+
   // a data: URL is base64 text; turn it back into a real Blob so it can live
   // in IndexedDB instead of bloating localStorage
   function dataURLToBlob(dataURL) {
@@ -103,5 +126,5 @@ window.BlobStore = (function () {
     return new Blob([bytes], { type: mime });
   }
 
-  return { set: set, get: get, del: del, url: url, dataURLToBlob: dataURLToBlob };
+  return { set: set, get: get, del: del, url: url, cachedUrl: cachedUrl, dataURLToBlob: dataURLToBlob };
 })();

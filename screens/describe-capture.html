@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bu">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727bu">
-<script src="../js/cursor.js?v=20260727bu" defer></script>
-<script src="../js/grain.js?v=20260727bu" defer></script>
-<script src="../js/tilt3d.js?v=20260727bu" defer></script>
-<script src="../js/annotations.js?v=20260727bu" defer></script>
-<script src="../js/owner.js?v=20260727bu"></script>
-<script src="../js/config.js?v=20260727bu"></script>
-<script src="../js/archive.js?v=20260727bu"></script>
-<script src="../js/blobstore.js?v=20260727bu"></script>
-<script src="../js/remote-captures.js?v=20260727bu"></script>
-<script src="../js/flow.js?v=20260727bu" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bu"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bv">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727bv">
+<script src="../js/cursor.js?v=20260727bv" defer></script>
+<script src="../js/grain.js?v=20260727bv" defer></script>
+<script src="../js/tilt3d.js?v=20260727bv" defer></script>
+<script src="../js/annotations.js?v=20260727bv" defer></script>
+<script src="../js/owner.js?v=20260727bv"></script>
+<script src="../js/config.js?v=20260727bv"></script>
+<script src="../js/archive.js?v=20260727bv"></script>
+<script src="../js/blobstore.js?v=20260727bv"></script>
+<script src="../js/remote-captures.js?v=20260727bv"></script>
+<script src="../js/flow.js?v=20260727bv" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727bv"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bu" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727bv" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bu";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bu";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727bu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727bv";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727bv";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727bv";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -523,14 +523,19 @@
           // provisional stopgap so this capture is visible from any device,
           // not just this browser
           if (window.RemoteCaptures) {
+            // Mor's own archive stays "sterile": something she (the owner) sends
+            // straight to the community — the captures she uploaded to populate
+            // the community feed for the exhibition — never also occupies her
+            // private archive. A VISITOR's own archive isn't affected: their
+            // shared capture stays in both places, exactly like sharing normally
+            // works for them (and visitors never publish to "archive" at all).
             if (isOwner && !alsoCommunity) RemoteCaptures.publish(cap, "archive");
             if (alsoCommunity) RemoteCaptures.publish(cap, "community");
           }
-          // a capture Mor shares to the community stays in her own archive too
-          // (it lives in both the Archive and Community local stores). It used
-          // to be retracted from the archive here to keep it "sterile", but that
-          // read as captures silently vanishing from the archive — they belong
-          // in both places, the same way sharing works for any visitor.
+          // retract the scratch Archive record used above (for the id and blob
+          // moves) now that Community holds its own copy — OWNER ONLY, so a
+          // visitor's shared capture stays in their archive as expected
+          if (isOwner && alsoCommunity && window.Archive) Archive.remove(cap.id);
           // A brand-NEW capture no longer freezes the Save button on the
           // upload: it's already saved locally, so leave for the gallery at
           // once and let the upload finish in the background. The upload is

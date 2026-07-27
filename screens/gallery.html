@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727bu">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727bu">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727bu">
-<script src="../js/cursor.js?v=20260727bu" defer></script>
-<script src="../js/grain.js?v=20260727bu" defer></script>
-<script src="../js/owner.js?v=20260727bu"></script>
-<script src="../js/config.js?v=20260727bu"></script>
-<script src="../js/archive.js?v=20260727bu"></script>
-<script src="../js/blobstore.js?v=20260727bu"></script>
-<script src="../js/remote-captures.js?v=20260727bu"></script>
-<script src="../js/designer-archive.js?v=20260727bu"></script>
-<script src="../js/gallery-title.js?v=20260727bu" defer></script>
-<script src="../js/flow.js?v=20260727bu" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727bv">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727bv">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727bv">
+<script src="../js/cursor.js?v=20260727bv" defer></script>
+<script src="../js/grain.js?v=20260727bv" defer></script>
+<script src="../js/owner.js?v=20260727bv"></script>
+<script src="../js/config.js?v=20260727bv"></script>
+<script src="../js/archive.js?v=20260727bv"></script>
+<script src="../js/blobstore.js?v=20260727bv"></script>
+<script src="../js/remote-captures.js?v=20260727bv"></script>
+<script src="../js/designer-archive.js?v=20260727bv"></script>
+<script src="../js/gallery-title.js?v=20260727bv" defer></script>
+<script src="../js/flow.js?v=20260727bv" defer></script>
 </head>
 <body>
 
@@ -236,8 +236,11 @@
             (entry.remove ? '<button class="gal-delete" type="button">delete</button>' : '') +
           '</div>';
         var imgEl = art.querySelector("img");
+        imgEl.loading = "lazy";
         if (window.BlobStore) {
-          window.BlobStore.url(entry.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+          // cache hosted thumbnails locally so the grid stops re-downloading
+          // every polaroid on each visit/scroll
+          window.BlobStore.cachedUrl(entry.img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
         } else {
           imgEl.src = entry.img || "../assets/images/photo-room.png";
         }
@@ -335,27 +338,36 @@
       // her own "your archive") this fetch runs for every visitor
       var showcaseRealItems = [];
 
-      // captures Mor shared to the community used to be retracted from her
-      // archive (the old "sterile archive" rule), so they vanished from here
-      // while staying in the community. The local Community store holds only
-      // her OWN shares — strangers' captures arrive from the live feed at
-      // render time and are never written to it — so any community capture
-      // missing from the archive is one of hers that disappeared. Put it back.
-      var _communityHealDone = false;
-      function healOwnCommunityIntoArchive() {
-        if (_communityHealDone) return;
-        _communityHealDone = true;
+      // sterile-archive invariant (OWNER only): the captures Mor uploaded to
+      // populate the community feed for the exhibition must NEVER show in her
+      // private archive. A short-lived earlier build wrongly copied them INTO
+      // the archive (locally, and its sync may have pushed them to the archive
+      // scope on the server) — this one-time cleanup undoes that: it drops any
+      // capture that also lives in her local Community store back out of the
+      // archive, and best-effort deletes any archive-scope server record that
+      // leaked. Visitor devices are untouched (their shares belong in both).
+      var _sterileCleanupFlag = "traces-sterile-cleanup-v1";
+      function enforceSterileArchive() {
         if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
         if (!(window.Archive && window.Community)) return;
+        try { if (localStorage.getItem(_sterileCleanupFlag)) return; } catch (e) {}
+        var apiBase = (window.TRACES_API || "").replace(/\/$/, "");
         Community.all().forEach(function (c) {
-          if (c && c.id && !Archive.get(c.id)) Archive.add(Object.assign({}, c));
+          if (!c || !c.id) return;
+          if (window.Archive.get(c.id)) window.Archive.remove(c.id);
+          // the archive-scope server record (id = c.id; the community record is
+          // c.id + "-community", left alone). 404s harmlessly if none leaked.
+          if (apiBase) {
+            try { fetch(apiBase + "/captures/" + encodeURIComponent(c.id), { method: "DELETE" }).catch(function () {}); } catch (e) {}
+          }
         });
+        try { localStorage.setItem(_sterileCleanupFlag, "1"); } catch (e) {}
       }
       function render() {
         // the grid gets rebuilt below, but management mode's own state
         // (the screen class, the backdrop) lives outside it
         exitManageMode();
-        healOwnCommunityIntoArchive();
+        enforceSterileArchive();
         var allItems = (window.Archive ? Archive.all() : []);
         var localIds = {};
         allItems.forEach(function (c) { localIds[c.id] = true; });
@@ -547,7 +559,7 @@
           (onDelete ? '<button class="gal-hidden-restore gal-hidden-delete" type="button">delete</button>' : '');
         var imgEl = row.querySelector("img");
         if (window.BlobStore) {
-          window.BlobStore.url(img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
+          window.BlobStore.cachedUrl(img).then(function (u) { imgEl.src = u || "../assets/images/photo-room.png"; });
         } else {
           imgEl.src = img || "../assets/images/photo-room.png";
         }
