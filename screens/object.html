@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cy">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cy">
-<link rel="stylesheet" href="../css/object.css?v=20260727cy">
-<script src="../js/cursor.js?v=20260727cy" defer></script>
-<script src="../js/grain.js?v=20260727cy" defer></script>
-<script src="../js/tilt3d.js?v=20260727cy" defer></script>
-<script src="../js/owner.js?v=20260727cy"></script>
-<script src="../js/config.js?v=20260727cy"></script>
-<script src="../js/archive.js?v=20260727cy"></script>
-<script src="../js/blobstore.js?v=20260727cy"></script>
-<script src="../js/particle-loader.js?v=20260727cy"></script>
-<script src="../js/remote-captures.js?v=20260727cy"></script>
-<script src="../js/community-seed.js?v=20260727cy"></script>
-<script src="../js/flow.js?v=20260727cy" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cy"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cz">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cz">
+<link rel="stylesheet" href="../css/object.css?v=20260727cz">
+<script src="../js/cursor.js?v=20260727cz" defer></script>
+<script src="../js/grain.js?v=20260727cz" defer></script>
+<script src="../js/tilt3d.js?v=20260727cz" defer></script>
+<script src="../js/owner.js?v=20260727cz"></script>
+<script src="../js/config.js?v=20260727cz"></script>
+<script src="../js/archive.js?v=20260727cz"></script>
+<script src="../js/blobstore.js?v=20260727cz"></script>
+<script src="../js/particle-loader.js?v=20260727cz"></script>
+<script src="../js/remote-captures.js?v=20260727cz"></script>
+<script src="../js/community-seed.js?v=20260727cz"></script>
+<script src="../js/flow.js?v=20260727cz" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cz"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cy" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cz" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cy";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cy";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cz";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cz";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cy";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cz";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cy";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cz";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2575,7 +2575,16 @@
       // visitor moves on. The body is read to completion so the bytes actually
       // land in the (immutable) browser cache, then discarded.
       var meshWarmTimer = null;
+      var meshWarmAbort = null;
       var meshWarmed = {};
+      // cancel any pending or in-flight background mesh warm-up. Called on every
+      // navigation so a heavy (60-120MB) mesh downloading in the background for
+      // the capture you just left can't keep hogging the connection and starve
+      // the cloud you're loading NOW (which read as "the particles won't load").
+      function cancelMeshWarm() {
+        clearTimeout(meshWarmTimer);
+        if (meshWarmAbort) { try { meshWarmAbort.abort(); } catch (e) {} meshWarmAbort = null; }
+      }
       function warmCurrentMesh(k) {
         var it = catalog[k];
         if (!it || !it.dual || !it.model || String(it.model).indexOf("idb:") === 0) return;
@@ -2586,11 +2595,15 @@
           if (key !== k || meshWarmed[mdl]) return;   // moved on — don't waste bandwidth
           meshWarmed[mdl] = true;
           try {
-            fetch(mdl).then(function (r) { return r.ok ? r.blob() : null; }).then(function () {}).catch(function () {});
+            meshWarmAbort = new AbortController();
+            fetch(mdl, { signal: meshWarmAbort.signal }).then(function (r) { return r.ok ? r.blob() : null; }).then(function () {}).catch(function () {});
           } catch (e) {}
         }, 4000);
       }
       function swapScan(k, model, img, points, carriedView) {
+        // stop any background mesh warm-up from the capture we're leaving, so
+        // its heavy download can't starve the scan we're about to load
+        cancelMeshWarm();
         disposePcViewer();
         // fetching a real capture's photo/model/points can take real time -
         // an empty stage until it lands read as broken rather than loading.
