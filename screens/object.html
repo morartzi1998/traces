@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cx">
-<link rel="stylesheet" href="../css/object.css?v=20260727cx">
-<script src="../js/cursor.js?v=20260727cx" defer></script>
-<script src="../js/grain.js?v=20260727cx" defer></script>
-<script src="../js/tilt3d.js?v=20260727cx" defer></script>
-<script src="../js/owner.js?v=20260727cx"></script>
-<script src="../js/config.js?v=20260727cx"></script>
-<script src="../js/archive.js?v=20260727cx"></script>
-<script src="../js/blobstore.js?v=20260727cx"></script>
-<script src="../js/particle-loader.js?v=20260727cx"></script>
-<script src="../js/remote-captures.js?v=20260727cx"></script>
-<script src="../js/community-seed.js?v=20260727cx"></script>
-<script src="../js/flow.js?v=20260727cx" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cx"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727cy">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727cy">
+<link rel="stylesheet" href="../css/object.css?v=20260727cy">
+<script src="../js/cursor.js?v=20260727cy" defer></script>
+<script src="../js/grain.js?v=20260727cy" defer></script>
+<script src="../js/tilt3d.js?v=20260727cy" defer></script>
+<script src="../js/owner.js?v=20260727cy"></script>
+<script src="../js/config.js?v=20260727cy"></script>
+<script src="../js/archive.js?v=20260727cy"></script>
+<script src="../js/blobstore.js?v=20260727cy"></script>
+<script src="../js/particle-loader.js?v=20260727cy"></script>
+<script src="../js/remote-captures.js?v=20260727cy"></script>
+<script src="../js/community-seed.js?v=20260727cy"></script>
+<script src="../js/flow.js?v=20260727cy" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727cy"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cx" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727cy" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cx";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cx";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727cy";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727cy";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cx";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727cy";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727cx";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727cy";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2563,6 +2563,33 @@
         if (sw) sw.setAttribute("aria-checked", isPoints ? "true" : "false");
         if (lbl) lbl.textContent = isPoints ? "point cloud" : "mesh";
       }
+      // background mesh warm-up. When a dual capture opens on its light cloud
+      // (the fast default), quietly fetch ITS OWN mesh a few seconds later so a
+      // later toggle to the mesh is already downloaded and feels ready. Scope
+      // matters: ONLY the capture currently on screen — never neighbours, never
+      // every capture. A 60-120MB mesh per card downloading in the background
+      // would flood the connection and slow the very cloud loads we sped up, so
+      // "always for everything" is exactly the wrong move; "the one you're
+      // looking at, after its cloud is up" is the sweet spot. Deferred so it
+      // never competes with the cloud loading now, abandoned the moment the
+      // visitor moves on. The body is read to completion so the bytes actually
+      // land in the (immutable) browser cache, then discarded.
+      var meshWarmTimer = null;
+      var meshWarmed = {};
+      function warmCurrentMesh(k) {
+        var it = catalog[k];
+        if (!it || !it.dual || !it.model || String(it.model).indexOf("idb:") === 0) return;
+        var mdl = it.model;
+        if (meshWarmed[mdl]) return;
+        clearTimeout(meshWarmTimer);
+        meshWarmTimer = setTimeout(function () {
+          if (key !== k || meshWarmed[mdl]) return;   // moved on — don't waste bandwidth
+          meshWarmed[mdl] = true;
+          try {
+            fetch(mdl).then(function (r) { return r.ok ? r.blob() : null; }).then(function () {}).catch(function () {});
+          } catch (e) {}
+        }, 4000);
+      }
       function swapScan(k, model, img, points, carriedView) {
         disposePcViewer();
         // fetching a real capture's photo/model/points can take real time -
@@ -2681,6 +2708,9 @@
               // markers that track the camera — mirrors the modelViewer
               // "load" listener below, for the same reason
               if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
+              // the light cloud is on stage now — quietly warm this capture's
+              // own mesh in the background so a toggle to it feels ready
+              warmCurrentMesh(k);
             };
             // already loaded once this session → re-show instantly
             if (pointGeomCache[points]) { mountCloud(pointGeomCache[points]); return; }
