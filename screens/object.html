@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727db">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727db">
-<link rel="stylesheet" href="../css/object.css?v=20260727db">
-<script src="../js/cursor.js?v=20260727db" defer></script>
-<script src="../js/grain.js?v=20260727db" defer></script>
-<script src="../js/tilt3d.js?v=20260727db" defer></script>
-<script src="../js/owner.js?v=20260727db"></script>
-<script src="../js/config.js?v=20260727db"></script>
-<script src="../js/archive.js?v=20260727db"></script>
-<script src="../js/blobstore.js?v=20260727db"></script>
-<script src="../js/particle-loader.js?v=20260727db"></script>
-<script src="../js/remote-captures.js?v=20260727db"></script>
-<script src="../js/community-seed.js?v=20260727db"></script>
-<script src="../js/flow.js?v=20260727db" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727db"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dc">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727dc">
+<link rel="stylesheet" href="../css/object.css?v=20260727dc">
+<script src="../js/cursor.js?v=20260727dc" defer></script>
+<script src="../js/grain.js?v=20260727dc" defer></script>
+<script src="../js/tilt3d.js?v=20260727dc" defer></script>
+<script src="../js/owner.js?v=20260727dc"></script>
+<script src="../js/config.js?v=20260727dc"></script>
+<script src="../js/archive.js?v=20260727dc"></script>
+<script src="../js/blobstore.js?v=20260727dc"></script>
+<script src="../js/particle-loader.js?v=20260727dc"></script>
+<script src="../js/remote-captures.js?v=20260727dc"></script>
+<script src="../js/community-seed.js?v=20260727dc"></script>
+<script src="../js/flow.js?v=20260727dc" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dc"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727db" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dc" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727db";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727db";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dc";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dc";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727db";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dc";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727db";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727dc";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -659,8 +659,8 @@
           <button class="remark-card-close" type="button" id="remarkClose" aria-label="Close">&minus;</button>
           <span class="remark-card-title" id="remarkTitle" dir="auto"></span>
           <div class="remark-card-choices">
-            <label><input type="checkbox" id="remarkStoryBox" disabled> story</label>
             <label><input type="checkbox" id="remarkRemarkBox" disabled> remark</label>
+            <label><input type="checkbox" id="remarkStoryBox" disabled> story</label>
           </div>
         </div>
         <p class="remark-card-text" id="remarkText" dir="auto"></p>
@@ -817,8 +817,8 @@
       <div class="obj-blue-body" data-editable-rows="blueBody">
         <p class="obj-blue-label">Type of annotation</p>
         <div class="obj-blue-choices">
-          <label><input type="checkbox" id="blueStory" checked> story</label>
           <label><input type="checkbox" id="blueRemark"> remark</label>
+          <label><input type="checkbox" id="blueStory" checked> story</label>
         </div>
 
         <div class="obj-blue-fields" id="blueEditFields">

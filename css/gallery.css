@@ -211,8 +211,19 @@
   justify-content: center;
   align-items: flex-start;
 }
+/* a lone first row (a handful of captures, no full row above them) reads like
+   community's first row of four: the SAME left-with-spacing position, not
+   flush in the corner and not floating dead-centre. A centred auto-fill track
+   block does exactly that — the columns centre as a block (so there's real
+   breathing room from the corner, matching a centred full row), and the lone
+   captures fill from column one of that block leftward. */
 .gal--archive .gal-grid.gal-grid--single-row {
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, clamp(200px, 17vw, 372px));
+  justify-content: center;
+  align-items: start;
+  column-gap: clamp(28px, 3vw, 80px);
+  row-gap: clamp(26px, 3.2vh, 52px);
 }
 
 @media (max-width: 1120px) {
