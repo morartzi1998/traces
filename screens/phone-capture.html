@@ -6,11 +6,31 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dc">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727dc">
-<script src="../js/cursor.js?v=20260727dc" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727dc" defer></script>
-<script src="../js/normalize-image.js?v=20260727dc" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dd">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727dd">
+<script src="../js/cursor.js?v=20260727dd" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727dd" defer></script>
+<script src="../js/normalize-image.js?v=20260727dd" defer></script>
+<style>
+  /* companion-screen bits: a quiet spinner while the model builds on the
+     computer, and a framed preview of the finished result to save from here */
+  .pc-spinner {
+    width: 42px; height: 42px; margin: 0 auto 22px;
+    border: 3px solid rgba(255, 255, 255, 0.22);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: pc-spin 0.9s linear infinite;
+  }
+  @keyframes pc-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .pc-spinner { animation-duration: 2.4s; } }
+  .pc-result-img {
+    display: block; width: 100%; max-width: 320px; margin: 0 auto 20px;
+    aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .pc-result-actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+  .pc-btn--ghost { opacity: 0.75; }
+</style>
 </head>
 <body>
 
@@ -32,10 +52,22 @@
       <p class="pc-status">Sending your photo…</p>
     </div>
 
-    <div class="pc-card" id="pcDone" hidden>
-      <h1 class="pc-title">Sent</h1>
-      <p class="pc-sub">Confirm it on your computer — or take another photo here.</p>
+    <div class="pc-card" id="pcWaiting" hidden>
+      <div class="pc-spinner" aria-hidden="true"></div>
+      <h1 class="pc-title" id="pcWaitTitle">Sent</h1>
+      <p class="pc-sub" id="pcWaitSub">Confirm it on your computer to start building — you'll get the update right here.</p>
       <label class="pc-btn" for="pcInput">Take another photo</label>
+    </div>
+
+    <div class="pc-card" id="pcResult" hidden>
+      <h1 class="pc-title">Your model is ready</h1>
+      <img class="pc-result-img" id="pcResultImg" alt="your 3D model" hidden>
+      <p class="pc-sub">Continue on the computer — and you can save it here too:</p>
+      <div class="pc-result-actions">
+        <button class="pc-btn pc-btn--solid" type="button" id="pcDlImg">Download image</button>
+        <button class="pc-btn" type="button" id="pcDlModel">Download 3D file</button>
+      </div>
+      <label class="pc-btn pc-btn--ghost" for="pcInput">Scan another object</label>
     </div>
 
     <div class="pc-card" id="pcError" hidden>
@@ -53,12 +85,83 @@
 
       var start = document.getElementById("pcStart");
       var sending = document.getElementById("pcSending");
-      var done = document.getElementById("pcDone");
+      var waiting = document.getElementById("pcWaiting");
+      var result = document.getElementById("pcResult");
       var errorEl = document.getElementById("pcError");
       var errorText = document.getElementById("pcErrorText");
+      var waitTitle = document.getElementById("pcWaitTitle");
+      var waitSub = document.getElementById("pcWaitSub");
 
       function showOnly(el) {
-        [start, sending, done, errorEl].forEach(function (s) { s.hidden = s !== el; });
+        [start, sending, waiting, result, errorEl].forEach(function (s) { s.hidden = s !== el; });
+      }
+
+      // the desktop relays this capture's live build state back into the same
+      // session pigeonhole (as a small JSON blob in the task_id field, the same
+      // transport the phone used to send the photo up). Unpack whichever shape
+      // is currently parked there.
+      function parseRelay(d) {
+        var t = d && d.task_id;
+        if (typeof t !== "string" || t.charAt(0) !== "{") return {};
+        try { return JSON.parse(t) || {}; } catch (e) { return {}; }
+      }
+
+      var pollTimer = null;
+      function startWaiting() {
+        showOnly(waiting);
+        waitTitle.textContent = "Sent";
+        waitSub.textContent = "Confirm it on your computer to start building — you'll get the update right here.";
+        clearInterval(pollTimer);
+        pollTimer = setInterval(function () {
+          fetch(api + "/session/" + sessionId)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var p = parseRelay(d);
+              if (p.done) {
+                clearInterval(pollTimer);
+                showResult(p);
+              } else if (p.failed) {
+                clearInterval(pollTimer);
+                fail("The scan didn't complete. Take another photo to try again.");
+              } else if (p.building) {
+                waitTitle.textContent = "Building your model";
+                waitSub.textContent = "Hang tight — this takes a couple of minutes. The result appears here when it's ready.";
+              }
+              // otherwise the photo is still parked awaiting a confirm on the
+              // computer — leave the "Sent" wording as is
+            })
+            .catch(function () { /* transient — keep polling */ });
+        }, 2500);
+      }
+
+      // fetch the finished asset (already a worker /proxy URL, so it's
+      // CORS-fetchable) and hand it to the phone as a real download; fall back
+      // to just opening it if the fetch is blocked
+      function download(url, filename) {
+        if (!url) return;
+        fetch(url)
+          .then(function (r) { return r.ok ? r.blob() : null; })
+          .then(function (b) {
+            if (!b) { window.open(url, "_blank"); return; }
+            var a = document.createElement("a");
+            var u = URL.createObjectURL(b);
+            a.href = u; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000);
+          })
+          .catch(function () { window.open(url, "_blank"); });
+      }
+
+      function showResult(p) {
+        showOnly(result);
+        var img = document.getElementById("pcResultImg");
+        if (p.thumb) { img.src = p.thumb; img.hidden = false; } else { img.hidden = true; }
+        var dlImg = document.getElementById("pcDlImg");
+        var dlModel = document.getElementById("pcDlModel");
+        dlImg.style.display = p.thumb ? "" : "none";
+        dlModel.style.display = p.model ? "" : "none";
+        dlImg.onclick = function () { download(p.thumb, "traces-capture.jpg"); };
+        dlModel.onclick = function () { download(p.model, "traces-capture.glb"); };
       }
 
       function fail(msg) {
@@ -120,7 +223,7 @@
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ task_id: relay }),
-            }).then(function () { showOnly(done); });
+            }).then(function () { startWaiting(); });
           })
           .catch(function () { fail("Couldn't reach the server — check your connection."); });
       }
