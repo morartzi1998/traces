@@ -6,11 +6,11 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dd">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727dd">
-<script src="../js/cursor.js?v=20260727dd" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727dd" defer></script>
-<script src="../js/normalize-image.js?v=20260727dd" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727de">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727de">
+<script src="../js/cursor.js?v=20260727de" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727de" defer></script>
+<script src="../js/normalize-image.js?v=20260727de" defer></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -23,6 +23,19 @@
   }
   @keyframes pc-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .pc-spinner { animation-duration: 2.4s; } }
+  /* the live build loader: the visitor's own photo, dimmed, with the same
+     percentage the computer is showing counting up over it */
+  .pc-build {
+    position: relative; width: 100%; max-width: 300px; margin: 0 auto 22px;
+    aspect-ratio: 1 / 1; border-radius: 6px; overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .pc-build-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5) saturate(0.85); }
+  .pc-build-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+  }
+  .pc-build-pct { font-family: var(--font-display, serif); font-size: 2.6rem; line-height: 1; color: #fff; }
   .pc-result-img {
     display: block; width: 100%; max-width: 320px; margin: 0 auto 20px;
     aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px;
@@ -53,9 +66,15 @@
     </div>
 
     <div class="pc-card" id="pcWaiting" hidden>
-      <div class="pc-spinner" aria-hidden="true"></div>
+      <div class="pc-build">
+        <img class="pc-build-img" id="pcWaitImg" alt="" hidden>
+        <div class="pc-build-overlay">
+          <div class="pc-spinner" aria-hidden="true"></div>
+          <span class="pc-build-pct" id="pcWaitPct" hidden></span>
+        </div>
+      </div>
       <h1 class="pc-title" id="pcWaitTitle">Sent</h1>
-      <p class="pc-sub" id="pcWaitSub">Confirm it on your computer to start building — you'll get the update right here.</p>
+      <p class="pc-sub" id="pcWaitSub">Confirm it on your computer — you'll watch it build here, live.</p>
       <label class="pc-btn" for="pcInput">Take another photo</label>
     </div>
 
@@ -91,6 +110,11 @@
       var errorText = document.getElementById("pcErrorText");
       var waitTitle = document.getElementById("pcWaitTitle");
       var waitSub = document.getElementById("pcWaitSub");
+      var waitImg = document.getElementById("pcWaitImg");
+      var waitPct = document.getElementById("pcWaitPct");
+      // the small preview of the shot, shown dimmed under the live percentage so
+      // the phone mirrors the computer's loader instead of a static word
+      var photoPreview = null;
 
       function showOnly(el) {
         [start, sending, waiting, result, errorEl].forEach(function (s) { s.hidden = s !== el; });
@@ -109,8 +133,11 @@
       var pollTimer = null;
       function startWaiting() {
         showOnly(waiting);
+        if (photoPreview) { waitImg.src = photoPreview; waitImg.hidden = false; }
+        waitPct.hidden = true;
+        waitTitle.hidden = false;
         waitTitle.textContent = "Sent";
-        waitSub.textContent = "Confirm it on your computer to start building — you'll get the update right here.";
+        waitSub.textContent = "Confirm it on your computer — you'll watch it build here, live.";
         clearInterval(pollTimer);
         pollTimer = setInterval(function () {
           fetch(api + "/session/" + sessionId)
@@ -124,8 +151,12 @@
                 clearInterval(pollTimer);
                 fail("The scan didn't complete. Take another photo to try again.");
               } else if (p.building) {
-                waitTitle.textContent = "Building your model";
-                waitSub.textContent = "Hang tight — this takes a couple of minutes. The result appears here when it's ready.";
+                waitTitle.hidden = true;
+                waitSub.textContent = "Building your model — live from the computer.";
+                if (typeof p.pct === "number") {
+                  waitPct.hidden = false;
+                  waitPct.textContent = p.pct + "%";
+                }
               }
               // otherwise the photo is still parked awaiting a confirm on the
               // computer — leave the "Sent" wording as is
@@ -206,6 +237,7 @@
         window.normalizeImageToJpeg(file).then(function (jpegBlob) {
           return makeThumb(jpegBlob, 640).then(function (thumb) {
             previewThumb = thumb;
+            photoPreview = thumb; // shown under the live percentage while building
             var fd = new FormData();
             fd.append("file", jpegBlob, "capture.jpg");
             return fetch(api + "/captures/upload", { method: "POST", body: fd });
