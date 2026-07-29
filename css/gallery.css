@@ -200,14 +200,19 @@
   justify-content: center;
   align-items: flex-start;
 }
-/* the ARCHIVE starts from the first row on the left — a few captures should
-   sit top-left under the heading, not float centred in the middle of the
-   screen (the community feed still centres its trailing row) */
+/* the ARCHIVE reads exactly like the community feed: full rows fill from the
+   left (with the grid's own margin from the corner) and only an incomplete
+   TRAILING row centres. The one exception is a lone first row — a handful of
+   captures with no full row above them stays LEFT under the heading instead of
+   floating dead-centre (js toggles .gal-grid--single-row for that case). */
 .gal--archive .gal-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: flex-start;
+}
+.gal--archive .gal-grid.gal-grid--single-row {
+  justify-content: flex-start;
 }
 
 @media (max-width: 1120px) {
