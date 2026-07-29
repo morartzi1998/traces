@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727cz">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727cz">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727cz">
-<script src="../js/cursor.js?v=20260727cz" defer></script>
-<script src="../js/grain.js?v=20260727cz" defer></script>
-<script src="../js/owner.js?v=20260727cz"></script>
-<script src="../js/config.js?v=20260727cz"></script>
-<script src="../js/archive.js?v=20260727cz"></script>
-<script src="../js/blobstore.js?v=20260727cz"></script>
-<script src="../js/remote-captures.js?v=20260727cz"></script>
-<script src="../js/designer-archive.js?v=20260727cz"></script>
-<script src="../js/gallery-title.js?v=20260727cz" defer></script>
-<script src="../js/flow.js?v=20260727cz" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727da">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727da">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727da">
+<script src="../js/cursor.js?v=20260727da" defer></script>
+<script src="../js/grain.js?v=20260727da" defer></script>
+<script src="../js/owner.js?v=20260727da"></script>
+<script src="../js/config.js?v=20260727da"></script>
+<script src="../js/archive.js?v=20260727da"></script>
+<script src="../js/blobstore.js?v=20260727da"></script>
+<script src="../js/remote-captures.js?v=20260727da"></script>
+<script src="../js/designer-archive.js?v=20260727da"></script>
+<script src="../js/gallery-title.js?v=20260727da" defer></script>
+<script src="../js/flow.js?v=20260727da" defer></script>
 </head>
 <body>
 
@@ -435,7 +435,12 @@
         // the "here's what my archive looks like" placeholder for someone
         // who hasn't started yet, so that part still steps aside once your
         // own archive is genuinely yours.
-        var showcase = (allItems.length ? [] : showcaseRealItems
+        // base the "here's my archive" placeholder on the VISIBLE items, not
+        // every stored one: once every local capture is HIDDEN (e.g. Mor hid
+        // the test scans on the kiosk), the archive should fall back to her
+        // real showcase archive instead of sitting empty — "hide everything →
+        // bring my archive back".
+        var showcase = (realItems.length ? [] : showcaseRealItems
             .filter(function (c) { return hiddenDesigner.indexOf(c.id) === -1; })
             .map(function (c) { return { key: c.id, title: c.title, img: c.img, meta: ago(c.created), kind: c.kind }; })
           ).concat(mapShowcase(window.DESIGNER_ARCHIVE));

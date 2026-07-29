@@ -194,11 +194,19 @@
    center does exactly that. Applied to BOTH the community and the archive so
    they read the same way (the archive used to keep its auto-fill grid, but a
    consistent centred trailing row was asked for on both). */
-.gal--community .gal-grid,
-.gal--archive .gal-grid {
+.gal--community .gal-grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: flex-start;
+}
+/* the ARCHIVE starts from the first row on the left — a few captures should
+   sit top-left under the heading, not float centred in the middle of the
+   screen (the community feed still centres its trailing row) */
+.gal--archive .gal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: flex-start;
 }
 
