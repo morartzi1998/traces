@@ -58,7 +58,10 @@ function locationPrefix() {
   // 4 minutes for the exhibition — ten felt like the reset never happened
   var IDLE_MS = 4 * 60 * 1000;
   var path = window.location.pathname;
-  var skip = /\/(upload|processing|describe-capture|phone-capture)\.html$/.test(path);
+  // the owner tools (the live moderation log, the image manager) must stay put:
+  // the exhibition interface still resets to home for the next visitor, but the
+  // log Mor leaves open on her own screen should never navigate itself away.
+  var skip = /\/(upload|processing|describe-capture|phone-capture|admin-live|admin-images)\.html$/.test(path);
   if (skip || window.__artifactGo) return; // single-file preview has no pages to reset to
   var timer = null;
   function goHome() {
