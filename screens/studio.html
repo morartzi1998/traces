@@ -6,20 +6,20 @@
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727di">
-<script src="../js/owner.js?v=20260727di"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dj">
+<script src="../js/owner.js?v=20260727dj"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260727di"></script>
+<script src="../js/config.js?v=20260727dj"></script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260724d" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dj" } }
 </script>
-<script src="../js/grain.js?v=20260727di" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727di"></script>
+<script src="../js/grain.js?v=20260727dj" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dj"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -98,11 +98,35 @@
   /* stage backgrounds cycle: night (default) / violet / paper */
   body.bg-violet { background: linear-gradient(180deg, #45456e 0%, #2e2e50 100%); }
   body.bg-paper { background: #e8e5df url("../assets/images/paper-texture.png") center / cover; }
+  body.bg-white { background: #ffffff; }
+  body.bg-black { background: #050505; }
+  body.bg-studio { background: radial-gradient(120% 100% at 50% 0%, #34323e 0%, #17151a 72%); }
+  /* stills framing: constrain the stage to a chosen aspect ratio, centred, so
+     the rest of the screen letterboxes into the background — compose a landscape
+     (or square / portrait) shot and screen-grab exactly that frame */
+  .studio-stage.has-aspect {
+    inset: auto;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(94vw, calc(88vh * var(--ar, 1.7778)));
+    height: auto;
+    aspect-ratio: var(--ar, 1.7778);
+    outline: 1px solid rgba(240, 238, 234, 0.28);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 30px 80px rgba(0, 0, 0, 0.5);
+  }
+  /* rule-of-thirds composition guide laid over the frame; toggle off before
+     the actual shot */
+  .studio-guide {
+    position: absolute; inset: 0; z-index: 30; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+    background-size: 33.333% 33.333%;
+  }
 </style>
 </head>
 <body>
 
-  <div class="studio-stage" id="stage"></div>
+  <div class="studio-stage" id="stage"><div class="studio-guide" id="guide" hidden></div></div>
   <div class="studio-rain" id="rain"></div>
 
   <div class="studio-bar" id="bar">
@@ -114,12 +138,15 @@
     <button type="button" id="repBtn">show as mesh</button>
     <button type="button" id="frameBtn">frames</button>
     <button type="button" id="bgBtn">background</button>
+    <button type="button" id="aspectBtn">shot: fill</button>
+    <button type="button" id="pauseBtn">pause spin</button>
+    <button type="button" id="gridBtn">thirds</button>
     <span class="studio-hint">H hides this bar · items build &amp; slowly turn</span>
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727di";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727di";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dj";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727dj";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -129,6 +156,8 @@
     var captures = [];
     var mounted = []; // { slot, viewer, geometry }
     var bufCache = {};
+    // stills: when true, every object holds its current pose instead of turning
+    var paused = false;
 
     fetch(api + "/captures").then(function (r) { return r.json(); }).then(function (d) {
       // every dated scan is its own stage option — the OLD chandelier (or any
@@ -175,7 +204,7 @@
     }
 
     function mountInto(win, geometry, view) {
-      var o = { autoRotate: true };
+      var o = { autoRotate: !paused };
       if (view) o.initialView = view;
       return mountPointCloudViewer(win, geometry, o);
     }
@@ -241,7 +270,7 @@
           mv.setAttribute("interaction-prompt", "none");
           mv.setAttribute("shadow-intensity", "0");
           mv.setAttribute("exposure", "1");
-          mv.setAttribute("auto-rotate", "");
+          if (!paused) mv.setAttribute("auto-rotate", "");
           mv.setAttribute("rotation-per-second", "10deg");
           mv.setAttribute("auto-rotate-delay", "0");
           mv.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
@@ -261,7 +290,7 @@
     });
 
     // stage background: night / violet (community) / paper
-    var bgs = ["", "bg-violet", "bg-paper"];
+    var bgs = ["", "bg-violet", "bg-paper", "bg-white", "bg-black", "bg-studio"];
     var bgIdx = 0;
     document.getElementById("bgBtn").addEventListener("click", function () {
       bgIdx = (bgIdx + 1) % bgs.length;
@@ -385,6 +414,56 @@
       dropCard();
       rainTimer = setInterval(dropCard, 650);
       rainBtn.textContent = "stop rain";
+    });
+
+    // ----- stills: aspect-ratio shot frame -------------------------------
+    // "fill" is the original full-screen stage; the rest letterbox a centred
+    // frame you compose a landscape / square / portrait still inside, then
+    // screen-grab exactly that frame.
+    var ASPECTS = [
+      { name: "fill", ar: null },
+      { name: "16:9 landscape", ar: 16 / 9 },
+      { name: "3:2 photo", ar: 3 / 2 },
+      { name: "1:1 square", ar: 1 },
+      { name: "4:5 portrait", ar: 4 / 5 },
+      { name: "9:16 story", ar: 9 / 16 },
+    ];
+    var aspectIdx = 0;
+    var aspectBtn = document.getElementById("aspectBtn");
+    aspectBtn.addEventListener("click", function () {
+      aspectIdx = (aspectIdx + 1) % ASPECTS.length;
+      var a = ASPECTS[aspectIdx];
+      aspectBtn.textContent = "shot: " + a.name;
+      if (a.ar) {
+        stage.style.setProperty("--ar", a.ar);
+        stage.classList.add("has-aspect");
+      } else {
+        stage.classList.remove("has-aspect");
+        stage.style.removeProperty("--ar");
+      }
+    });
+
+    // ----- stills: freeze the spin so a pose holds still for the shot ----
+    // (orbit any object by hand first to pose it, then pause). New objects
+    // added while paused come in already still.
+    var pauseBtn = document.getElementById("pauseBtn");
+    function applyRotation(m) {
+      if (m.viewer && m.viewer.setAutoRotate) m.viewer.setAutoRotate(!paused);
+      var mv = m.win.querySelector("model-viewer");
+      if (mv) { if (paused) mv.removeAttribute("auto-rotate"); else mv.setAttribute("auto-rotate", ""); }
+    }
+    pauseBtn.addEventListener("click", function () {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "resume spin" : "pause spin";
+      mounted.forEach(applyRotation);
+    });
+
+    // ----- stills: rule-of-thirds composition guide ----------------------
+    var guide = document.getElementById("guide");
+    var gridBtn = document.getElementById("gridBtn");
+    gridBtn.addEventListener("click", function () {
+      guide.hidden = !guide.hidden;
+      gridBtn.textContent = guide.hidden ? "thirds" : "hide thirds";
     });
 
     window.addEventListener("keydown", function (e) {
