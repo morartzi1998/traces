@@ -6,20 +6,20 @@
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dj">
-<script src="../js/owner.js?v=20260727dj"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dk">
+<script src="../js/owner.js?v=20260727dk"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260727dj"></script>
+<script src="../js/config.js?v=20260727dk"></script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dj" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dk" } }
 </script>
-<script src="../js/grain.js?v=20260727dj" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dj"></script>
+<script src="../js/grain.js?v=20260727dk" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dk"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -122,6 +122,21 @@
       linear-gradient(90deg, rgba(255, 255, 255, 0.35) 1px, transparent 1px);
     background-size: 33.333% 33.333%;
   }
+  /* per-card controls, shown on hover (never in a screenshot) */
+  .studio-slot-tools {
+    position: absolute; top: 8px; right: 8px; z-index: 36;
+    display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s ease;
+  }
+  .studio-slot:hover .studio-slot-tools { opacity: 1; }
+  .studio-slot-tools button {
+    font: 12px/1 system-ui, sans-serif; color: #f0eeea;
+    background: rgba(20, 18, 16, 0.82); border: 1px solid rgba(240, 238, 234, 0.4);
+    padding: 4px 7px; cursor: pointer; border-radius: 3px;
+  }
+  .studio-slot-tools button:hover { border-color: #f0eeea; }
+  /* reserve a clean band at the top of a framed shot for a title added
+     afterwards, so the polaroids sit lower and the title never overlaps them */
+  .studio-stage.framed.title-space { align-items: flex-end; padding-top: 22%; box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -141,12 +156,13 @@
     <button type="button" id="aspectBtn">shot: fill</button>
     <button type="button" id="pauseBtn">pause spin</button>
     <button type="button" id="gridBtn">thirds</button>
-    <span class="studio-hint">H hides this bar · items build &amp; slowly turn</span>
+    <button type="button" id="titleBtn">title space</button>
+    <span class="studio-hint">H hides this bar · hover a card for ◀ ⬇ ▶ ✕</span>
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dj";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727dj";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dk";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727dk";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -220,12 +236,43 @@
       var cap = document.createElement("div");
       cap.className = "studio-cap";
       cap.textContent = c.title;
+      // per-card controls (reorder · download this one polaroid · remove),
+      // revealed on hover so they never show up in a screenshot
+      var tools = document.createElement("div");
+      tools.className = "studio-slot-tools";
+      tools.innerHTML =
+        '<button type="button" data-a="left" title="move left">◀</button>' +
+        '<button type="button" data-a="dl" title="download this polaroid">⬇</button>' +
+        '<button type="button" data-a="right" title="move right">▶</button>' +
+        '<button type="button" data-a="rm" title="remove">✕</button>';
+      slot.appendChild(tools);
       slot.appendChild(win);
       slot.appendChild(cap);
       stage.appendChild(slot);
+      var m = { slot: slot, win: win, viewer: null, geometry: null, capture: c };
+      mounted.push(m);
+      tools.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-a]");
+        if (!b) return;
+        if (b.dataset.a === "left") moveSlot(m, -1);
+        else if (b.dataset.a === "right") moveSlot(m, 1);
+        else if (b.dataset.a === "rm") removeSlot(m);
+        else if (b.dataset.a === "dl") downloadPolaroid(m);
+      });
       loadGeometry(c).then(function (g) {
-        var viewer = mountInto(win, g);
-        mounted.push({ slot: slot, win: win, viewer: viewer, geometry: g, capture: c });
+        m.geometry = g;
+        m.viewer = mountInto(win, g);
+      }).catch(function () {
+        // the scan's cloud couldn't be fetched/parsed — never leave a blank
+        // card; fall back to the capture's saved photo so it still reads
+        win.style.background = "#3f3f4a";
+        if (c.img) {
+          var im = document.createElement("img");
+          im.crossOrigin = "anonymous";
+          im.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover";
+          im.src = c.img;
+          win.appendChild(im);
+        }
       });
     });
 
@@ -276,7 +323,7 @@
           mv.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
           mv.src = m.capture.model;
           m.win.appendChild(mv);
-        } else {
+        } else if (m.geometry) {
           m.viewer = mountInto(m.win, m.geometry, m.view);
         }
       });
@@ -464,6 +511,93 @@
     gridBtn.addEventListener("click", function () {
       guide.hidden = !guide.hidden;
       gridBtn.textContent = guide.hidden ? "thirds" : "hide thirds";
+    });
+
+    // ----- reorder / remove one card -------------------------------------
+    function moveSlot(m, dir) {
+      var i = mounted.indexOf(m), j = i + dir;
+      if (i < 0 || j < 0 || j >= mounted.length) return;
+      var t = mounted[i]; mounted[i] = mounted[j]; mounted[j] = t;
+      // re-append in the new order (the thirds guide stays first, on top)
+      mounted.forEach(function (mm) { stage.appendChild(mm.slot); });
+    }
+    function removeSlot(m) {
+      var i = mounted.indexOf(m);
+      if (i < 0) return;
+      try { m.viewer && m.viewer.dispose(); } catch (e) {}
+      m.slot.remove();
+      mounted.splice(i, 1);
+    }
+
+    // ----- download ONE polaroid as a PNG --------------------------------
+    // composites the current 3D render (point cloud via screenshot(), mesh via
+    // model-viewer.toDataURL()) onto a real polaroid: paper, photo window, and
+    // the blue caption — so a single object can be saved on its own.
+    function downloadPolaroid(m) {
+      var shot = null;
+      try { if (m.viewer && m.viewer.screenshot) shot = m.viewer.screenshot(); } catch (e) {}
+      if (!shot) {
+        var mv = m.win.querySelector("model-viewer");
+        try { if (mv && mv.toDataURL) shot = mv.toDataURL("image/png"); } catch (e) {}
+      }
+      var photoSrc = shot || m.capture.img || null;
+      var W = 900, PAD = 42, PHOTO = W - PAD * 2, CAP = 150, H = PAD + PHOTO + CAP;
+      var canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      var ctx = canvas.getContext("2d");
+      function finish() {
+        var url;
+        try { url = canvas.toDataURL("image/png"); }
+        catch (e) { alert("couldn't export this card (cross-origin image)"); return; }
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = (m.capture.title || "polaroid").replace(/[^\w\- ]+/g, "").trim() + ".png";
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      function caption() {
+        ctx.fillStyle = "#0a25b4";
+        ctx.textBaseline = "middle";
+        ctx.font = "500 34px 'urw-din', system-ui, sans-serif";
+        var t = m.capture.title || "";
+        while (ctx.measureText(t).width > PHOTO && t.length > 1) t = t.slice(0, -1);
+        ctx.fillText(t, PAD + 4, PAD + PHOTO + CAP / 2);
+        finish();
+      }
+      function drawPhotoThen(src, done) {
+        if (!src) { done(); return; }
+        var p = new Image();
+        p.crossOrigin = "anonymous";
+        p.onload = function () {
+          var sc = Math.max(PHOTO / p.width, PHOTO / p.height);
+          var dw = p.width * sc, dh = p.height * sc;
+          ctx.save();
+          ctx.beginPath(); ctx.rect(PAD, PAD, PHOTO, PHOTO); ctx.clip();
+          ctx.drawImage(p, PAD + (PHOTO - dw) / 2, PAD + (PHOTO - dh) / 2, dw, dh);
+          ctx.restore();
+          done();
+        };
+        p.onerror = done;
+        p.src = src;
+      }
+      var paper = new Image();
+      paper.onload = function () {
+        ctx.drawImage(paper, 0, 0, W, H);
+        ctx.fillStyle = "#3f3f4a"; ctx.fillRect(PAD, PAD, PHOTO, PHOTO);
+        drawPhotoThen(photoSrc, caption);
+      };
+      paper.onerror = function () {
+        ctx.fillStyle = "#f0eeea"; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#3f3f4a"; ctx.fillRect(PAD, PAD, PHOTO, PHOTO);
+        drawPhotoThen(photoSrc, caption);
+      };
+      paper.src = "../assets/images/polaroid-paper-1.png";
+    }
+
+    // ----- reserve a clean band at the top for a title added afterwards ---
+    var titleBtn = document.getElementById("titleBtn");
+    titleBtn.addEventListener("click", function () {
+      var on = stage.classList.toggle("title-space");
+      titleBtn.textContent = on ? "no title space" : "title space";
     });
 
     window.addEventListener("keydown", function (e) {
