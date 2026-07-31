@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dk";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dk";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dl";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dl";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -76,12 +76,22 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // on a machine that reports little memory, thin an extra-dense cloud —
   // half the points still read as a full surface at these densities, and
   // it halves both the GPU upload and the frame cost
-  var mem = navigator.deviceMemory || 8;
+  // iOS/Safari never reports deviceMemory (it stays undefined → 8), so a phone
+  // was treated as an 8GB desktop and the full-density cloud was uploaded —
+  // which is exactly what silently failed to load on phones (the rug and other
+  // heavy scans). Treat any mobile device as memory-constrained so the thinning
+  // runs there too; desktops are unaffected.
+  var isMobile = /Mobi|Android|iP(hone|ad|od)/i.test(navigator.userAgent || "") ||
+    ((navigator.maxTouchPoints || 0) > 1 && /Mac/.test(navigator.platform || ""));
+  var mem = navigator.deviceMemory || (isMobile ? 3 : 8);
   var posCount = geometry.getAttribute("position") ? geometry.getAttribute("position").count : 0;
-  if (mem <= 4 && posCount > 240000) {
+  // phones get a lower ceiling than low-memory laptops — the GPU, not just RAM,
+  // is the limit on a handset
+  var thinTarget = isMobile ? 180000 : 220000;
+  if ((mem <= 4 || isMobile) && posCount > thinTarget + 20000) {
     var srcPos = geometry.getAttribute("position").array;
     var srcCol = geometry.getAttribute("color") ? geometry.getAttribute("color").array : null;
-    var stride = Math.ceil(posCount / 220000);
+    var stride = Math.ceil(posCount / thinTarget);
     var kept = Math.floor(posCount / stride);
     var np = new Float32Array(kept * 3);
     var nc = srcCol ? new Float32Array(kept * 3) : null;
