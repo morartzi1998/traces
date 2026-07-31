@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dm">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727dm">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727dm">
-<script src="../js/cursor.js?v=20260727dm" defer></script>
-<script src="../js/grain.js?v=20260727dm" defer></script>
-<script src="../js/owner.js?v=20260727dm"></script>
-<script src="../js/config.js?v=20260727dm"></script>
-<script src="../js/archive.js?v=20260727dm"></script>
-<script src="../js/blobstore.js?v=20260727dm"></script>
-<script src="../js/remote-captures.js?v=20260727dm"></script>
-<script src="../js/designer-archive.js?v=20260727dm"></script>
-<script src="../js/gallery-title.js?v=20260727dm" defer></script>
-<script src="../js/flow.js?v=20260727dm" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dn">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727dn">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727dn">
+<script src="../js/cursor.js?v=20260727dn" defer></script>
+<script src="../js/grain.js?v=20260727dn" defer></script>
+<script src="../js/owner.js?v=20260727dn"></script>
+<script src="../js/config.js?v=20260727dn"></script>
+<script src="../js/archive.js?v=20260727dn"></script>
+<script src="../js/blobstore.js?v=20260727dn"></script>
+<script src="../js/remote-captures.js?v=20260727dn"></script>
+<script src="../js/designer-archive.js?v=20260727dn"></script>
+<script src="../js/gallery-title.js?v=20260727dn" defer></script>
+<script src="../js/flow.js?v=20260727dn" defer></script>
 </head>
 <body>
 
@@ -672,23 +672,25 @@
       // but it must NOT show Mor's shared archive to visitors as if it were
       // theirs, and carries no owner UI. It only needs the server list to
       // dedupe its own uploads.
-      // ANY device now fetches the shared archive list — not to display it
-      // (only the owner does that), but so the catch-up below can tell which of
-      // this browser's local archive captures the server is still missing. This
-      // is what lets captures already sitting on the exhibition machine before
-      // the "publish archive from anywhere" change get pushed up the next time
-      // its gallery loads, so the live log fills in retroactively too.
-      var remoteReady = window.RemoteCaptures ? RemoteCaptures.list("archive") : Promise.resolve([]);
+      var isKiosk = window.isKioskDevice && window.isKioskDevice();
+      // the archive list AND the retroactive catch-up upload run only on Mor's
+      // own devices (owner) or an exhibition kiosk. A regular visitor's phone
+      // must NOT bulk-upload its local archive in the background — on a phone
+      // that saturates the connection and makes everything else crawl ("loads
+      // for hours"). New archive saves still reach the live log via
+      // describe-capture's publish-on-save; only the retroactive push on plain
+      // visitor devices is dropped.
+      var remoteReady = (window.RemoteCaptures && (isOwner || isKiosk)) ? RemoteCaptures.list("archive") : Promise.resolve([]);
       remoteReady.then(function (list) {
         // only the OWNER merges the shared pool into what's displayed; a kiosk
         // (and any regular visitor) shows only its own local captures
         remoteArchiveItems = isOwner ? (list || []) : [];
         render();
         // anything captured in this browser before the shared store was
-        // reachable (or before archive-from-anywhere) never made it there —
-        // send it now, once, quietly, from ANY device, with its "only on this
-        // device" label (owner only) turning into a live percentage as it goes
-        if (window.RemoteCaptures) {
+        // reachable never made it there — send it now, once, quietly, with its
+        // "only on this device" label (owner only) turning into a live
+        // percentage as it goes
+        if (window.RemoteCaptures && (isOwner || isKiosk)) {
           RemoteCaptures.syncMissing(window.Archive ? Archive.all() : [], list, "archive", function (capId, pct, done, success) {
             var el = grid.querySelector('.gal-sync-status[data-cap-id="' + capId + '"]');
             // carry the real versions along (not just the id) - a later
