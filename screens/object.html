@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dn">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727dn">
-<link rel="stylesheet" href="../css/object.css?v=20260727dn">
-<script src="../js/cursor.js?v=20260727dn" defer></script>
-<script src="../js/grain.js?v=20260727dn" defer></script>
-<script src="../js/tilt3d.js?v=20260727dn" defer></script>
-<script src="../js/owner.js?v=20260727dn"></script>
-<script src="../js/config.js?v=20260727dn"></script>
-<script src="../js/archive.js?v=20260727dn"></script>
-<script src="../js/blobstore.js?v=20260727dn"></script>
-<script src="../js/particle-loader.js?v=20260727dn"></script>
-<script src="../js/remote-captures.js?v=20260727dn"></script>
-<script src="../js/community-seed.js?v=20260727dn"></script>
-<script src="../js/flow.js?v=20260727dn" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dn"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727do">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727do">
+<link rel="stylesheet" href="../css/object.css?v=20260727do">
+<script src="../js/cursor.js?v=20260727do" defer></script>
+<script src="../js/grain.js?v=20260727do" defer></script>
+<script src="../js/tilt3d.js?v=20260727do" defer></script>
+<script src="../js/owner.js?v=20260727do"></script>
+<script src="../js/config.js?v=20260727do"></script>
+<script src="../js/archive.js?v=20260727do"></script>
+<script src="../js/blobstore.js?v=20260727do"></script>
+<script src="../js/particle-loader.js?v=20260727do"></script>
+<script src="../js/remote-captures.js?v=20260727do"></script>
+<script src="../js/community-seed.js?v=20260727do"></script>
+<script src="../js/flow.js?v=20260727do" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727do"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dn" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727do" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dn";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dn";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727do";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727do";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dn";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727do";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727dn";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727do";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2604,11 +2604,34 @@
         // stop any background mesh warm-up from the capture we're leaving, so
         // its heavy download can't starve the scan we're about to load
         cancelMeshWarm();
+        // clear any leftover freeze image from a prior transition
+        var oldFreeze = stage.querySelector(".obj-freeze");
+        if (oldFreeze) oldFreeze.remove();
+        // a SAME-capture points→mesh toggle: instead of tearing the point cloud
+        // down instantly — which left a black stage (then loader particles) for
+        // the long seconds a heavy mesh takes to load on a phone — freeze the
+        // cloud to a still image and show THAT as the backdrop, then cross to
+        // the mesh only once it has actually loaded. One WebGL context at a time
+        // (the mesh needs the memory), no black, no flicker. Every OTHER
+        // navigation still disposes up front and shows the loader as before.
+        var meshFreeze = null;
+        if (k === key && pcViewer && model && !points) {
+          try {
+            var shot = pcViewer.screenshot && pcViewer.screenshot();
+            if (shot) {
+              meshFreeze = document.createElement("img");
+              meshFreeze.className = "obj-freeze";
+              meshFreeze.src = shot;
+              stage.insertBefore(meshFreeze, stage.firstChild); // under the mesh
+            }
+          } catch (e) {}
+        }
         disposePcViewer();
         // fetching a real capture's photo/model/points can take real time -
         // an empty stage until it lands read as broken rather than loading.
         // Cleared as soon as each branch below actually has something to show.
-        beginLoading();
+        // (skipped when a freeze image already covers the stage)
+        if (!meshFreeze) beginLoading();
         // claim this navigation — any cloud fetch started by an EARLIER
         // swapScan that resolves after this point is now stale and must not
         // mount (see pcLoadToken above)
@@ -2772,6 +2795,7 @@
           // unchanged, never re-fired "load" so the loader hung over the mesh.
           if (model === currentModelRef && modelViewer.loaded) {
             modelViewer.style.opacity = ""; // already the right mesh — show it
+            if (meshFreeze) { meshFreeze.remove(); meshFreeze = null; }
             endLoading();
             // the "load" event won't re-fire for an unchanged src, so the
             // load listener that redraws annotations/links never runs — do it
@@ -2798,8 +2822,13 @@
             // still handles the normal case and clears this timer.
             clearTimeout(modelLoadFallback);
             var revealWhenLoaded = function () {
-              if (key !== k) return;                 // navigated away — abandon
-              if (modelViewer.loaded) { modelViewer.style.opacity = ""; endLoading(); return; }
+              if (key !== k) { if (meshFreeze) { meshFreeze.remove(); meshFreeze = null; } return; }
+              if (modelViewer.loaded) {
+                modelViewer.style.opacity = "";
+                if (meshFreeze) { meshFreeze.remove(); meshFreeze = null; }
+                endLoading();
+                return;
+              }
               modelLoadFallback = setTimeout(revealWhenLoaded, 600);
             };
             modelLoadFallback = setTimeout(revealWhenLoaded, 600);

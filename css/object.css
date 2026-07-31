@@ -857,6 +857,18 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   height: 100%;
 }
 
+/* a still snapshot of the point cloud, held on stage under the mesh while a
+   heavy mesh loads (points→mesh toggle) so the stage never flashes black */
+.obj-freeze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .obj-tags {
   position: absolute;
   inset: 0;
