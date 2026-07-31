@@ -1959,4 +1959,26 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   .obj-years {
     gap: 1.6rem;
   }
+
+  /* a remark/story card pinned to its hotspot works on a wide desktop, but on
+     a narrow phone the card was capped at 30vw (~115px) so its nowrap toggle
+     row (remark / story) spilled OUTSIDE the blue box — "the story comes out of
+     place" — and pinning it near an edge pushed it off-screen. On mobile, dock
+     it as a readable card near the bottom, full width, with the toggle row free
+     to wrap. !important overrides the per-frame inline left/top the JS writes to
+     glue it to the hotspot. */
+  .remark-card {
+    position: fixed !important;
+    left: 4vw !important;
+    right: 4vw !important;
+    top: auto !important;
+    bottom: 13vh !important;
+    transform: none !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+  .remark-card-row {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
 }
