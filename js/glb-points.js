@@ -15,7 +15,7 @@
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727ea";
+import * as THREE from "./vendor/three/three.module.js?v=20260727eb";
 
 // Draco decoder — loaded once, on demand, only when a GLB actually carries
 // KHR_draco_mesh_compression (most Tripo scans do NOT; ready-made uploads
@@ -266,13 +266,16 @@ export function glbToPoints(arrayBuffer) {
       // corner. Using them directly as points reproduces that clumping, which
       // is what reads as the wrong "scatter" beside a real scan — evenly
       // measured points. The area-weighted pass below samples the surface
-      // uniformly instead, so when the mesh has faces to sample, prefer it and
-      // skip the vertex pass entirely. Only a mesh with no indices at all
-      // (nothing to sample across) still falls back to raw vertices.
+      // uniformly instead, so when the mesh has faces to sample, prefer it.
+      // The vertex pass stays as the FALLBACK, not the discarded alternative:
+      // sampling can still come up empty (indices that can't be read, an
+      // undecoded Draco primitive, degenerate zero-area faces), and returning
+      // no cloud at all is far worse than returning a clumpy one.
       var hasFaces = prims.length > 0 && prims.every(function (p) {
         return p.prim.indices != null;
       });
-      for (var pi = 0; !hasFaces && pi < prims.length; pi++) {
+      async function emitVertexPoints() {
+      for (var pi = 0; pi < prims.length; pi++) {
         var prim = prims[pi].prim, world = prims[pi].world;
         var pos = accessorData(prim.attributes.POSITION);
         if (!pos) continue;
@@ -310,6 +313,7 @@ export function glbToPoints(arrayBuffer) {
           }
         }
       }
+      }
       // a low-poly mesh yields only a few thousand vertex points — sparse,
       // see-through, "not really particles". Densify by sampling extra
       // points ON the triangle faces (area-weighted, colours interpolated
@@ -317,6 +321,7 @@ export function glbToPoints(arrayBuffer) {
       // match the mesh's own density when sampling replaces the vertex pass,
       // so a detailed scan keeps its point count and only the DISTRIBUTION
       // changes — never fewer points than the old path produced
+      if (!hasFaces) await emitVertexPoints();
       var TARGET = hasFaces ? Math.max(300000, Math.min(600000, total)) : 300000;
       if (positions.length / 3 < TARGET) {
         var want = TARGET - positions.length / 3;
@@ -325,6 +330,10 @@ export function glbToPoints(arrayBuffer) {
         var areaSum = 0;
         var va = new THREE.Vector3(), vb = new THREE.Vector3(), vc = new THREE.Vector3();
         var ab = new THREE.Vector3(), ac = new THREE.Vector3();
+        // the scratch vector each sampled point is built in. It used to be
+        // reached by hoisting from the vertex pass, which only worked while
+        // that pass always ran first — own it here instead.
+        var v = new THREE.Vector3();
         for (var qi = 0; qi < prims.length; qi++) {
           var qp = prims[qi].prim;
           var qidx = qp.indices != null ? accessorData(qp.indices) : null;
@@ -396,6 +405,9 @@ export function glbToPoints(arrayBuffer) {
           }
         }
       }
+      // sampling was preferred but yielded nothing — fall back rather than
+      // handing back a capture with no point cloud at all
+      if (!positions.length && hasFaces) await emitVertexPoints();
       if (!positions.length) return null;
       var g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
