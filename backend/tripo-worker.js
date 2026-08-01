@@ -356,17 +356,36 @@ export default {
         const fileId = url.pathname.slice("/captures/file/".length);
         const meta = await env.CAPTURES.get("file:" + fileId + ":meta", "json");
         if (!meta) return json({ error: "not found" }, 404);
-        const chunks = await Promise.all(
-          Array.from({ length: meta.chunks }, (_, i) => env.CAPTURES.get("file:" + fileId + ":" + i, "arrayBuffer"))
-        );
-        if (chunks.some((c) => !c)) return json({ error: "not found" }, 404);
-        const whole = new Uint8Array(meta.size);
-        let offset = 0;
-        for (const chunk of chunks) {
-          whole.set(new Uint8Array(chunk), offset);
-          offset += chunk.byteLength;
-        }
-        return new Response(whole, {
+        // A file is stored as ~24MB chunks. This used to pull every chunk at
+        // once and copy them into a single Uint8Array of the whole file — which
+        // means the worker had to hold the ENTIRE file in memory to send it.
+        // Past Cloudflare's ~128MB per-request memory limit that allocation
+        // simply throws ("Invalid typed array length"), so a large scan uploaded
+        // fine, stored fine, and could then never be downloaded by anyone. The
+        // limit is Cloudflare's and cannot be raised on any plan.
+        //
+        // So don't assemble it. Stream the chunks out in order: the worker holds
+        // one chunk at a time, memory stays flat, and the file's total size
+        // stops mattering. Nothing about how files are STORED changes, so every
+        // file already up there — including the ones too big to serve until now
+        // — starts working without being re-uploaded.
+        const first = await env.CAPTURES.get("file:" + fileId + ":0", "arrayBuffer");
+        if (!first) return json({ error: "not found" }, 404);
+        let next = 1;
+        const body = new ReadableStream({
+          start(controller) { controller.enqueue(new Uint8Array(first)); },
+          async pull(controller) {
+            if (next >= meta.chunks) { controller.close(); return; }
+            const part = await env.CAPTURES.get("file:" + fileId + ":" + next, "arrayBuffer");
+            next++;
+            // a chunk that has gone missing mid-file can't be papered over —
+            // a truncated point cloud would decode into garbage. Fail the
+            // transfer instead so the client's own error path takes over.
+            if (!part) { controller.error(new Error("missing chunk " + (next - 1))); return; }
+            controller.enqueue(new Uint8Array(part));
+          },
+        });
+        return new Response(body, {
           // each fileId is a fresh crypto.randomUUID at upload time and its
           // bytes never change, so the file is safely immutable — let the
           // browser cache it forever instead of re-downloading the whole
@@ -374,6 +393,10 @@ export default {
           // "everything loads forever" on a slow connection)
           headers: cors({
             "Content-Type": meta.contentType || "application/octet-stream",
+            // a streamed body has no length of its own — state it, so the
+            // browser can report real download progress instead of an
+            // open-ended wait (object.html shows that as a percentage)
+            "Content-Length": String(meta.size),
             "Cache-Control": "public, max-age=31536000, immutable",
           }),
         });
