@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727ew";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ew";
+import * as THREE from "./vendor/three/three.module.js?v=20260727ex";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ex";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -29,13 +29,44 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // frame — it reads as a "bar", not a cloud filling in. Shuffle the points
   // once up front so any prefix of the buffer is a spatially-uniform sample
   // and the object crystallises evenly from everywhere at once.
-  (function shufflePoints() {
+  (function orderPoints() {
     if (opts.buildIn === false || geometry.index) return;
     var pos = geometry.getAttribute("position");
     if (!pos) return;
     var p = pos.array;
     var colAttr = geometry.getAttribute("color");
     var c = colAttr ? colAttr.array : null;
+    // revealFrom turns the intro into an EXPANSION: sorted by distance from a
+    // given point, any prefix of the buffer is the sphere of cloud nearest it,
+    // so the build-in grows outward from that spot instead of filling in
+    // everywhere at once. Used when a space is opened on one of its objects —
+    // the object appears first and the room assembles around it.
+    if (opts.revealFrom) {
+      var ax = opts.revealFrom.x, ay = opts.revealFrom.y, az = opts.revealFrom.z;
+      var n = pos.count;
+      var d2 = new Float32Array(n);
+      var order = new Uint32Array(n);
+      for (var qi = 0; qi < n; qi++) {
+        order[qi] = qi;
+        var qx = p[qi * 3] - ax, qy = p[qi * 3 + 1] - ay, qz = p[qi * 3 + 2] - az;
+        d2[qi] = qx * qx + qy * qy + qz * qz;
+      }
+      order.sort(function (a, b) { return d2[a] - d2[b]; });
+      // permute into fresh buffers, then copy back — an in-place permutation
+      // needs cycle tracking and is not worth it for a one-off
+      var op = new Float32Array(n * 3);
+      var oc = c ? new Float32Array(n * 3) : null;
+      for (var oi = 0; oi < n; oi++) {
+        var src = order[oi] * 3, dst = oi * 3;
+        op[dst] = p[src]; op[dst + 1] = p[src + 1]; op[dst + 2] = p[src + 2];
+        if (oc) { oc[dst] = c[src]; oc[dst + 1] = c[src + 1]; oc[dst + 2] = c[src + 2]; }
+      }
+      p.set(op);
+      if (c) c.set(oc);
+      pos.needsUpdate = true;
+      if (colAttr) colAttr.needsUpdate = true;
+      return;
+    }
     for (var i = pos.count - 1; i > 0; i--) {
       var j = (Math.random() * (i + 1)) | 0;
       var pi = i * 3, pj = j * 3, t;
