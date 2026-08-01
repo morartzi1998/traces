@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ed">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ed">
-<link rel="stylesheet" href="../css/object.css?v=20260727ed">
-<script src="../js/cursor.js?v=20260727ed" defer></script>
-<script src="../js/grain.js?v=20260727ed" defer></script>
-<script src="../js/tilt3d.js?v=20260727ed" defer></script>
-<script src="../js/owner.js?v=20260727ed"></script>
-<script src="../js/config.js?v=20260727ed"></script>
-<script src="../js/archive.js?v=20260727ed"></script>
-<script src="../js/blobstore.js?v=20260727ed"></script>
-<script src="../js/particle-loader.js?v=20260727ed"></script>
-<script src="../js/remote-captures.js?v=20260727ed"></script>
-<script src="../js/community-seed.js?v=20260727ed"></script>
-<script src="../js/flow.js?v=20260727ed" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ed"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ee">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ee">
+<link rel="stylesheet" href="../css/object.css?v=20260727ee">
+<script src="../js/cursor.js?v=20260727ee" defer></script>
+<script src="../js/grain.js?v=20260727ee" defer></script>
+<script src="../js/tilt3d.js?v=20260727ee" defer></script>
+<script src="../js/owner.js?v=20260727ee"></script>
+<script src="../js/config.js?v=20260727ee"></script>
+<script src="../js/archive.js?v=20260727ee"></script>
+<script src="../js/blobstore.js?v=20260727ee"></script>
+<script src="../js/particle-loader.js?v=20260727ee"></script>
+<script src="../js/remote-captures.js?v=20260727ee"></script>
+<script src="../js/community-seed.js?v=20260727ee"></script>
+<script src="../js/flow.js?v=20260727ee" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ee"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ed" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ee" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ed";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ed";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ee";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ee";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ed";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ee";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ed";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ee";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1514,6 +1514,52 @@
       // a brief status line for actions that take a while and have no other
       // visible result — styled like flow.js's update toast so it reads as the
       // same piece of furniture
+      // A card is meant to be taken in at a glance, so it never scrolls —
+      // which means the type has to give instead. Every font-size inside the
+      // card panels is multiplied by --fit in the stylesheet; shrink that
+      // until the content stops overflowing. Only text scales, never the
+      // panel box, so measuring can't be disturbed by the fix itself.
+      // The floor keeps it readable: content long enough to hit 0.62 is past
+      // what any type size could rescue.
+      var FIT_FLOOR = 0.55;
+      var FIT_STEP = 0.04;
+      // overflow can hide INSIDE the card as well as at its edge: any
+      // descendant that clips will swallow the excess and report the panel as
+      // fitting while its own content is cut off. Ask the clippers too.
+      function cardOverflows(el) {
+        if (el.scrollHeight > el.clientHeight + 1) return true;
+        var kids = el.querySelectorAll("*");
+        for (var i = 0; i < kids.length; i++) {
+          var k = kids[i];
+          if (k.scrollHeight <= k.clientHeight + 1) continue;
+          var ov = getComputedStyle(k).overflowY;
+          if (ov === "hidden" || ov === "auto" || ov === "scroll") return true;
+        }
+        return false;
+      }
+      function fitCard(el) {
+        if (!el || el.hidden) return;
+        el.style.setProperty("--fit", "1");
+        if (!cardOverflows(el)) return;
+        var f = 1;
+        while (f > FIT_FLOOR && cardOverflows(el)) {
+          f -= FIT_STEP;
+          el.style.setProperty("--fit", f.toFixed(2));
+        }
+      }
+      // re-fit every card that is currently open — cards are filled from many
+      // places, and the layout also changes under them on resize
+      function fitOpenCards() {
+        ["objWhite", "objBlue", "linkCard"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el && !el.hidden) fitCard(el);
+        });
+      }
+      window.addEventListener("resize", fitOpenCards);
+      // a card is usually filled and revealed in the same tick, so run after
+      // layout has settled rather than racing it
+      function fitSoon() { requestAnimationFrame(fitOpenCards); }
+
       var notifyTimer = null;
       function notify(msg) {
         var el = document.getElementById("objNotice");
@@ -1734,6 +1780,7 @@
         }
 
         linkCard.hidden = false;
+        fitSoon();
         openLinkTarget = link.target;
         openLinkRef = link;
       }
@@ -2456,6 +2503,9 @@
           li.textContent = "no annotations yet";
           ul.appendChild(li);
         }
+      
+        // the card was just refilled — re-fit the type to the new content
+        fitSoon();
       }
 
       var photo = document.getElementById("objPhoto");
@@ -3482,6 +3532,7 @@
         pendingSpot = spot || null;
         editingAnnotation = annotation || null;
         blue.hidden = false;
+        fitSoon();
         white.hidden = true;
         blueHead.classList.remove("obj-blue-head--view");
         blueClose.hidden = true;
@@ -3506,6 +3557,7 @@
         pendingSpot = null;
         editingAnnotation = annotation;
         blue.hidden = false;
+        fitSoon();
         white.hidden = true;
         blueHead.classList.add("obj-blue-head--view");
         blueClose.hidden = false;
