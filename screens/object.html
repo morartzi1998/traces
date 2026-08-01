@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ep">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ep">
-<link rel="stylesheet" href="../css/object.css?v=20260727ep">
-<script src="../js/cursor.js?v=20260727ep" defer></script>
-<script src="../js/grain.js?v=20260727ep" defer></script>
-<script src="../js/tilt3d.js?v=20260727ep" defer></script>
-<script src="../js/owner.js?v=20260727ep"></script>
-<script src="../js/config.js?v=20260727ep"></script>
-<script src="../js/archive.js?v=20260727ep"></script>
-<script src="../js/blobstore.js?v=20260727ep"></script>
-<script src="../js/particle-loader.js?v=20260727ep"></script>
-<script src="../js/remote-captures.js?v=20260727ep"></script>
-<script src="../js/community-seed.js?v=20260727ep"></script>
-<script src="../js/flow.js?v=20260727ep" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ep"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727eq">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727eq">
+<link rel="stylesheet" href="../css/object.css?v=20260727eq">
+<script src="../js/cursor.js?v=20260727eq" defer></script>
+<script src="../js/grain.js?v=20260727eq" defer></script>
+<script src="../js/tilt3d.js?v=20260727eq" defer></script>
+<script src="../js/owner.js?v=20260727eq"></script>
+<script src="../js/config.js?v=20260727eq"></script>
+<script src="../js/archive.js?v=20260727eq"></script>
+<script src="../js/blobstore.js?v=20260727eq"></script>
+<script src="../js/particle-loader.js?v=20260727eq"></script>
+<script src="../js/remote-captures.js?v=20260727eq"></script>
+<script src="../js/community-seed.js?v=20260727eq"></script>
+<script src="../js/flow.js?v=20260727eq" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eq"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ep" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eq" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ep";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ep";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eq";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eq";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ep";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eq";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ep";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727eq";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -569,7 +569,6 @@
         <!-- a cloud derived before the sampler preferred surface sampling is
              stored as the mesh's vertices, which clump and leave gaps; this
              rebuilds it evenly from the same mesh and re-saves it -->
-        <li id="menuRebuildCloudRow" hidden><button type="button" id="menuRebuildCloud">Rebuild point cloud from mesh</button></li>
         <!-- points back at the cloud a rebuild replaced, so an unwanted rebuild
              is recoverable instead of permanent -->
         <li id="menuRestoreCloudRow" hidden><button type="button" id="menuRestoreCloud">Restore the previous point cloud</button></li>
@@ -2055,6 +2054,9 @@
         // scan. Prefer points, then a model, then a flat photo.
         disposePcViewer();
         if (space.points) {
+          // the main view shows its particle loader while a cloud fetches; this
+          // path showed nothing at all, so a slow space read as a dead screen
+          beginLoading();
           stage.dataset.mode = "model";
           photo.hidden = true;
           modelViewer.hidden = true;
@@ -2065,7 +2067,7 @@
             : fetch(space.points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
           if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
             spblob.then(function (blob) {
-              if (!SPACE_VIEW_ACTIVE) return null;
+              if (!SPACE_VIEW_ACTIVE) { endLoading(); return null; }
               if (!blob) throw new Error("the space's point cloud could not be fetched");
               return blob.arrayBuffer();
             }).then(function (buf) {
@@ -2078,6 +2080,7 @@
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
                 { pointSize: space.pointSize || null, tilt: space.tilt || null,
                   initialView: (space.defaultView && space.defaultView.position) ? space.defaultView : null });
+              endLoading();
               showPcDebug();
             }).catch(function (e) {
               // this used to end in an empty catch, so a space whose cloud
@@ -2085,6 +2088,7 @@
               // it — indistinguishable from a space with nothing in it. Fall
               // back to whatever else the space has, and say what happened.
               if (!SPACE_VIEW_ACTIVE) return;
+              endLoading();
               try { console.error("[traces] space cloud failed", e); } catch (e2) {}
               showSpaceFallback(space, (e && e.message) || "the space's point cloud failed");
             });
@@ -3292,18 +3296,6 @@
         // rebuilding the cloud re-derives and re-publishes a shared asset, so
         // it is offered only where the capture is actually manageable, and
         // only when there is a mesh to derive it from
-        var menuRebuildCloudRow = document.getElementById("menuRebuildCloudRow");
-        if (menuRebuildCloudRow) {
-          // Only ever offer this for a cloud that was itself built from a mesh.
-          // A capture uploaded as a point cloud has no mesh of its own — the one
-          // it appears to have is the voxel approximation this app builds FROM
-          // that cloud so there is something to show on the mesh side. Rebuilding
-          // from it feeds the cloud its own approximation back and loses detail
-          // every round, so the action must not be reachable there at all.
-          var d = (pcViewer && pcViewer.getDiagnostics) ? pcViewer.getDiagnostics() : null;
-          menuRebuildCloudRow.hidden = !(menuManageable && catalog[k] && catalog[k].model
-            && d && d.isDerived === true);
-        }
         var menuRestoreCloudRow = document.getElementById("menuRestoreCloudRow");
         if (menuRestoreCloudRow) {
           menuRestoreCloudRow.hidden = !(menuManageable && catalog[k] && catalog[k].pointsPrev);
@@ -4998,10 +4990,6 @@
       document.getElementById("menuVisualMerge").addEventListener("click", function () {
         menu.hidden = true;
         openVisualMerge();
-      });
-      document.getElementById("menuRebuildCloud").addEventListener("click", function () {
-        menu.hidden = true;
-        rebuildCloudFromMesh(key);
       });
       document.getElementById("menuRestoreCloud").addEventListener("click", function () {
         menu.hidden = true;
