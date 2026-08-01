@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727eg">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727eg">
-<link rel="stylesheet" href="../css/object.css?v=20260727eg">
-<script src="../js/cursor.js?v=20260727eg" defer></script>
-<script src="../js/grain.js?v=20260727eg" defer></script>
-<script src="../js/tilt3d.js?v=20260727eg" defer></script>
-<script src="../js/owner.js?v=20260727eg"></script>
-<script src="../js/config.js?v=20260727eg"></script>
-<script src="../js/archive.js?v=20260727eg"></script>
-<script src="../js/blobstore.js?v=20260727eg"></script>
-<script src="../js/particle-loader.js?v=20260727eg"></script>
-<script src="../js/remote-captures.js?v=20260727eg"></script>
-<script src="../js/community-seed.js?v=20260727eg"></script>
-<script src="../js/flow.js?v=20260727eg" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eg"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727eh">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727eh">
+<link rel="stylesheet" href="../css/object.css?v=20260727eh">
+<script src="../js/cursor.js?v=20260727eh" defer></script>
+<script src="../js/grain.js?v=20260727eh" defer></script>
+<script src="../js/tilt3d.js?v=20260727eh" defer></script>
+<script src="../js/owner.js?v=20260727eh"></script>
+<script src="../js/config.js?v=20260727eh"></script>
+<script src="../js/archive.js?v=20260727eh"></script>
+<script src="../js/blobstore.js?v=20260727eh"></script>
+<script src="../js/particle-loader.js?v=20260727eh"></script>
+<script src="../js/remote-captures.js?v=20260727eh"></script>
+<script src="../js/community-seed.js?v=20260727eh"></script>
+<script src="../js/flow.js?v=20260727eh" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eh"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eg" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eh" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eg";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eg";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eh";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eh";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eg";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eh";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727eg";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727eh";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1988,6 +1988,36 @@
         var spaceKey = catalog[key].connectedKey;
         var space = catalog[spaceKey];
         if (!space) return;
+      // the space's mesh, else its photo — used both when the space simply has
+      // no cloud and when its cloud failed to load, so the stage is never left
+      // empty with no way to tell which happened
+      function showSpaceFallback(space, why) {
+        disposePcViewer();
+        objPoints.hidden = true;
+        if (space.model) {
+          stage.dataset.mode = "model";
+          photo.hidden = true;
+          modelViewer.hidden = false;
+          if (String(space.model).indexOf("idb:") === 0) {
+            window.BlobStore.get(String(space.model).slice(4)).then(function (blob) {
+              if (blob && SPACE_VIEW_ACTIVE) modelViewer.src = URL.createObjectURL(blob);
+            });
+          } else {
+            modelViewer.src = space.model;
+          }
+        } else if (space.img) {
+          stage.dataset.mode = "photo";
+          modelViewer.hidden = true;
+          photo.hidden = false;
+          photo.src = space.img;
+          photo.alt = space.title;
+        } else if (why) {
+          notify("Couldn't show that space: " + why + ".");
+          return;
+        }
+        if (why) notify("Showing the space's mesh — " + why + ".");
+      }
+
         SPACE_VIEW_ACTIVE = true;
         clearHotspots();
         clearLinkHotspots();
@@ -2014,34 +2044,32 @@
             : fetch(space.points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
           if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
             spblob.then(function (blob) {
-              if (!blob || !SPACE_VIEW_ACTIVE) return null;
+              if (!SPACE_VIEW_ACTIVE) return null;
+              if (!blob) throw new Error("the space's point cloud could not be fetched");
               return blob.arrayBuffer();
             }).then(function (buf) {
-              if (!buf || !SPACE_VIEW_ACTIVE) return;
+              if (!SPACE_VIEW_ACTIVE) return;
+              if (!buf) throw new Error("the space's point cloud was empty");
               var geometry = window.__deserializeGeometry(buf);
+              if (!geometry || !geometry.getAttribute || !geometry.getAttribute("position")) {
+                throw new Error("the space's point cloud could not be read");
+              }
               pcViewer = window.__mountPointCloudViewer(objPoints, geometry,
                 { pointSize: space.pointSize || null, tilt: space.tilt || null,
                   initialView: (space.defaultView && space.defaultView.position) ? space.defaultView : null });
               showPcDebug();
-            }).catch(function () {});
-          }
-        } else if (space.model) {
-          stage.dataset.mode = "model";
-          photo.hidden = true;
-          modelViewer.hidden = false;
-          if (space.model.indexOf("idb:") === 0) {
-            window.BlobStore.get(space.model.slice(4)).then(function (blob) {
-              if (blob && SPACE_VIEW_ACTIVE) modelViewer.src = URL.createObjectURL(blob);
+            }).catch(function (e) {
+              // this used to end in an empty catch, so a space whose cloud
+              // failed opened as a bare black stage with only its markers on
+              // it — indistinguishable from a space with nothing in it. Fall
+              // back to whatever else the space has, and say what happened.
+              if (!SPACE_VIEW_ACTIVE) return;
+              try { console.error("[traces] space cloud failed", e); } catch (e2) {}
+              showSpaceFallback(space, (e && e.message) || "the space's point cloud failed");
             });
-          } else {
-            modelViewer.src = space.model;
           }
         } else {
-          stage.dataset.mode = "photo";
-          modelViewer.hidden = true;
-          photo.hidden = false;
-          photo.src = space.img;
-          photo.alt = space.title;
+          showSpaceFallback(space, null);
         }
         renderSpaceHighlight(spaceKey, key);
         refreshViewToggle();
