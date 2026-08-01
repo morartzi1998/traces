@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fb";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fb";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fc";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fc";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -393,6 +393,19 @@ export function mountPointCloudViewer(container, geometry, opts) {
     }
     camera.up.copy(upVec);
     camera.position.copy(sphere.center).add(viewDir.multiplyScalar(sphere.radius * 2.4 || 3));
+  }
+  // focusOn: arrive already looking AT a particular point rather than at the
+  // whole cloud — entering a space through one of its objects should open on
+  // that object, not on the room with the object somewhere in it. The pull-back
+  // is a fraction of the cloud's own radius, so it frames comparably whether
+  // the space is a small room or a large one.
+  if (opts.focusOn) {
+    var fp = new THREE.Vector3(opts.focusOn.x, opts.focusOn.y, opts.focusOn.z);
+    var away = camera.position.clone().sub(sphere.center);
+    if (away.lengthSq() < 1e-8) away.set(0, 0, 1);
+    away.normalize().multiplyScalar(Math.max(sphere.radius * 0.28, 0.05));
+    camera.position.copy(fp).add(away);
+    controls.target.copy(fp);
   }
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
