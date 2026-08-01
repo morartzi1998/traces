@@ -227,9 +227,27 @@
       var sizes = blobs.map(function (b) { return b ? b.size : 0; });
       var total = (sizes[0] + sizes[1] + sizes[2]) || 1;
       var frac = [0, 0, 0];
-      function report() {
+      // A publish has two upload phases — the capture's own files, then every
+      // dated version's. Each phase had its own reporter writing to the SAME
+      // callback, so the number climbed through the first phase and then
+      // started again from zero for the second: the percentage visibly went
+      // BACKWARDS, which reads as the share restarting or stalling. Give each
+      // phase its own slice of the range, and never emit a value lower than
+      // one already shown.
+      var versionCount = Array.isArray(cap.versions) ? cap.versions.length : 0;
+      // with a single version its files are usually the same blobs as the
+      // capture's own, so the first phase really is the whole job
+      var BASE_SHARE = versionCount > 1 ? 0.4 : 1;
+      var lastPct = 0;
+      function emit(v) {
         if (!onProgress) return;
-        onProgress((frac[0] * sizes[0] + frac[1] * sizes[1] + frac[2] * sizes[2]) / total);
+        if (!(v > lastPct)) v = lastPct;
+        lastPct = v;
+        onProgress(v);
+      }
+      function report() {
+        var f = (frac[0] * sizes[0] + frac[1] * sizes[1] + frac[2] * sizes[2]) / total;
+        emit(f * BASE_SHARE);
       }
       return Promise.all([0, 1, 2].map(function (i) {
         var blob = blobs[i];
@@ -267,7 +285,9 @@
           if (!onProgress || !vRefs.length) return;
           var sum = 0;
           vRefs.forEach(function (r) { sum += vFrac[r] || 0; });
-          onProgress(sum / vRefs.length);
+          // the versions occupy the range left over by the first phase, so the
+          // number carries on from where that finished instead of resetting
+          emit(BASE_SHARE + (sum / vRefs.length) * (1 - BASE_SHARE));
         }
         function rehost(ref) {
           if (!ref) return Promise.resolve(ref || null);
