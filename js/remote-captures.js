@@ -360,8 +360,33 @@
                   record.versions.forEach(function (rv) {
                     var pv = prev.versions.filter(function (v) { return v.created === rv.created; })[0];
                     if (!pv) return;
+                    // MODEL and IMG were not inherited here, only points and the
+                    // saved angle. A re-publish from a device that no longer
+                    // holds a version's blob rehosts it to null, and that null
+                    // was written straight over the good URL already on the
+                    // server: the scan itself survives in storage, but nothing
+                    // points at it any more and the dated scan reads as gone.
+                    // Never let an absent value overwrite a present one.
+                    if (!rv.model && pv.model) rv.model = pv.model;
+                    if (!rv.img && pv.img) rv.img = pv.img;
                     if (!rv.points && pv.points) rv.points = pv.points;
                     if (rv.defaultView == null && pv.defaultView != null) rv.defaultView = pv.defaultView;
+                    if (rv.meshTilt == null && pv.meshTilt != null) rv.meshTilt = pv.meshTilt;
+                  });
+                  // A version that ends up with no file at all, where the server
+                  // has one with the same date that does, is this same loss
+                  // arriving by a different route (a `created` that no longer
+                  // lines up). Fall back to matching on the visible date before
+                  // publishing an empty dated scan over a real one.
+                  record.versions.forEach(function (rv) {
+                    if (rv.model || rv.img || rv.points) return;
+                    var byDate = prev.versions.filter(function (v) {
+                      return (v.dateLabel || v.year) === (rv.dateLabel || rv.year) && (v.model || v.img || v.points);
+                    })[0];
+                    if (!byDate) return;
+                    rv.model = byDate.model || null;
+                    rv.img = byDate.img || null;
+                    rv.points = byDate.points || null;
                   });
                 }
               }
