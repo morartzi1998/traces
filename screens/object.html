@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ff">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ff">
-<link rel="stylesheet" href="../css/object.css?v=20260727ff">
-<script src="../js/cursor.js?v=20260727ff" defer></script>
-<script src="../js/grain.js?v=20260727ff" defer></script>
-<script src="../js/tilt3d.js?v=20260727ff" defer></script>
-<script src="../js/owner.js?v=20260727ff"></script>
-<script src="../js/config.js?v=20260727ff"></script>
-<script src="../js/archive.js?v=20260727ff"></script>
-<script src="../js/blobstore.js?v=20260727ff"></script>
-<script src="../js/particle-loader.js?v=20260727ff"></script>
-<script src="../js/remote-captures.js?v=20260727ff"></script>
-<script src="../js/community-seed.js?v=20260727ff"></script>
-<script src="../js/flow.js?v=20260727ff" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ff"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fg">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fg">
+<link rel="stylesheet" href="../css/object.css?v=20260727fg">
+<script src="../js/cursor.js?v=20260727fg" defer></script>
+<script src="../js/grain.js?v=20260727fg" defer></script>
+<script src="../js/tilt3d.js?v=20260727fg" defer></script>
+<script src="../js/owner.js?v=20260727fg"></script>
+<script src="../js/config.js?v=20260727fg"></script>
+<script src="../js/archive.js?v=20260727fg"></script>
+<script src="../js/blobstore.js?v=20260727fg"></script>
+<script src="../js/particle-loader.js?v=20260727fg"></script>
+<script src="../js/remote-captures.js?v=20260727fg"></script>
+<script src="../js/community-seed.js?v=20260727fg"></script>
+<script src="../js/flow.js?v=20260727fg" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fg"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ff" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fg" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ff";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ff";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fg";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fg";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ff";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fg";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ff";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fg";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1604,6 +1604,7 @@
                 modelViewer.hidden = true;
                 stage.dataset.mode = "model";
                 pcViewer = window.__mountPointCloudViewer(objPoints, geometry, { tilt: it.tilt || null });
+                pcViewerKey = k;
                 showPcDebug();
                 setRepToggle(true);
                 notify("Rebuilt with " + count.toLocaleString() + " evenly spread points — saving…");
@@ -2987,6 +2988,7 @@
         clearPcFrameSubs();
         clearLinkFrameSubs();
         if (pcViewer) { pcViewer.dispose(); pcViewer = null; }
+        pcViewerKey = null;
         objPoints.hidden = true;
       }
 
@@ -3001,6 +3003,13 @@
       // never disposes the geometry it's handed, so a cached one stays valid
       // across re-mounts.
       var pointGeomCache = {};
+      // which capture the mounted cloud actually belongs to. show() assigns
+      // `key = k` BEFORE swapScan runs, so a `k === key` test there is always
+      // true and cannot tell "toggled representation" from "moved to another
+      // capture" — which is how the freeze-the-cloud path came to fire on
+      // navigation, covering the stage with a stale (often blank) still and
+      // skipping the loading animation entirely.
+      var pcViewerKey = null;
       // a monotonic token bumped on EVERY swapScan. The old `key !== k` guard
       // only tells captures apart, not navigations — so exiting a capture and
       // arrowing back to it (A→B→A) left TWO in-flight cloud fetches for A,
@@ -3079,7 +3088,7 @@
         // (the mesh needs the memory), no black, no flicker. Every OTHER
         // navigation still disposes up front and shows the loader as before.
         var meshFreeze = null;
-        if (k === key && pcViewer && model && !points) {
+        if (pcViewerKey === k && pcViewer && model && !points) {
           try {
             var shot = pcViewer.screenshot && pcViewer.screenshot();
             if (shot) {
@@ -3223,6 +3232,7 @@
                 { pointSize: catalog[k].pointSize || null,
                   initialView: pcv(carriedView) || pcv(catalog[k].defaultView),
                   tilt: catalog[k].tilt || null });
+              pcViewerKey = k;
               showPcDebug();
               endLoading();
               setRepToggle(true); // the cloud is genuinely on stage now
@@ -5279,6 +5289,7 @@
           // as empty)
           g.computeBoundingSphere();
           var rad = (g.boundingSphere && g.boundingSphere.radius) || 1;
+          pcViewerKey = k;
           pcViewer = window.__mountPointCloudViewer(objPoints, g,
             { pointSize: Math.max(0.004, rad * 0.006), tilt: catalog[k].tilt || null });
           showPcDebug();
