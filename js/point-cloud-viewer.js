@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727ec";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ec";
+import * as THREE from "./vendor/three/three.module.js?v=20260727ed";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ed";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -247,6 +247,18 @@ export function mountPointCloudViewer(container, geometry, opts) {
     vertexColors: hasColor,
     color: hasColor ? 0xffffff : 0xcccccc,
   });
+  // A bare PointsMaterial draws every point as a hard SQUARE. Where a surface
+  // runs at an angle those squares tile into visible diagonal lattices — the
+  // "diamond" pattern that a real scan (round points) never shows. Discarding
+  // the corners makes each point a disc instead. This is a cutout, not
+  // transparency: no blending, no depth sorting, so it costs nothing and can't
+  // reorder the cloud.
+  material.onBeforeCompile = function (shader) {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "void main() {",
+      "void main() {\n\tvec2 tracesPC = gl_PointCoord - vec2( 0.5 );\n\tif ( dot( tracesPC, tracesPC ) > 0.25 ) discard;"
+    );
+  };
   // a managed/locked-down PC often runs Chrome with hardware acceleration
   // disabled by policy — WebGL then renders in SOFTWARE (SwiftShader), which
   // manages ~3fps on a dense cloud: reads as frozen/never-loading. Detect it
