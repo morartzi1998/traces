@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727et">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727et">
-<link rel="stylesheet" href="../css/object.css?v=20260727et">
-<script src="../js/cursor.js?v=20260727et" defer></script>
-<script src="../js/grain.js?v=20260727et" defer></script>
-<script src="../js/tilt3d.js?v=20260727et" defer></script>
-<script src="../js/owner.js?v=20260727et"></script>
-<script src="../js/config.js?v=20260727et"></script>
-<script src="../js/archive.js?v=20260727et"></script>
-<script src="../js/blobstore.js?v=20260727et"></script>
-<script src="../js/particle-loader.js?v=20260727et"></script>
-<script src="../js/remote-captures.js?v=20260727et"></script>
-<script src="../js/community-seed.js?v=20260727et"></script>
-<script src="../js/flow.js?v=20260727et" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727et"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727eu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727eu">
+<link rel="stylesheet" href="../css/object.css?v=20260727eu">
+<script src="../js/cursor.js?v=20260727eu" defer></script>
+<script src="../js/grain.js?v=20260727eu" defer></script>
+<script src="../js/tilt3d.js?v=20260727eu" defer></script>
+<script src="../js/owner.js?v=20260727eu"></script>
+<script src="../js/config.js?v=20260727eu"></script>
+<script src="../js/archive.js?v=20260727eu"></script>
+<script src="../js/blobstore.js?v=20260727eu"></script>
+<script src="../js/particle-loader.js?v=20260727eu"></script>
+<script src="../js/remote-captures.js?v=20260727eu"></script>
+<script src="../js/community-seed.js?v=20260727eu"></script>
+<script src="../js/flow.js?v=20260727eu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727et" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eu" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727et";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727et";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eu";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727et";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727et";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727eu";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3621,9 +3621,31 @@
       // (not the designer's fixed showcase) can be extended this way.
       function startUpdateFlow() {
         try {
-          if ((window.Archive && Archive.get(key)) || (window.Community && Community.get(key))) {
+          var inLocal = (window.Archive && Archive.get(key)) || (window.Community && Community.get(key));
+          // A capture that lives only on the server is in the catalog but in
+          // neither local store. Clearing the target here is what made the
+          // next screen build a BRAND NEW capture instead of a new version of
+          // this one — the re-scan silently became a duplicate. Seed the local
+          // archive from the catalog record first, so the update has something
+          // to attach its version to and stays the same capture.
+          if (!inLocal && catalog[key] && window.Archive && Archive.add) {
+            var c = catalog[key];
+            Archive.add({
+              id: key, title: c.title || "untitled capture", feeling: c.feeling || "",
+              kind: c.kind || "object", img: c.img || null, model: c.model || null,
+              points: c.points || null, created: c.created || Date.now(),
+              annotations: c.annotations || [], versions: c.versions || [],
+              defaultView: c.defaultView || null, pointSize: c.pointSize != null ? c.pointSize : null,
+              tilt: c.tilt || null, dual: !!c.dual, openOn: c.openOn || null,
+              connectedKey: c.connectedKey || null, links: c.links || [],
+            });
+            inLocal = window.Archive.get(key);
+          }
+          if (inLocal) {
             sessionStorage.setItem("traces-update-target", key);
           } else {
+            // genuinely nothing to attach to — the next screen will say so
+            try { console.error("[traces] cannot seed update target:", key); } catch (e2) {}
             sessionStorage.removeItem("traces-update-target");
           }
         } catch (e) {}
