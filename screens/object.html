@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dy">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727dy">
-<link rel="stylesheet" href="../css/object.css?v=20260727dy">
-<script src="../js/cursor.js?v=20260727dy" defer></script>
-<script src="../js/grain.js?v=20260727dy" defer></script>
-<script src="../js/tilt3d.js?v=20260727dy" defer></script>
-<script src="../js/owner.js?v=20260727dy"></script>
-<script src="../js/config.js?v=20260727dy"></script>
-<script src="../js/archive.js?v=20260727dy"></script>
-<script src="../js/blobstore.js?v=20260727dy"></script>
-<script src="../js/particle-loader.js?v=20260727dy"></script>
-<script src="../js/remote-captures.js?v=20260727dy"></script>
-<script src="../js/community-seed.js?v=20260727dy"></script>
-<script src="../js/flow.js?v=20260727dy" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dy"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dz">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727dz">
+<link rel="stylesheet" href="../css/object.css?v=20260727dz">
+<script src="../js/cursor.js?v=20260727dz" defer></script>
+<script src="../js/grain.js?v=20260727dz" defer></script>
+<script src="../js/tilt3d.js?v=20260727dz" defer></script>
+<script src="../js/owner.js?v=20260727dz"></script>
+<script src="../js/config.js?v=20260727dz"></script>
+<script src="../js/archive.js?v=20260727dz"></script>
+<script src="../js/blobstore.js?v=20260727dz"></script>
+<script src="../js/particle-loader.js?v=20260727dz"></script>
+<script src="../js/remote-captures.js?v=20260727dz"></script>
+<script src="../js/community-seed.js?v=20260727dz"></script>
+<script src="../js/flow.js?v=20260727dz" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dz"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dy" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dz" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dy";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dy";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dz";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dz";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dy";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dz";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727dy";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727dz";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -566,6 +566,10 @@
         <li hidden><button type="button" id="menuDisconnect">Disconnect from that space</button></li>
         <li hidden><button type="button" id="menuSetDefaultView">Set this angle as default view &amp; thumbnail</button></li>
         <li hidden><button type="button" id="menuAdjust">Adjust view &amp; orientation</button></li>
+        <!-- a cloud derived before the sampler preferred surface sampling is
+             stored as the mesh's vertices, which clump and leave gaps; this
+             rebuilds it evenly from the same mesh and re-saves it -->
+        <li id="menuRebuildCloudRow" hidden><button type="button" id="menuRebuildCloud">Rebuild point cloud from mesh</button></li>
       </ul>
       <!-- "Set a display image" file picker: swaps the polaroid thumbnail for
            a chosen image, for any capture Mor can manage (hers, or a shared
@@ -1499,6 +1503,81 @@
             });
           })
           .catch(function () {});
+      }
+
+      // Same derive-and-attach as the heal above, but deliberate and for a
+      // capture that ALREADY has a cloud: an older cloud was built from the
+      // mesh's vertices (they clump where geometry is fine and leave large
+      // flat spans nearly bare), while the sampler now spreads points evenly
+      // across the surface. Only the stored blob carries the old distribution,
+      // so re-deriving is the only way to fix a capture already published.
+      // a brief status line for actions that take a while and have no other
+      // visible result — styled like flow.js's update toast so it reads as the
+      // same piece of furniture
+      var notifyTimer = null;
+      function notify(msg) {
+        var el = document.getElementById("objNotice");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "objNotice";
+          el.style.cssText = "position:fixed;left:50%;bottom:5vh;transform:translateX(-50%);" +
+            "z-index:9999;background:#0a25b4;color:#fff;padding:10px 18px;" +
+            "font-family:inherit;font-size:0.85rem;letter-spacing:0.05em;" +
+            "box-shadow:0 4px 18px rgba(0,0,0,0.35);pointer-events:none;max-width:80vw;" +
+            "text-align:center";
+          document.body.appendChild(el);
+        }
+        el.textContent = msg;
+        clearTimeout(notifyTimer);
+        notifyTimer = setTimeout(function () { if (el) el.remove(); }, 5000);
+      }
+
+      var rebuildingCloud = false;
+      function rebuildCloudFromMesh(k) {
+        if (rebuildingCloud) return;
+        var it = catalog[k];
+        if (!it || !it.model) { notify("This capture has no mesh to rebuild from."); return; }
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!api || !window.__glbToPoints || !window.__serializeGeometry) {
+          notify("Can't rebuild right now.");
+          return;
+        }
+        rebuildingCloud = true;
+        notify("Rebuilding the point cloud…");
+        fetchModelBuffer(String(it.model))
+          .then(function (buf) {
+            if (!buf) throw new Error("no mesh");
+            return window.__glbToPoints(buf);
+          })
+          .then(function (geometry) {
+            if (!geometry || !geometry.getAttribute("position")) throw new Error("no points");
+            var count = geometry.getAttribute("position").count;
+            var bytes = window.__serializeGeometry(geometry, { derived: true });
+            var form = new FormData();
+            form.append("file", new Blob([bytes], { type: "application/octet-stream" }), "derived-points.bin");
+            return fetch(api + "/captures/upload", { method: "POST", body: form })
+              .then(function (r) { return r.ok ? r.json() : null; })
+              .then(function (d) {
+                if (!d || !d.url) throw new Error("upload failed");
+                // the stored size was chosen against the OLD distribution and
+                // is meaningless for the new one — drop it so the viewer sizes
+                // this cloud from its own scale again
+                var fields = { points: d.url, dual: true, pointSize: null };
+                [k, k + "-community"].forEach(function (sid) { patchServerRecord(sid, fields); });
+                it.points = d.url;
+                it.dual = true;
+                it.pointSize = null;
+                if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+                if (window.Community && Community.get(k)) Community.update(k, fields);
+                // the old cloud is cached under its own blob key for this
+                // session; drop it so the view remounts the rebuilt one
+                if (pointGeomCache) delete pointGeomCache[d.url];
+                notify("Rebuilt with " + count.toLocaleString() + " evenly spread points.");
+                if (key === k) show(k);
+              });
+          })
+          .catch(function () { notify("Couldn't rebuild the point cloud."); })
+          .then(function () { rebuildingCloud = false; });
       }
 
       // heal EVERY community capture that reached the server with a mesh but no
@@ -3081,6 +3160,13 @@
         // view or not — so it's offered whenever the menu itself is
         var menuSetImageRow = document.getElementById("menuSetImageRow");
         if (menuSetImageRow) menuSetImageRow.hidden = !menuManageable;
+        // rebuilding the cloud re-derives and re-publishes a shared asset, so
+        // it is offered only where the capture is actually manageable, and
+        // only when there is a mesh to derive it from
+        var menuRebuildCloudRow = document.getElementById("menuRebuildCloudRow");
+        if (menuRebuildCloudRow) {
+          menuRebuildCloudRow.hidden = !(menuManageable && catalog[k] && catalog[k].model);
+        }
         // a 3D "visual merge" only means something with at least two dated
         // point-cloud scans to combine — otherwise the button read as broken
         // (it never had a handler at all). Hidden until there's real history.
@@ -4761,6 +4847,10 @@
       document.getElementById("menuVisualMerge").addEventListener("click", function () {
         menu.hidden = true;
         openVisualMerge();
+      });
+      document.getElementById("menuRebuildCloud").addEventListener("click", function () {
+        menu.hidden = true;
+        rebuildCloudFromMesh(key);
       });
       document.getElementById("objMergeClose").addEventListener("click", closeVisualMerge);
       document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeVisualMerge(); });
