@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ej">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ej">
-<link rel="stylesheet" href="../css/object.css?v=20260727ej">
-<script src="../js/cursor.js?v=20260727ej" defer></script>
-<script src="../js/grain.js?v=20260727ej" defer></script>
-<script src="../js/tilt3d.js?v=20260727ej" defer></script>
-<script src="../js/owner.js?v=20260727ej"></script>
-<script src="../js/config.js?v=20260727ej"></script>
-<script src="../js/archive.js?v=20260727ej"></script>
-<script src="../js/blobstore.js?v=20260727ej"></script>
-<script src="../js/particle-loader.js?v=20260727ej"></script>
-<script src="../js/remote-captures.js?v=20260727ej"></script>
-<script src="../js/community-seed.js?v=20260727ej"></script>
-<script src="../js/flow.js?v=20260727ej" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ej"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ek">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ek">
+<link rel="stylesheet" href="../css/object.css?v=20260727ek">
+<script src="../js/cursor.js?v=20260727ek" defer></script>
+<script src="../js/grain.js?v=20260727ek" defer></script>
+<script src="../js/tilt3d.js?v=20260727ek" defer></script>
+<script src="../js/owner.js?v=20260727ek"></script>
+<script src="../js/config.js?v=20260727ek"></script>
+<script src="../js/archive.js?v=20260727ek"></script>
+<script src="../js/blobstore.js?v=20260727ek"></script>
+<script src="../js/particle-loader.js?v=20260727ek"></script>
+<script src="../js/remote-captures.js?v=20260727ek"></script>
+<script src="../js/community-seed.js?v=20260727ek"></script>
+<script src="../js/flow.js?v=20260727ek" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ek"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ej" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ek" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ej";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ej";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ek";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ek";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ej";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ek";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ej";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ek";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -628,6 +628,7 @@
          aria-label="Archived capture. Drag to turn it in space, scroll to zoom, click to see its details.">
       <img class="obj-photo" id="objPhoto" src="" alt="">
       <model-viewer class="obj-model" id="objModel" camera-controls tone-mapping="neutral" disable-pan bounds="tight" min-camera-orbit="auto auto 0m"
+        max-camera-orbit="auto auto 400%"
         interaction-prompt="none" shadow-intensity="0" exposure="1" hidden></model-viewer>
       <div class="obj-points" id="objPoints" hidden></div>
       <!-- a drifting particle cloud shown while a (often tens-of-MB) scan is
@@ -1948,6 +1949,7 @@
       // the space's mesh, else its photo — used both when the space simply has
       // no cloud and when its cloud failed to load, so the stage is never left
       // empty with no way to tell which happened
+      function spaceKeyOf(sp) { return (sp && (sp.id || sp.key || sp.title)) || "(unknown)"; }
       function showSpaceFallback(space, why) {
         disposePcViewer();
         objPoints.hidden = true;
@@ -1968,8 +1970,18 @@
           photo.hidden = false;
           photo.src = space.img;
           photo.alt = space.title;
-        } else if (why) {
-          notify("Couldn't show that space: " + why + ".");
+        } else {
+          // nothing at all to fall back to. Previously this said nothing when
+          // there was no error to report either, so a space holding only its
+          // markers opened as a bare stage and read as the action failing.
+          try {
+            console.error("[traces] space has nothing to display", {
+              key: spaceKeyOf(space), points: !!space.points,
+              model: !!space.model, img: !!space.img });
+          } catch (e) {}
+          notify(why
+            ? "Couldn't show that space: " + why + "."
+            : "That space has no scan attached yet — only its marked points.");
           return;
         }
         if (why) notify("Showing the space's mesh — " + why + ".");
@@ -3121,15 +3133,26 @@
         // here — and because every later click re-enters show()/handlers with
         // the same broken key, the WHOLE screen went dead: arrows, panels,
         // menu, everything. Fall back to something that exists instead.
+        // A missing key used to be swapped for the first available capture in
+        // silence — and then written back to sessionStorage below, which is
+        // what made it STICK: open a capture before the server merge has
+        // landed, get someone's community item instead, and from then on that
+        // wrong id is the remembered one. Substitute only to keep the screen
+        // alive, say so, and never remember a capture that was not the one
+        // asked for.
+        var substituted = false;
         if (!catalog[k]) {
           var fallback = order.concat(communityOrder).filter(function (id) { return !!catalog[id]; })[0];
           if (!fallback || fallback === k) return;
+          try { console.error("[traces] capture not in catalog, substituting:", k, "->", fallback); } catch (e) {}
+          notify("That capture isn't loaded yet — showing another one.");
           k = fallback;
+          substituted = true;
         }
         var sameItem = (k === key);
         key = k;
         displayedVersionIndex = -1;
-        try { sessionStorage.setItem("traces-item", k); } catch (e) {}
+        if (!substituted) { try { sessionStorage.setItem("traces-item", k); } catch (e) {} }
         // links placed before link-syncing existed live only in this
         // browser's overlay — opening the capture once as the owner pushes
         // them to the shared record so visitors finally see them
