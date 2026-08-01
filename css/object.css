@@ -1436,8 +1436,13 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   flex: 1;
   /* min-height:0 so the description inside can actually shrink — a flex item
      defaults to min-height:auto, which refuses to go below its content and
-     leaves an inner scroller nothing to scroll against */
+     leaves an inner scroller nothing to scroll against.
+     overflow:hidden is not optional alongside it: once the section is allowed
+     to shrink below its content, anything sticking out is PAINTED OVER the
+     section beneath, which put the description straight on top of the
+     annotations. */
   min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
