@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ex">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727ex">
-<script src="../js/cursor.js?v=20260727ex" defer></script>
-<script src="../js/grain.js?v=20260727ex" defer></script>
-<script src="../js/tilt3d.js?v=20260727ex" defer></script>
-<script src="../js/annotations.js?v=20260727ex" defer></script>
-<script src="../js/owner.js?v=20260727ex"></script>
-<script src="../js/config.js?v=20260727ex"></script>
-<script src="../js/archive.js?v=20260727ex"></script>
-<script src="../js/blobstore.js?v=20260727ex"></script>
-<script src="../js/remote-captures.js?v=20260727ex"></script>
-<script src="../js/flow.js?v=20260727ex" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ex"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ey">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727ey">
+<script src="../js/cursor.js?v=20260727ey" defer></script>
+<script src="../js/grain.js?v=20260727ey" defer></script>
+<script src="../js/tilt3d.js?v=20260727ey" defer></script>
+<script src="../js/annotations.js?v=20260727ey" defer></script>
+<script src="../js/owner.js?v=20260727ey"></script>
+<script src="../js/config.js?v=20260727ey"></script>
+<script src="../js/archive.js?v=20260727ey"></script>
+<script src="../js/blobstore.js?v=20260727ey"></script>
+<script src="../js/remote-captures.js?v=20260727ey"></script>
+<script src="../js/flow.js?v=20260727ey" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ey"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ex" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ey" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ex";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ex";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ex";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ey";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ey";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ey";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -429,7 +429,10 @@
       var updateTargetMissing = !!(updateTarget && !isUpdate);
       if (updateTargetMissing) {
         try { console.error("[traces] update target not found locally:", updateTarget); } catch (e) {}
+        // owner-only, same reasoning as object.html: a visitor should not be
+        // shown internal status text about capture records
         window.addEventListener("DOMContentLoaded", function () {
+          if (!(window.isOwnerDevice && window.isOwnerDevice())) return;
           var n = document.createElement("div");
           n.style.cssText = "position:fixed;left:50%;bottom:5vh;transform:translateX(-50%);" +
             "z-index:9999;background:#0a25b4;color:#fff;padding:12px 20px;max-width:80vw;" +
