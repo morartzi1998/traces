@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fj">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fj">
-<link rel="stylesheet" href="../css/object.css?v=20260727fj">
-<script src="../js/cursor.js?v=20260727fj" defer></script>
-<script src="../js/grain.js?v=20260727fj" defer></script>
-<script src="../js/tilt3d.js?v=20260727fj" defer></script>
-<script src="../js/owner.js?v=20260727fj"></script>
-<script src="../js/config.js?v=20260727fj"></script>
-<script src="../js/archive.js?v=20260727fj"></script>
-<script src="../js/blobstore.js?v=20260727fj"></script>
-<script src="../js/particle-loader.js?v=20260727fj"></script>
-<script src="../js/remote-captures.js?v=20260727fj"></script>
-<script src="../js/community-seed.js?v=20260727fj"></script>
-<script src="../js/flow.js?v=20260727fj" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fj"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fk">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fk">
+<link rel="stylesheet" href="../css/object.css?v=20260727fk">
+<script src="../js/cursor.js?v=20260727fk" defer></script>
+<script src="../js/grain.js?v=20260727fk" defer></script>
+<script src="../js/tilt3d.js?v=20260727fk" defer></script>
+<script src="../js/owner.js?v=20260727fk"></script>
+<script src="../js/config.js?v=20260727fk"></script>
+<script src="../js/archive.js?v=20260727fk"></script>
+<script src="../js/blobstore.js?v=20260727fk"></script>
+<script src="../js/particle-loader.js?v=20260727fk"></script>
+<script src="../js/remote-captures.js?v=20260727fk"></script>
+<script src="../js/community-seed.js?v=20260727fk"></script>
+<script src="../js/flow.js?v=20260727fk" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fk"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fj" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fk" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fj";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fj";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fk";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fk";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fj";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fk";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fj";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fk";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2258,6 +2258,11 @@
           }
           for (var i = 0; i < n.children.length; i++) walk(n.children[i], depth + 1, out);
         }
+        // The white lasts only as long as a load does — expecting anyone to
+        // screenshot the exact instant is a bad ask. So the FIRST time a large
+        // light layer appears, that reading is latched and kept on screen until
+        // the page is reloaded: trigger the white once, then screenshot calmly.
+        var caught = null;
         setInterval(function () {
           var out = ["STAGE LAYERS  " + new Date().toLocaleTimeString(),
                      "mode=" + (stage.dataset.mode || "-") + "  stage=" + stage.className, ""];
@@ -2274,7 +2279,12 @@
                 out.push("FULLSCREEN " + describe(n, 0));
               }
             });
-          box.textContent = out.join("\n");
+          if (!caught && out.some(function (l) { return l.indexOf("<<< LIGHT") !== -1; })) {
+            caught = ["*** CAUGHT THE WHITE AT " + new Date().toLocaleTimeString() + " ***"]
+              .concat(out, ["*** end of catch — live reading follows ***", ""]);
+            box.style.color = "#f88";
+          }
+          box.textContent = (caught || []).concat(out).join("\n");
         }, 250);
       }
       startLayerProbe();
