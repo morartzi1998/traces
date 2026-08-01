@@ -1475,11 +1475,9 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    without hunting for them, which is the whole point of not scrolling the card */
 .obj-link-card > .obj-link-card-section--visibility {
   flex-shrink: 0;
-  /* was sitting directly on the annotations above it — the two read as one
-     collapsed block with no separation at all */
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(10, 37, 180, 0.25);
+  /* separated by space, not by a rule of its own: a half-strength line here
+     read as a stray divider against the card's real ones */
+  margin-top: 18px;
 }
 
 .obj-link-card-section--actions .obj-white-edit {
