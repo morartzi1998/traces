@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727eu">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727eu">
-<link rel="stylesheet" href="../css/object.css?v=20260727eu">
-<script src="../js/cursor.js?v=20260727eu" defer></script>
-<script src="../js/grain.js?v=20260727eu" defer></script>
-<script src="../js/tilt3d.js?v=20260727eu" defer></script>
-<script src="../js/owner.js?v=20260727eu"></script>
-<script src="../js/config.js?v=20260727eu"></script>
-<script src="../js/archive.js?v=20260727eu"></script>
-<script src="../js/blobstore.js?v=20260727eu"></script>
-<script src="../js/particle-loader.js?v=20260727eu"></script>
-<script src="../js/remote-captures.js?v=20260727eu"></script>
-<script src="../js/community-seed.js?v=20260727eu"></script>
-<script src="../js/flow.js?v=20260727eu" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eu"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ev">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ev">
+<link rel="stylesheet" href="../css/object.css?v=20260727ev">
+<script src="../js/cursor.js?v=20260727ev" defer></script>
+<script src="../js/grain.js?v=20260727ev" defer></script>
+<script src="../js/tilt3d.js?v=20260727ev" defer></script>
+<script src="../js/owner.js?v=20260727ev"></script>
+<script src="../js/config.js?v=20260727ev"></script>
+<script src="../js/archive.js?v=20260727ev"></script>
+<script src="../js/blobstore.js?v=20260727ev"></script>
+<script src="../js/particle-loader.js?v=20260727ev"></script>
+<script src="../js/remote-captures.js?v=20260727ev"></script>
+<script src="../js/community-seed.js?v=20260727ev"></script>
+<script src="../js/flow.js?v=20260727ev" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ev"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eu" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ev" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eu";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eu";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ev";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ev";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eu";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ev";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727eu";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ev";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2194,6 +2194,15 @@
           u = String(u);
           return u.length > 34 ? "…" + u.slice(-33) : u;
         }
+        // what each dated version actually points at. Two versions rendering
+        // the same scan is either two records sharing one file, or a version
+        // that never got its own — and only the stored refs tell them apart.
+        var vLines = (cap.versions || []).map(function (v, i) {
+          return "  [" + i + "] " + (v.year || v.created || "?") + " \"" + (v.title || "-") + "\""
+            + "\n      model: " + tail(v.model)
+            + "\n      points: " + tail(v.points);
+        });
+        var vBlock = vLines.length ? "\nversions (" + vLines.length + "):\n" + vLines.join("\n") : "\nversions: none";
         box.textContent = "SCREEN " + (window.innerWidth + "x" + window.innerHeight) +
           " dpr" + (window.devicePixelRatio || 1) +
           "\ntouch:" + (navigator.maxTouchPoints || 0) + " plat:" + (navigator.platform || "?") +
@@ -2201,6 +2210,7 @@
           "\npoints: " + tail(cap.points) +
           "\nmodel: " + tail(cap.model) +
           "\ndual: " + !!cap.dual + "  openOn: " + (cap.openOn || "-") +
+          vBlock +
           "\n" + rows.join("\n");
       }
 
