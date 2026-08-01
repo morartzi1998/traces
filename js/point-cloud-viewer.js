@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dv";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dv";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dw";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dw";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -209,12 +209,23 @@ export function mountPointCloudViewer(container, geometry, opts) {
   //    these arrive at wildly different coordinate scales: a fixed size
   //    rendered one sub-pixel ("empty" stage) and another as giant squares;
   // 3. a person's UPLOADED scan with no saved size keeps the original fixed
-  //    0.013 — exactly how their scans have always rendered. Do not touch.
+  //    0.013 — exactly how their scans have always rendered — but ONLY while
+  //    that scan is anywhere near the object scale the number assumes. A
+  //    room-scale upload measures ~18 units across its radius where an object
+  //    measures ~1.6, so a fixed 0.013 leaves every point sub-pixel and the
+  //    cloud reads as a thin speckle, exactly the way a stale saved size does.
+  //    Off-scale uploads therefore size by radius like a derived cloud; the
+  //    ordinary object-scale ones keep the fixed number untouched.
   var hasColor = !!geometry.getAttribute("color");
   var isDerived = !!(geometry.userData && geometry.userData.derived);
   // derived clouds render OPAQUE — big enough that neighbouring points
   // overlap into a continuous surface rather than a speckled see-through one
-  var autoSize = isDerived ? sphere.radius * 0.008 : 0.013;
+  var LEGACY_UPLOAD_SIZE = 0.013;
+  var scaleSize = sphere.radius * 0.008;
+  // "off scale" = the radius-appropriate size is more than 2x away from the
+  // fixed one, a margin wide enough that no normal object trips it
+  var offScale = scaleSize > LEGACY_UPLOAD_SIZE * 2 || scaleSize < LEGACY_UPLOAD_SIZE / 2;
+  var autoSize = (isDerived || offScale) ? scaleSize : LEGACY_UPLOAD_SIZE;
   var chosenSize = opts.pointSize || autoSize || 0.01;
   // A saved size can be stale: written against a different representation of
   // this capture, or — more often — picked from the old absolute size ladder,
@@ -224,7 +235,9 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // The live ladder spans 0.47x-2.03x of this radius-derived size, so anything
   // outside a slightly wider window than that could not have been chosen for
   // THIS cloud and is treated as stale rather than intentional.
-  if (isDerived && opts.pointSize &&
+  // An object-scale upload is left alone entirely — its saved size is a real
+  // choice made on a ladder that could actually express it.
+  if ((isDerived || offScale) && opts.pointSize &&
       (opts.pointSize < autoSize * 0.3 || opts.pointSize > autoSize * 3.5)) {
     chosenSize = autoSize;
   }
@@ -356,6 +369,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
     softwareGL: softwareGL,
     pixelRatio: renderer.getPixelRatio(),
     isDerived: isDerived,
+    offScale: offScale,
     autoSize: autoSize,
     chosenSize: chosenSize,
     optsPointSize: opts.pointSize || null,
@@ -581,6 +595,10 @@ export function mountPointCloudViewer(container, geometry, opts) {
     // from some OTHER representation of the same capture (the mesh) lives in
     // this cloud's coordinate frame at all — see object.html's anchor bridge
     getDiagnostics: function () { return diagnostics; },
+    // the size this cloud renders at when nothing is saved for it — the base
+    // object.html builds its size ladder from, so the slider's rungs always
+    // land in the same scale the viewer is actually drawing in
+    getAutoSize: function () { return autoSize; },
     getBounds: function () {
       return {
         center: { x: sphere.center.x, y: sphere.center.y, z: sphere.center.z },
