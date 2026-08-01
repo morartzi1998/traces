@@ -645,6 +645,12 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* the stage was fully transparent, so during a mesh/points swap — while one
+     renderer is torn down and the other has not painted its first frame —
+     whatever the browser put there showed through as a white flash. Carrying
+     the page's own background means the gap between the two is simply the
+     page, not a blank sheet. */
+  background: var(--color-bg);
 }
 
 /* a real capture's photo/model/points can take real time to fetch - an
