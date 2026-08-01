@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dr";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dr";
+import * as THREE from "./vendor/three/three.module.js?v=20260727ds";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ds";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -85,10 +85,16 @@ export function mountPointCloudViewer(container, geometry, opts) {
     ((navigator.maxTouchPoints || 0) > 1 && /Mac/.test(navigator.platform || ""));
   var mem = navigator.deviceMemory || (isMobile ? 3 : 8);
   var posCount = geometry.getAttribute("position") ? geometry.getAttribute("position").count : 0;
-  // phones get a lower ceiling than low-memory laptops — the GPU, not just RAM,
-  // is the limit on a handset
-  var thinTarget = isMobile ? 180000 : 220000;
-  if ((mem <= 4 || isMobile) && posCount > thinTarget + 20000) {
+  // Only decimate the genuinely huge clouds — the ones that actually failed to
+  // upload on a handset (a 1M+ rug/room scan). An earlier version thinned every
+  // mobile cloud to 180k, which quietly gutted normal room scans on any
+  // touch-capable machine (including a touchscreen Mac at the exhibition) so
+  // they read as sparse. Keep the target high and the trigger high: typical
+  // scans pass through untouched, and only the extreme clouds get reduced —
+  // still to a density that reads as a full surface.
+  var thinTarget = isMobile ? 600000 : 900000;
+  var thinFloor = isMobile ? 750000 : 1100000;
+  if ((mem <= 4 || isMobile) && posCount > thinFloor) {
     var srcPos = geometry.getAttribute("position").array;
     var srcCol = geometry.getAttribute("color") ? geometry.getAttribute("color").array : null;
     var stride = Math.ceil(posCount / thinTarget);
