@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dw">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727dw">
-<link rel="stylesheet" href="../css/object.css?v=20260727dw">
-<script src="../js/cursor.js?v=20260727dw" defer></script>
-<script src="../js/grain.js?v=20260727dw" defer></script>
-<script src="../js/tilt3d.js?v=20260727dw" defer></script>
-<script src="../js/owner.js?v=20260727dw"></script>
-<script src="../js/config.js?v=20260727dw"></script>
-<script src="../js/archive.js?v=20260727dw"></script>
-<script src="../js/blobstore.js?v=20260727dw"></script>
-<script src="../js/particle-loader.js?v=20260727dw"></script>
-<script src="../js/remote-captures.js?v=20260727dw"></script>
-<script src="../js/community-seed.js?v=20260727dw"></script>
-<script src="../js/flow.js?v=20260727dw" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dw"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dx">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727dx">
+<link rel="stylesheet" href="../css/object.css?v=20260727dx">
+<script src="../js/cursor.js?v=20260727dx" defer></script>
+<script src="../js/grain.js?v=20260727dx" defer></script>
+<script src="../js/tilt3d.js?v=20260727dx" defer></script>
+<script src="../js/owner.js?v=20260727dx"></script>
+<script src="../js/config.js?v=20260727dx"></script>
+<script src="../js/archive.js?v=20260727dx"></script>
+<script src="../js/blobstore.js?v=20260727dx"></script>
+<script src="../js/particle-loader.js?v=20260727dx"></script>
+<script src="../js/remote-captures.js?v=20260727dx"></script>
+<script src="../js/community-seed.js?v=20260727dx"></script>
+<script src="../js/flow.js?v=20260727dx" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dx"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dw" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dx" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dw";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dw";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dx";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dx";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dw";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dx";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727dw";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727dx";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1943,9 +1943,22 @@
           if (typeof v === "number" && !Number.isInteger(v)) v = v.toFixed(5);
           return k + ": " + v;
         });
+        // which ASSET is on stage matters as much as how it is drawn: a cloud
+        // sampled off the mesh has the mesh's vertices for positions, so no
+        // size setting can make it look like the original scan
+        var cap = catalog[key] || {};
+        function tail(u) {
+          if (!u) return "(none)";
+          u = String(u);
+          return u.length > 34 ? "…" + u.slice(-33) : u;
+        }
         box.textContent = "SCREEN " + (window.innerWidth + "x" + window.innerHeight) +
           " dpr" + (window.devicePixelRatio || 1) +
           "\ntouch:" + (navigator.maxTouchPoints || 0) + " plat:" + (navigator.platform || "?") +
+          "\nkey: " + key +
+          "\npoints: " + tail(cap.points) +
+          "\nmodel: " + tail(cap.model) +
+          "\ndual: " + !!cap.dual + "  openOn: " + (cap.openOn || "-") +
           "\n" + rows.join("\n");
       }
 
@@ -4000,7 +4013,12 @@
         adjustPanelOpening = true;
         menu.hidden = true;
         objMenuBtn.setAttribute("aria-expanded", "false");
-        var idx = closestPointSizeIndex(catalog[key].pointSize || 0.013);
+        // seed from what the viewer is actually drawing, not from the stored
+        // number: a stale saved size gets replaced by the computed one, and
+        // seeding from the stored value then showed a rung the cloud was not
+        // being drawn at — so the first nudge jumped it to a wild size
+        var liveSize = (pcViewer && pcViewer.getPointSize) ? pcViewer.getPointSize() : 0;
+        var idx = closestPointSizeIndex(liveSize || catalog[key].pointSize || 0.013);
         menuPointSizeSlider.value = idx + 1;
         menuPointSizeLabel.textContent = POINT_SIZE_NAMES[idx];
         // on the mesh side the sliders straighten the MESH (its own saved

@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dw";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dw";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dx";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dx";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -582,6 +582,11 @@ export function mountPointCloudViewer(container, geometry, opts) {
 
   return {
     setPointSize: function (size) { material.size = size; },
+    // what is ACTUALLY on screen right now — which is not always the saved
+    // size, since a stale one gets replaced by the computed size above. The
+    // slider seeds from this so it can never show one rung while the cloud
+    // is drawn at another.
+    getPointSize: function () { return material.size; },
     // rotates the cloud in place around its own center (not the camera) -
     // x is a forward/back tilt, z is a side-to-side lean
     setTilt: function (x, z) { pivot.rotation.set(x, 0, z); },
