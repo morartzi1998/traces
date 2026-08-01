@@ -376,4 +376,15 @@
   .up-main {
     justify-content: center;
   }
+
+  /* These hover tips only ever appear on a device with a real pointer, so on a
+     phone they are permanently invisible — but an invisible element still takes
+     up space in the document's scroll width, and being one unwrapped line
+     ("sharp and well-lit, held straight, from the most detailed angle") each one
+     is far wider than the screen. The whole upload page could be swiped
+     sideways because of text nobody can see. Take them out of the layout where
+     they can never be shown. */
+  .up-option-tip {
+    display: none;
+  }
 }
