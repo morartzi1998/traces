@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dt";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dt";
+import * as THREE from "./vendor/three/three.module.js?v=20260727du";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727du";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -337,6 +337,36 @@ export function mountPointCloudViewer(container, geometry, opts) {
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
   camera.updateProjectionMatrix();
+
+  // Everything that decides how this cloud ends up looking, recorded so a
+  // display complaint can be diagnosed from the actual numbers on the actual
+  // machine instead of guessed at from a screenshot. Surfaced by object.html
+  // under ?pcdebug=1.
+  var diagnostics = {
+    rawCount: posCount,
+    drawnCount: geometry.getAttribute("position").count,
+    wasThinned: posCount !== geometry.getAttribute("position").count,
+    isMobile: isMobile,
+    deviceMemory: navigator.deviceMemory || null,
+    memUsed: mem,
+    softwareGL: softwareGL,
+    pixelRatio: renderer.getPixelRatio(),
+    isDerived: isDerived,
+    autoSize: autoSize,
+    chosenSize: chosenSize,
+    optsPointSize: opts.pointSize || null,
+    rawRadius: rawSphere.radius,
+    radius: sphere.radius,
+    radiusWasTrimmed: sphere.radius !== rawSphere.radius,
+    hadSavedView: !!(opts.initialView && opts.initialView.position),
+    savedViewAccepted: ivOk,
+    savedViewDist: (opts.initialView && opts.initialView.position)
+      ? Math.hypot(opts.initialView.position.x - sphere.center.x,
+        opts.initialView.position.y - sphere.center.y,
+        opts.initialView.position.z - sphere.center.z) : null,
+    cameraDist: Math.hypot(camera.position.x - sphere.center.x,
+      camera.position.y - sphere.center.y, camera.position.z - sphere.center.z),
+  };
   // default zoomSpeed (1) reads as barely responding on a scan-sized scene —
   // scrolling should visibly close the distance in a couple of ticks, and
   // minDistance needs to allow getting genuinely close (matching camera.near)
@@ -546,6 +576,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
     // the cloud's own extent, so a caller can test whether a 3D point taken
     // from some OTHER representation of the same capture (the mesh) lives in
     // this cloud's coordinate frame at all — see object.html's anchor bridge
+    getDiagnostics: function () { return diagnostics; },
     getBounds: function () {
       return {
         center: { x: sphere.center.x, y: sphere.center.y, z: sphere.center.z },
