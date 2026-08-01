@@ -15,7 +15,7 @@
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727dx";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dy";
 
 // Draco decoder — loaded once, on demand, only when a GLB actually carries
 // KHR_draco_mesh_compression (most Tripo scans do NOT; ready-made uploads
@@ -260,7 +260,19 @@ export function glbToPoints(arrayBuffer) {
       var step = Math.max(1, Math.floor(total / 600000));
       var positions = [], colors = [];
       var sinceYield = 0;
-      for (var pi = 0; pi < prims.length; pi++) {
+      // A mesh's VERTICES are not an even sample of its surface: a mesh packs
+      // vertices where the geometry is fine and puts almost none across a
+      // large flat span, and a cube/voxel mesh piles four of them at every
+      // corner. Using them directly as points reproduces that clumping, which
+      // is what reads as the wrong "scatter" beside a real scan — evenly
+      // measured points. The area-weighted pass below samples the surface
+      // uniformly instead, so when the mesh has faces to sample, prefer it and
+      // skip the vertex pass entirely. Only a mesh with no indices at all
+      // (nothing to sample across) still falls back to raw vertices.
+      var hasFaces = prims.length > 0 && prims.every(function (p) {
+        return p.prim.indices != null;
+      });
+      for (var pi = 0; !hasFaces && pi < prims.length; pi++) {
         var prim = prims[pi].prim, world = prims[pi].world;
         var pos = accessorData(prim.attributes.POSITION);
         if (!pos) continue;
@@ -302,7 +314,10 @@ export function glbToPoints(arrayBuffer) {
       // see-through, "not really particles". Densify by sampling extra
       // points ON the triangle faces (area-weighted, colours interpolated
       // from the texture at the sampled UV) up to a healthy target.
-      var TARGET = 300000;
+      // match the mesh's own density when sampling replaces the vertex pass,
+      // so a detailed scan keeps its point count and only the DISTRIBUTION
+      // changes — never fewer points than the old path produced
+      var TARGET = hasFaces ? Math.max(300000, Math.min(600000, total)) : 300000;
       if (positions.length / 3 < TARGET) {
         var want = TARGET - positions.length / 3;
         // total surface area across prims, for fair distribution
