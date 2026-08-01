@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fa">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fa">
-<link rel="stylesheet" href="../css/object.css?v=20260727fa">
-<script src="../js/cursor.js?v=20260727fa" defer></script>
-<script src="../js/grain.js?v=20260727fa" defer></script>
-<script src="../js/tilt3d.js?v=20260727fa" defer></script>
-<script src="../js/owner.js?v=20260727fa"></script>
-<script src="../js/config.js?v=20260727fa"></script>
-<script src="../js/archive.js?v=20260727fa"></script>
-<script src="../js/blobstore.js?v=20260727fa"></script>
-<script src="../js/particle-loader.js?v=20260727fa"></script>
-<script src="../js/remote-captures.js?v=20260727fa"></script>
-<script src="../js/community-seed.js?v=20260727fa"></script>
-<script src="../js/flow.js?v=20260727fa" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fa"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fb">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fb">
+<link rel="stylesheet" href="../css/object.css?v=20260727fb">
+<script src="../js/cursor.js?v=20260727fb" defer></script>
+<script src="../js/grain.js?v=20260727fb" defer></script>
+<script src="../js/tilt3d.js?v=20260727fb" defer></script>
+<script src="../js/owner.js?v=20260727fb"></script>
+<script src="../js/config.js?v=20260727fb"></script>
+<script src="../js/archive.js?v=20260727fb"></script>
+<script src="../js/blobstore.js?v=20260727fb"></script>
+<script src="../js/particle-loader.js?v=20260727fb"></script>
+<script src="../js/remote-captures.js?v=20260727fb"></script>
+<script src="../js/community-seed.js?v=20260727fb"></script>
+<script src="../js/flow.js?v=20260727fb" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fb"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fa" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fb" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fa";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fa";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fb";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fb";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fa";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fb";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fa";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fb";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1947,6 +1947,29 @@
       // may the CURRENT capture be edited from this device? (set in show(k),
       // read by the menu-row gating and the view toggle)
       var menuManageable = false;
+      // The space an object sits in, from whichever record still knows it.
+      // connectedKey is written from a localStorage entry on THIS device, so a
+      // connection made elsewhere — or a cleared browser — left the object
+      // looking unconnected even though the space still carried its marker.
+      // The link on the space is the shared, synced fact, so fall back to it:
+      // any capture holding a link that targets this object IS its space.
+      function spaceContaining(k) {
+        if (!catalog[k]) return null;
+        if (catalog[k].connectedKey && catalog[catalog[k].connectedKey]) return catalog[k].connectedKey;
+        var keys = Object.keys(catalog);
+        for (var i = 0; i < keys.length; i++) {
+          var c = catalog[keys[i]];
+          if (!c || keys[i] === k || !c.links || !c.links.length) continue;
+          for (var j = 0; j < c.links.length; j++) {
+            if (c.links[j] && c.links[j].target === k) return keys[i];
+          }
+        }
+        // a connectedKey left pointing at a space that no longer exists is
+        // not a connection — offering the entry for it just produces a
+        // button that cannot open anything
+        return null;
+      }
+
       function hasSpaceView(k) {
         // The connection itself is what decides this, not whether the space
         // happens to be in this device's catalog right now. Requiring the
@@ -1955,7 +1978,7 @@
         // from the server — so a connected object simply looked unconnected.
         // showSpaceView() reports it properly if the space really can't be
         // opened, which is far better than the menu quietly losing an entry.
-        return !!(catalog[k] && catalog[k].connectedKey);
+        return !!spaceContaining(k);
       }
 
       function refreshViewToggle() {
@@ -2059,7 +2082,7 @@
       }
 
       function showSpaceView() {
-        var spaceKey = catalog[key].connectedKey;
+        var spaceKey = spaceContaining(key);
         var space = catalog[spaceKey];
         if (!space) {
           // the connection points at a space this device doesn't hold — hidden,
