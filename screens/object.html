@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727dz">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727dz">
-<link rel="stylesheet" href="../css/object.css?v=20260727dz">
-<script src="../js/cursor.js?v=20260727dz" defer></script>
-<script src="../js/grain.js?v=20260727dz" defer></script>
-<script src="../js/tilt3d.js?v=20260727dz" defer></script>
-<script src="../js/owner.js?v=20260727dz"></script>
-<script src="../js/config.js?v=20260727dz"></script>
-<script src="../js/archive.js?v=20260727dz"></script>
-<script src="../js/blobstore.js?v=20260727dz"></script>
-<script src="../js/particle-loader.js?v=20260727dz"></script>
-<script src="../js/remote-captures.js?v=20260727dz"></script>
-<script src="../js/community-seed.js?v=20260727dz"></script>
-<script src="../js/flow.js?v=20260727dz" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dz"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ea">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ea">
+<link rel="stylesheet" href="../css/object.css?v=20260727ea">
+<script src="../js/cursor.js?v=20260727ea" defer></script>
+<script src="../js/grain.js?v=20260727ea" defer></script>
+<script src="../js/tilt3d.js?v=20260727ea" defer></script>
+<script src="../js/owner.js?v=20260727ea"></script>
+<script src="../js/config.js?v=20260727ea"></script>
+<script src="../js/archive.js?v=20260727ea"></script>
+<script src="../js/blobstore.js?v=20260727ea"></script>
+<script src="../js/particle-loader.js?v=20260727ea"></script>
+<script src="../js/remote-captures.js?v=20260727ea"></script>
+<script src="../js/community-seed.js?v=20260727ea"></script>
+<script src="../js/flow.js?v=20260727ea" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ea"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dz" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ea" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dz";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dz";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ea";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ea";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dz";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ea";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727dz";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ea";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1546,11 +1546,11 @@
         notify("Rebuilding the point cloud…");
         fetchModelBuffer(String(it.model))
           .then(function (buf) {
-            if (!buf) throw new Error("no mesh");
+            if (!buf) throw new Error("the mesh file could not be fetched");
             return window.__glbToPoints(buf);
           })
           .then(function (geometry) {
-            if (!geometry || !geometry.getAttribute("position")) throw new Error("no points");
+            if (!geometry || !geometry.getAttribute("position")) throw new Error("the mesh produced no points");
             var count = geometry.getAttribute("position").count;
             var bytes = window.__serializeGeometry(geometry, { derived: true });
             var form = new FormData();
@@ -1558,7 +1558,7 @@
             return fetch(api + "/captures/upload", { method: "POST", body: form })
               .then(function (r) { return r.ok ? r.json() : null; })
               .then(function (d) {
-                if (!d || !d.url) throw new Error("upload failed");
+                if (!d || !d.url) throw new Error("the server rejected the upload");
                 // the stored size was chosen against the OLD distribution and
                 // is meaningless for the new one — drop it so the viewer sizes
                 // this cloud from its own scale again
@@ -1576,7 +1576,13 @@
                 if (key === k) show(k);
               });
           })
-          .catch(function () { notify("Couldn't rebuild the point cloud."); })
+          // report WHICH stage failed — a bare "couldn't rebuild" gave nothing
+          // to act on, and the likeliest causes (no reachable mesh, a mesh that
+          // yields no geometry, a rejected upload) each need a different fix
+          .catch(function (e) {
+            notify("Couldn't rebuild: " + ((e && e.message) || "unknown") + ".");
+            try { console.error("[traces] rebuild failed", e); } catch (e2) {}
+          })
           .then(function () { rebuildingCloud = false; });
       }
 
