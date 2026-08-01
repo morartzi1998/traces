@@ -1392,9 +1392,23 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   --poster-color: #000000;
 }
 
+
+/* the shared description style scrolls inside the white panel, but the link
+   card scrolls its whole content column instead — a nested scroller there
+   just traps the wheel over the text. */
+.obj-link-card .obj-white-feeling {
+  overflow: visible;
+  flex: 0 0 auto;
+}
 .obj-link-card-content {
-  flex: 1;
+  /* scrolls within the card so the actions below it stay reachable. Without
+     this the description simply pushed "Open" past the bottom edge, and with
+     the card itself no longer scrolling there was no way to reach it short of
+     zooming the whole browser out. */
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1440,6 +1454,14 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 .obj-link-card-section--actions {
   padding-top: 6px;
   transform: translateY(-12px);
+  /* pinned below the scrolling content — this is the card's way out */
+  flex-shrink: 0;
+}
+
+/* visibility sits with the actions, outside the scroll: both must be readable
+   without hunting for them, which is the whole point of not scrolling the card */
+.obj-link-card > .obj-link-card-section--visibility {
+  flex-shrink: 0;
 }
 
 .obj-link-card-section--actions .obj-white-edit {
