@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727es">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727es">
-<script src="../js/cursor.js?v=20260727es" defer></script>
-<script src="../js/grain.js?v=20260727es" defer></script>
-<script src="../js/tilt3d.js?v=20260727es" defer></script>
-<script src="../js/annotations.js?v=20260727es" defer></script>
-<script src="../js/owner.js?v=20260727es"></script>
-<script src="../js/config.js?v=20260727es"></script>
-<script src="../js/archive.js?v=20260727es"></script>
-<script src="../js/blobstore.js?v=20260727es"></script>
-<script src="../js/remote-captures.js?v=20260727es"></script>
-<script src="../js/flow.js?v=20260727es" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727es"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727et">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727et">
+<script src="../js/cursor.js?v=20260727et" defer></script>
+<script src="../js/grain.js?v=20260727et" defer></script>
+<script src="../js/tilt3d.js?v=20260727et" defer></script>
+<script src="../js/annotations.js?v=20260727et" defer></script>
+<script src="../js/owner.js?v=20260727et"></script>
+<script src="../js/config.js?v=20260727et"></script>
+<script src="../js/archive.js?v=20260727et"></script>
+<script src="../js/blobstore.js?v=20260727et"></script>
+<script src="../js/remote-captures.js?v=20260727et"></script>
+<script src="../js/flow.js?v=20260727et" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727et"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727es" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727et" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727es";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727es";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727es";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727et";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727et";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727et";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -413,7 +413,34 @@
       // create a brand-new duplicate instead of updating the real one
       var existingArchive = updateTarget && window.Archive ? Archive.get(updateTarget) : null;
       var existingCommunity = updateTarget && window.Community ? Community.get(updateTarget) : null;
+      // a community record is also stored under a "-community" suffixed id in
+      // some paths — check it before giving up on the target
+      if (!existingArchive && !existingCommunity && updateTarget && window.Community) {
+        existingCommunity = Community.get(updateTarget + "-community") || null;
+      }
       var isUpdate = !!(existingArchive || existingCommunity);
+      // "Update capture" was chosen, but the capture it points at is not in
+      // this device's local stores — it lives only on the server. Falling
+      // through here builds a brand NEW capture instead of a new version of
+      // that one, which is how a re-scan quietly turned into a duplicate.
+      // The scan is still saved (losing it would be worse), but say plainly
+      // that it did not attach, rather than letting the duplicate be a
+      // surprise found later in the archive.
+      var updateTargetMissing = !!(updateTarget && !isUpdate);
+      if (updateTargetMissing) {
+        try { console.error("[traces] update target not found locally:", updateTarget); } catch (e) {}
+        window.addEventListener("DOMContentLoaded", function () {
+          var n = document.createElement("div");
+          n.style.cssText = "position:fixed;left:50%;bottom:5vh;transform:translateX(-50%);" +
+            "z-index:9999;background:#0a25b4;color:#fff;padding:12px 20px;max-width:80vw;" +
+            "font-family:inherit;font-size:0.85rem;letter-spacing:0.04em;text-align:center;" +
+            "box-shadow:0 4px 18px rgba(0,0,0,0.35)";
+          n.textContent = "This scan couldn't be attached to the capture you picked — "
+            + "it will be saved as a separate capture.";
+          document.body.appendChild(n);
+          setTimeout(function () { n.remove(); }, 12000);
+        });
+      }
 
       function clearSession(showItem) {
         try {

@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727es">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727es">
-<link rel="stylesheet" href="../css/object.css?v=20260727es">
-<script src="../js/cursor.js?v=20260727es" defer></script>
-<script src="../js/grain.js?v=20260727es" defer></script>
-<script src="../js/tilt3d.js?v=20260727es" defer></script>
-<script src="../js/owner.js?v=20260727es"></script>
-<script src="../js/config.js?v=20260727es"></script>
-<script src="../js/archive.js?v=20260727es"></script>
-<script src="../js/blobstore.js?v=20260727es"></script>
-<script src="../js/particle-loader.js?v=20260727es"></script>
-<script src="../js/remote-captures.js?v=20260727es"></script>
-<script src="../js/community-seed.js?v=20260727es"></script>
-<script src="../js/flow.js?v=20260727es" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727es"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727et">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727et">
+<link rel="stylesheet" href="../css/object.css?v=20260727et">
+<script src="../js/cursor.js?v=20260727et" defer></script>
+<script src="../js/grain.js?v=20260727et" defer></script>
+<script src="../js/tilt3d.js?v=20260727et" defer></script>
+<script src="../js/owner.js?v=20260727et"></script>
+<script src="../js/config.js?v=20260727et"></script>
+<script src="../js/archive.js?v=20260727et"></script>
+<script src="../js/blobstore.js?v=20260727et"></script>
+<script src="../js/particle-loader.js?v=20260727et"></script>
+<script src="../js/remote-captures.js?v=20260727et"></script>
+<script src="../js/community-seed.js?v=20260727et"></script>
+<script src="../js/flow.js?v=20260727et" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727et"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727es" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727et" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727es";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727es";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727et";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727et";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727es";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727et";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727es";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727et";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1938,7 +1938,14 @@
       // read by the menu-row gating and the view toggle)
       var menuManageable = false;
       function hasSpaceView(k) {
-        return !!(catalog[k].connectedKey && catalog[catalog[k].connectedKey]);
+        // The connection itself is what decides this, not whether the space
+        // happens to be in this device's catalog right now. Requiring the
+        // space object too meant the entry vanished with no explanation
+        // whenever the space was filtered out — hidden, or not yet merged in
+        // from the server — so a connected object simply looked unconnected.
+        // showSpaceView() reports it properly if the space really can't be
+        // opened, which is far better than the menu quietly losing an entry.
+        return !!(catalog[k] && catalog[k].connectedKey);
       }
 
       function refreshViewToggle() {
@@ -2035,7 +2042,13 @@
       function showSpaceView() {
         var spaceKey = catalog[key].connectedKey;
         var space = catalog[spaceKey];
-        if (!space) return;
+        if (!space) {
+          // the connection points at a space this device doesn't hold — hidden,
+          // deleted, or still arriving. Say so instead of doing nothing at all.
+          try { console.error("[traces] connected space not in catalog:", spaceKey); } catch (e) {}
+          notify("That space isn't available here — it may be hidden or still loading.");
+          return;
+        }
       // the space's mesh, else its photo — used both when the space simply has
       // no cloud and when its cloud failed to load, so the stage is never left
       // empty with no way to tell which happened
