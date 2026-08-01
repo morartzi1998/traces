@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fk">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fk">
-<link rel="stylesheet" href="../css/object.css?v=20260727fk">
-<script src="../js/cursor.js?v=20260727fk" defer></script>
-<script src="../js/grain.js?v=20260727fk" defer></script>
-<script src="../js/tilt3d.js?v=20260727fk" defer></script>
-<script src="../js/owner.js?v=20260727fk"></script>
-<script src="../js/config.js?v=20260727fk"></script>
-<script src="../js/archive.js?v=20260727fk"></script>
-<script src="../js/blobstore.js?v=20260727fk"></script>
-<script src="../js/particle-loader.js?v=20260727fk"></script>
-<script src="../js/remote-captures.js?v=20260727fk"></script>
-<script src="../js/community-seed.js?v=20260727fk"></script>
-<script src="../js/flow.js?v=20260727fk" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fk"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fm">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fm">
+<link rel="stylesheet" href="../css/object.css?v=20260727fm">
+<script src="../js/cursor.js?v=20260727fm" defer></script>
+<script src="../js/grain.js?v=20260727fm" defer></script>
+<script src="../js/tilt3d.js?v=20260727fm" defer></script>
+<script src="../js/owner.js?v=20260727fm"></script>
+<script src="../js/config.js?v=20260727fm"></script>
+<script src="../js/archive.js?v=20260727fm"></script>
+<script src="../js/blobstore.js?v=20260727fm"></script>
+<script src="../js/particle-loader.js?v=20260727fm"></script>
+<script src="../js/remote-captures.js?v=20260727fm"></script>
+<script src="../js/community-seed.js?v=20260727fm"></script>
+<script src="../js/flow.js?v=20260727fm" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fm"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fk" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fm" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fk";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fk";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fm";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fm";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fk";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fm";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fk";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fm";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3207,6 +3207,34 @@
           } catch (e) {}
         }, 4000);
       }
+      // Is this decoded snapshot the point cloud, or a blank sheet the GPU
+      // handed back instead? A cloud sits on a transparent background, so a
+      // real one is mostly transparent; a failed read-back is a large opaque
+      // near-white rectangle. Sampled from a 64x32 downscale — enough to tell
+      // those two apart, cheap enough to run on every transition.
+      function isUsableFreeze(imgEl) {
+        try {
+          if (!imgEl.naturalWidth) return false;
+          var c = document.createElement("canvas");
+          c.width = 64; c.height = 32;
+          var cx = c.getContext("2d", { willReadFrequently: true });
+          cx.clearRect(0, 0, 64, 32);
+          cx.drawImage(imgEl, 0, 0, 64, 32);
+          var d = cx.getImageData(0, 0, 64, 32).data;
+          var total = d.length / 4, opaque = 0, light = 0;
+          for (var i = 0; i < d.length; i += 4) {
+            if (d[i + 3] < 8) continue;
+            opaque++;
+            if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) light++;
+          }
+          return !(opaque > total * 0.6 && light > opaque * 0.8);
+        } catch (e) {
+          // a canvas that cannot be read (tainted, no context) says nothing
+          // about the picture — don't throw away a good freeze over it
+          return true;
+        }
+      }
+
       function swapScan(k, model, img, points, carriedView) {
         // stop any background mesh warm-up from the capture we're leaving, so
         // its heavy download can't starve the scan we're about to load
@@ -3230,6 +3258,21 @@
               meshFreeze.className = "obj-freeze";
               var fImg = document.createElement("img");
               fImg.className = "obj-freeze-img";
+              // Last line of defence on the read-back. The viewer already
+              // refuses to hand back an obviously blank sheet, but the sheet
+              // that matters is the one that ends up DECODED into this <img>,
+              // so it gets checked here too — full-bleed under a mesh that is
+              // still at opacity 0, a white still IS the reported white flash,
+              // and it swallows the loader particles drawn over it.
+              fImg.addEventListener("load", function () {
+                if (isUsableFreeze(fImg)) return;
+                try { console.warn("[traces] point-cloud snapshot came back blank — showing the loader instead"); } catch (e) {}
+                dropFreeze(meshFreeze);
+                // the stage is bare now, and the mesh has not arrived — put
+                // the drifting particles back over the dark stage, which is
+                // what this transition should have looked like all along
+                if (modelViewer.style.opacity === "0") beginLoading();
+              });
               fImg.src = shot;
               meshFreeze.appendChild(fImg);
               // the same drifting particles the main loader uses, over the

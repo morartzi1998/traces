@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fk";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fk";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fm";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fm";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -732,9 +732,30 @@ export function mountPointCloudViewer(container, geometry, opts) {
         target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
       };
     },
+    // A still of the cloud exactly as it is framed right now. A cloud drawn on
+    // a transparent background is MOSTLY transparent — so if the read-back
+    // comes back as a large opaque near-white sheet, the GPU handed back
+    // something that is not this cloud, and handing it on would put a white
+    // rectangle where the scan should be. Say so with null instead.
     screenshot: function () {
       renderer.render(scene, camera);
-      return renderer.domElement.toDataURL("image/png");
+      var el = renderer.domElement;
+      try {
+        var probe = document.createElement("canvas");
+        probe.width = 64; probe.height = 32;
+        var pctx = probe.getContext("2d", { willReadFrequently: true });
+        pctx.clearRect(0, 0, 64, 32);
+        pctx.drawImage(el, 0, 0, 64, 32);
+        var d = pctx.getImageData(0, 0, 64, 32).data;
+        var total = d.length / 4, opaque = 0, light = 0;
+        for (var i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 8) continue;
+          opaque++;
+          if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) light++;
+        }
+        if (opaque > total * 0.6 && light > opaque * 0.8) return null;
+      } catch (e) {}
+      return el.toDataURL("image/png");
     },
     dispose: function () {
       disposed = true;

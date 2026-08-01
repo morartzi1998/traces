@@ -17,10 +17,25 @@ window.ParticleLoader = (function () {
 
     function size() {
       var r = canvas.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.round(r.width * dpr));
-      canvas.height = Math.max(1, Math.round(r.height * dpr));
+      var w = r.width, h = r.height;
+      // A canvas measured in the same tick it was inserted can still report
+      // 0x0 — nothing containing it has been laid out yet. That is how the
+      // freeze-frame loader ended up drawing its particles into a ONE-PIXEL
+      // canvas: the animation was running the whole time, at a size nobody
+      // could see. Fall back to the parent's box, then the viewport.
+      if (w < 2 || h < 2) {
+        var parent = canvas.parentElement;
+        var pr = parent ? parent.getBoundingClientRect() : null;
+        w = (pr && pr.width) || window.innerWidth;
+        h = (pr && pr.height) || window.innerHeight;
+      }
+      canvas.width = Math.max(1, Math.round(w * dpr));
+      canvas.height = Math.max(1, Math.round(h * dpr));
     }
     size();
+    // and measure again once layout has actually settled, so the real box
+    // wins over the fallback the moment it exists
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(size);
     window.addEventListener("resize", size);
 
     // seed points on a rough sphere shell, each with a small drift + twinkle
