@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ds">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ds">
-<link rel="stylesheet" href="../css/object.css?v=20260727ds">
-<script src="../js/cursor.js?v=20260727ds" defer></script>
-<script src="../js/grain.js?v=20260727ds" defer></script>
-<script src="../js/tilt3d.js?v=20260727ds" defer></script>
-<script src="../js/owner.js?v=20260727ds"></script>
-<script src="../js/config.js?v=20260727ds"></script>
-<script src="../js/archive.js?v=20260727ds"></script>
-<script src="../js/blobstore.js?v=20260727ds"></script>
-<script src="../js/particle-loader.js?v=20260727ds"></script>
-<script src="../js/remote-captures.js?v=20260727ds"></script>
-<script src="../js/community-seed.js?v=20260727ds"></script>
-<script src="../js/flow.js?v=20260727ds" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ds"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727dt">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727dt">
+<link rel="stylesheet" href="../css/object.css?v=20260727dt">
+<script src="../js/cursor.js?v=20260727dt" defer></script>
+<script src="../js/grain.js?v=20260727dt" defer></script>
+<script src="../js/tilt3d.js?v=20260727dt" defer></script>
+<script src="../js/owner.js?v=20260727dt"></script>
+<script src="../js/config.js?v=20260727dt"></script>
+<script src="../js/archive.js?v=20260727dt"></script>
+<script src="../js/blobstore.js?v=20260727dt"></script>
+<script src="../js/particle-loader.js?v=20260727dt"></script>
+<script src="../js/remote-captures.js?v=20260727dt"></script>
+<script src="../js/community-seed.js?v=20260727dt"></script>
+<script src="../js/flow.js?v=20260727dt" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727dt"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ds" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727dt" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ds";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ds";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727dt";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727dt";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ds";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727dt";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ds";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727dt";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1671,7 +1671,7 @@
         var isPoints = !!pcViewer && !objPoints.hidden;
         catalog[key].links.forEach(function (l, i) {
           if (ready) {
-            if (!l.pos) convertTo3D(l);
+            if (!l.pos) { bridgePointsToMesh(l) || convertTo3D(l); }
             if (l.pos) {
               var h = document.createElement("button");
               h.className = "obj-link-marker obj-link-hotspot";
@@ -1687,7 +1687,7 @@
             }
           }
           if (isPoints) {
-            if (!l.ppos) convertFromPoints(l);
+            if (!l.ppos) { bridgeMeshToPoints(l) || convertFromPoints(l); }
             // same reasoning as annotations: a link that never found a
             // nearby point has no trustworthy place to float, so it's
             // better left off the stage than shown somewhere misleading
@@ -1919,6 +1919,66 @@
         if (SPACE_VIEW_ACTIVE) { show(key); } else { showSpaceView(); }
       });
 
+      // An annotation carries up to two 3D anchors: `pos` on the mesh and
+      // `ppos` in the point cloud. Whichever view it was placed in is the only
+      // one that gets filled — the other used to be derived by re-raycasting
+      // the annotation's flat, stored (x,y). That fraction is a SCREEN
+      // position frozen at whatever camera angle the object happened to be at
+      // when the note was first written, so replaying it against a differently
+      // framed view drops the marker onto an unrelated part of the object.
+      // That is the points-vs-mesh drift.
+      //
+      // For most captures here the mesh is voxelized straight off this same
+      // cloud (buildVoxelGlb), so the two anchors are literally the same
+      // number in the same frame and can simply be copied across — exactly,
+      // with no camera involved. That is only true when the frames coincide,
+      // so it is verified rather than assumed: a point from one frame must
+      // actually land inside the other's extent before it is trusted.
+      // A Tripo-built mesh is an independent asset in its own frame and fails
+      // this test, and those fall through to the old raycast path.
+      var FRAME_MATCH_SLACK = 1.15; // a surface point sits at ~the bounding radius
+
+      function withinBounds(p, center, radius) {
+        if (!p || !center || !(radius > 0)) return false;
+        var dx = p.x - center.x, dy = p.y - center.y, dz = p.z - center.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz) <= radius * FRAME_MATCH_SLACK;
+      }
+
+      function meshBounds() {
+        if (!modelViewer || !modelViewer.loaded) return null;
+        try {
+          var c = modelViewer.getBoundingBoxCenter();
+          var d = modelViewer.getDimensions();
+          if (!c || !d) return null;
+          return {
+            center: { x: c.x, y: c.y, z: c.z },
+            radius: Math.sqrt(d.x * d.x + d.y * d.y + d.z * d.z) / 2,
+          };
+        } catch (e) { return null; }
+      }
+
+      // cloud anchor -> mesh anchor, when both live in the same frame
+      function bridgePointsToMesh(a) {
+        if (!a.ppos || a.pos) return false;
+        var b = meshBounds();
+        if (!b) return false;
+        var p = strToVec3(a.ppos);
+        if (!withinBounds(p, b.center, b.radius)) return false;
+        a.pos = a.ppos;
+        return true;
+      }
+
+      // mesh anchor -> cloud anchor, same test in the other direction
+      function bridgeMeshToPoints(a) {
+        if (!a.pos || a.ppos || !pcViewer || !pcViewer.getBounds) return false;
+        var b = pcViewer.getBounds();
+        if (!b) return false;
+        var p = strToVec3(a.pos);
+        if (!withinBounds(p, b.center, b.radius)) return false;
+        a.ppos = a.pos;
+        return true;
+      }
+
       // raycast a stored fractional (x,y) onto the loaded mesh so an older
       // 2D annotation gains a 3D anchor that tracks the model when it rotates
       function convertTo3D(a) {
@@ -2019,7 +2079,7 @@
         catalog[key].annotations.forEach(function (a, i) {
           if (!annotationVisibleNow(a)) return;
           if (ready) {
-            if (!a.pos) convertTo3D(a);
+            if (!a.pos) { bridgePointsToMesh(a) || convertTo3D(a); }
             if (a.pos) {
               var h = document.createElement("button");
               h.className = "obj-hotspot";
@@ -2035,7 +2095,7 @@
             }
           }
           if (isPoints) {
-            if (!a.ppos) convertFromPoints(a);
+            if (!a.ppos) { bridgeMeshToPoints(a) || convertFromPoints(a); }
             // no reliable 3D anchor for this one (the raycast never found a
             // nearby point) — showing it at a raw flat x/y guess instead
             // would just be the same "floating disconnected in space" bug

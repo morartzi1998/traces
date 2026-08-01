@@ -24,8 +24,8 @@ import {
 	CompressedTexture,
 	Vector3,
 	Quaternion,
-} from './three.module.js?v=20260727ds';
-import { decompress } from './../utils/TextureUtils.js?v=20260727ds';
+} from './three.module.js?v=20260727dt';
+import { decompress } from './../utils/TextureUtils.js?v=20260727dt';
 
 
 /**

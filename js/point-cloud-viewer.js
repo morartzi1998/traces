@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727ds";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ds";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dt";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dt";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -543,6 +543,15 @@ export function mountPointCloudViewer(container, geometry, opts) {
     setAutoRotate: setAutoRotate,
     project: project,
     onFrame: onFrame,
+    // the cloud's own extent, so a caller can test whether a 3D point taken
+    // from some OTHER representation of the same capture (the mesh) lives in
+    // this cloud's coordinate frame at all — see object.html's anchor bridge
+    getBounds: function () {
+      return {
+        center: { x: sphere.center.x, y: sphere.center.y, z: sphere.center.z },
+        radius: sphere.radius,
+      };
+    },
     // the current orbit, in a form that can be stored and handed back to
     // opts.initialView on a later mount to reproduce this exact framing
     getView: function () {
