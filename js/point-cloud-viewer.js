@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727du";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727du";
+import * as THREE from "./vendor/three/three.module.js?v=20260727dv";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727dv";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -216,12 +216,16 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // overlap into a continuous surface rather than a speckled see-through one
   var autoSize = isDerived ? sphere.radius * 0.008 : 0.013;
   var chosenSize = opts.pointSize || autoSize || 0.01;
-  // a size saved against a DIFFERENT representation of this capture (the
-  // old voxel cloud, a mesh at another coordinate scale) can be so far off
-  // this cloud's scale that every point lands sub-pixel — an "empty" stage.
-  // A person's deliberate choice is never 20x off; that's stale data.
+  // A saved size can be stale: written against a different representation of
+  // this capture, or — more often — picked from the old absolute size ladder,
+  // which only ever spanned object-scale values. On a room-scale cloud every
+  // rung of that ladder is several times too small, so the saved number is not
+  // a deliberate choice at all, just the closest the slider could get.
+  // The live ladder spans 0.47x-2.03x of this radius-derived size, so anything
+  // outside a slightly wider window than that could not have been chosen for
+  // THIS cloud and is treated as stale rather than intentional.
   if (isDerived && opts.pointSize &&
-      (opts.pointSize < autoSize * 0.05 || opts.pointSize > autoSize * 20)) {
+      (opts.pointSize < autoSize * 0.3 || opts.pointSize > autoSize * 3.5)) {
     chosenSize = autoSize;
   }
   var material = new THREE.PointsMaterial({
