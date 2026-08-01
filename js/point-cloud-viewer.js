@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fc";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fc";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fd";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fd";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -399,14 +399,18 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // that object, not on the room with the object somewhere in it. The pull-back
   // is a fraction of the cloud's own radius, so it frames comparably whether
   // the space is a small room or a large one.
-  if (opts.focusOn) {
-    var fp = new THREE.Vector3(opts.focusOn.x, opts.focusOn.y, opts.focusOn.z);
-    var away = camera.position.clone().sub(sphere.center);
+  function focusAt(pt) {
+    if (!pt) return;
+    var fp = new THREE.Vector3(pt.x, pt.y, pt.z);
+    var away = camera.position.clone().sub(controls.target);
+    if (away.lengthSq() < 1e-8) away.copy(camera.position).sub(sphere.center);
     if (away.lengthSq() < 1e-8) away.set(0, 0, 1);
     away.normalize().multiplyScalar(Math.max(sphere.radius * 0.28, 0.05));
     camera.position.copy(fp).add(away);
     controls.target.copy(fp);
+    controls.update();
   }
+  if (opts.focusOn) focusAt(opts.focusOn);
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
   camera.updateProjectionMatrix();
@@ -660,6 +664,10 @@ export function mountPointCloudViewer(container, geometry, opts) {
     // object.html builds its size ladder from, so the slider's rungs always
     // land in the same scale the viewer is actually drawing in
     getAutoSize: function () { return autoSize; },
+    // frame a point after mounting — an object whose anchor is only worked out
+    // once the cloud exists can still be zoomed to, not just one that already
+    // had a stored anchor when the viewer was created
+    focusAt: focusAt,
     getBounds: function () {
       return {
         center: { x: sphere.center.x, y: sphere.center.y, z: sphere.center.z },
