@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727em";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727em";
+import * as THREE from "./vendor/three/three.module.js?v=20260727en";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727en";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
