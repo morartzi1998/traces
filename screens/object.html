@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fm">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fm">
-<link rel="stylesheet" href="../css/object.css?v=20260727fm">
-<script src="../js/cursor.js?v=20260727fm" defer></script>
-<script src="../js/grain.js?v=20260727fm" defer></script>
-<script src="../js/tilt3d.js?v=20260727fm" defer></script>
-<script src="../js/owner.js?v=20260727fm"></script>
-<script src="../js/config.js?v=20260727fm"></script>
-<script src="../js/archive.js?v=20260727fm"></script>
-<script src="../js/blobstore.js?v=20260727fm"></script>
-<script src="../js/particle-loader.js?v=20260727fm"></script>
-<script src="../js/remote-captures.js?v=20260727fm"></script>
-<script src="../js/community-seed.js?v=20260727fm"></script>
-<script src="../js/flow.js?v=20260727fm" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fm"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fn">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fn">
+<link rel="stylesheet" href="../css/object.css?v=20260727fn">
+<script src="../js/cursor.js?v=20260727fn" defer></script>
+<script src="../js/grain.js?v=20260727fn" defer></script>
+<script src="../js/tilt3d.js?v=20260727fn" defer></script>
+<script src="../js/owner.js?v=20260727fn"></script>
+<script src="../js/config.js?v=20260727fn"></script>
+<script src="../js/archive.js?v=20260727fn"></script>
+<script src="../js/blobstore.js?v=20260727fn"></script>
+<script src="../js/particle-loader.js?v=20260727fn"></script>
+<script src="../js/remote-captures.js?v=20260727fn"></script>
+<script src="../js/community-seed.js?v=20260727fn"></script>
+<script src="../js/flow.js?v=20260727fn" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fn"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fm" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fn" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fm";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fm";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fn";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fn";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fm";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fn";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fm";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fn";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1001,6 +1001,10 @@
                     dateLabel: v.dateLabel || null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
+                    // a version taken off the timeline without being destroyed
+                    // — the flag has to survive this mapping or the entry
+                    // reappears on the next load
+                    hidden: !!v.hidden,
                     feeling: v.feeling || "",
                     title: v.title || d.title };
                 })
@@ -1048,6 +1052,10 @@
                     dateLabel: v.dateLabel || null,
                     created: v.created, model: v.model, img: v.img, points: v.points,
                     defaultView: v.defaultView || null, meshTilt: v.meshTilt || null,
+                    // a version taken off the timeline without being destroyed
+                    // — the flag has to survive this mapping or the entry
+                    // reappears on the next load
+                    hidden: !!v.hidden,
                     feeling: v.feeling || "",
                     title: v.title || c.title };
                 })
@@ -2197,6 +2205,8 @@
           spendAnnotationJump: function () { return spendAnnotationJump(); },
           focusStageOn: function (a) { return focusStageOn(a); },
           get key() { return key; },
+          renderTimeline: function (k) { return renderTimeline(k); },
+          mergeableVersions: function (k) { return mergeableVersions(k); },
           get pendingJump() { return pendingAnnotationJump; },
           set pendingJump(v) { pendingAnnotationJump = v; },
         };
@@ -4106,8 +4116,19 @@
       // timeline: one dot per dated scan version. Rebuilt per capture; hidden
       // entirely until there's more than one version to move between.
       var objTimeline = document.getElementById("objTimeline");
+      // A hidden version is still THERE — its scan, title, date and annotations
+      // all stay in the record, and on the server. It simply stops being
+      // offered on the timeline. This is deliberately not a delete: a version
+      // that turns out to be a duplicate, or a scan that came out wrong, should
+      // be removable from the exhibition without destroying it.
+      function versionHidden(v) { return !!(v && v.hidden); }
+      function visibleVersions(k) {
+        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) {
+          return !versionHidden(v);
+        });
+      }
       function timelineHasHistory() {
-        return ((catalog[key] && catalog[key].versions) || []).length >= 2;
+        return visibleVersions(key).length >= 2;
       }
       // long-press a version to mark it pending deletion (struck-through
       // label, red dot); a plain tap on that same marked version confirms
@@ -4161,12 +4182,18 @@
         var yearsWrap = objTimeline.querySelector(".obj-years");
         yearsWrap.innerHTML = "";
         clearPendingDelete();
-        if (versions.length < 2) { objTimeline.hidden = true; return; }
+        // a hidden version keeps its place in the array — every index stored
+        // anywhere else still points at the right scan — it just never gets a
+        // dot, and never counts towards "is there history to move between"
+        var shown = [];
+        versions.forEach(function (v, i) { if (!versionHidden(v)) shown.push(i); });
+        if (shown.length < 2) { objTimeline.hidden = true; return; }
         objTimeline.hidden = false;
-        // default to the latest version
-        var latest = versions.length - 1;
+        // default to the latest version that is actually on offer
+        var latest = shown[shown.length - 1];
         activeYear = versions[latest].year;
         versions.forEach(function (v, i) {
+          if (versionHidden(v)) return;
           var btn = document.createElement("button");
           btn.className = "obj-year" + (i === latest ? " obj-year--active" : "");
           btn.type = "button";
@@ -5091,7 +5118,9 @@
       // __glbToPoints) — so a capture whose whole history is models (like the
       // chandelier's) finally gets its collage too
       function mergeableVersions(k) {
-        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) { return v && (v.points || v.model); });
+        return ((catalog[k] && catalog[k].versions) || []).filter(function (v) {
+          return v && !versionHidden(v) && (v.points || v.model);
+        });
       }
       var mergeViewer = null;
       function fetchRefBuffer(ref) {
