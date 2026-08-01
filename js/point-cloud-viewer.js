@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fp";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fp";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fq";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fq";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -641,7 +641,14 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var introStart = 0;
   var INTRO_MS = opts.buildIn === false ? 0 : 2200;
   var introBaseSize = material.size;
-  var introTotal = geometry.getAttribute("position").count;
+  // A software-GL machine (the exhibition laptop, if it has no usable GPU) has
+  // already capped how many points it will draw. The intro grows drawRange
+  // itself and used to finish by clearing it to Infinity — quietly handing that
+  // machine the entire scan the moment the animation ended, which is the worst
+  // possible time to do it. Grow towards the cap and land on it instead.
+  var drawCap = geometry.drawRange.count;
+  var introTotal = Math.min(geometry.getAttribute("position").count,
+                            drawCap === Infinity ? Infinity : drawCap);
   if (INTRO_MS && introTotal > 20000) {
     geometry.setDrawRange(0, Math.max(1, Math.floor(introTotal * 0.05)));
     material.size = introBaseSize * 3.6;
@@ -669,7 +676,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
       geometry.setDrawRange(0, Math.max(1, Math.floor(introTotal * (0.05 + 0.95 * ease))));
       material.size = introBaseSize * (3.6 - 2.6 * ease);
       if (ik >= 1) {
-        geometry.setDrawRange(0, Infinity);
+        geometry.setDrawRange(0, drawCap);
         material.size = introBaseSize;
         INTRO_MS = 0;
       }
@@ -689,7 +696,17 @@ export function mountPointCloudViewer(container, geometry, opts) {
   })(0);
 
   return {
-    setPointSize: function (size) { material.size = size; },
+    setPointSize: function (size) {
+      material.size = size;
+      // The build-in rewrites material.size on EVERY frame and finishes by
+      // restoring its own starting value — so a size chosen during those two
+      // seconds was applied, visibly ignored for the rest of the animation,
+      // and then silently undone at the end. Since object.html applies a
+      // capture's saved size the moment the cloud mounts, that is exactly
+      // when it happened. Move the intro's target instead, so it eases toward
+      // the newly chosen size and lands on it.
+      introBaseSize = size;
+    },
     // what is ACTUALLY on screen right now — which is not always the saved
     // size, since a stale one gets replaced by the computed size above. The
     // slider seeds from this so it can never show one rung while the cloud
