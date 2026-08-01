@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fh";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fh";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fi";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fi";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -399,18 +399,65 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // that object, not on the room with the object somewhere in it. The pull-back
   // is a fraction of the cloud's own radius, so it frames comparably whether
   // the space is a small room or a large one.
-  function focusAt(pt) {
+  // A camera that jumps in a single frame reads as the capture being swapped
+  // for a different one. Easing the same move over ~0.7s reads as travelling
+  // to the thing you asked for, which is what "zoom to this" should feel like.
+  var camTween = null;
+  function tweenCamera(toPos, toTarget, ms) {
+    camTween = {
+      fromPos: camera.position.clone(), toPos: toPos.clone(),
+      fromTarget: controls.target.clone(), toTarget: toTarget.clone(),
+      ms: ms > 0 ? ms : 1, start: 0,
+    };
+  }
+  function stepCameraTween(t) {
+    if (!camTween) return;
+    if (!camTween.start) camTween.start = t;
+    var k = Math.min(1, (t - camTween.start) / camTween.ms);
+    var e = k * k * (3 - 2 * k); // smoothstep, same easing as the build-in
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, e);
+    controls.target.lerpVectors(camTween.fromTarget, camTween.toTarget, e);
+    if (k >= 1) camTween = null;
+  }
+  // hands on the controls always win — an animation that fought a drag would
+  // feel like the viewer was stuck
+  if (controls.addEventListener) {
+    controls.addEventListener("start", function () { camTween = null; });
+  }
+
+  function focusAt(pt, focusOpts) {
     if (!pt) return;
     var fp = new THREE.Vector3(pt.x, pt.y, pt.z);
     var away = camera.position.clone().sub(controls.target);
     if (away.lengthSq() < 1e-8) away.copy(camera.position).sub(sphere.center);
     if (away.lengthSq() < 1e-8) away.set(0, 0, 1);
     away.normalize().multiplyScalar(Math.max(sphere.radius * 0.28, 0.05));
-    camera.position.copy(fp).add(away);
-    controls.target.copy(fp);
-    controls.update();
+    var dest = fp.clone().add(away);
+    // arriving already framed on the object (opts.focusOn at mount) must be
+    // instant — there is no "before" position for a move to start from
+    if (focusOpts && focusOpts.animate === false) {
+      camTween = null;
+      camera.position.copy(dest);
+      controls.target.copy(fp);
+      controls.update();
+      return;
+    }
+    tweenCamera(dest, fp, (focusOpts && focusOpts.ms) || 700);
   }
-  if (opts.focusOn) focusAt(opts.focusOn);
+
+  // the reverse of focusAt: pull back out until the whole cloud is in frame
+  // again. Leaving a space used to cut straight back to the object, which
+  // threw away the sense of where in the room it had been standing.
+  function zoomOut(ms, done) {
+    var dir = camera.position.clone().sub(sphere.center);
+    if (dir.lengthSq() < 1e-8) dir.set(0, 0, 1);
+    dir.normalize().multiplyScalar(sphere.radius * 2.4 || 3);
+    var span = ms > 0 ? ms : 520;
+    tweenCamera(sphere.center.clone().add(dir), sphere.center.clone(), span);
+    if (done) setTimeout(done, span);
+  }
+
+  if (opts.focusOn) focusAt(opts.focusOn, { animate: false });
   camera.near = Math.max(sphere.radius * 0.005, 0.001);
   camera.far = (sphere.radius || 1) * 30;
   camera.updateProjectionMatrix();
@@ -634,6 +681,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
       if (slowStreak >= 12) { slowStreak = 0; stepQualityDown(); }
     }
     lastT = t;
+    stepCameraTween(t);
     controls.update();
     renderer.render(scene, camera);
     frameCallbacks.forEach(function (cb) { cb(); });
@@ -668,6 +716,8 @@ export function mountPointCloudViewer(container, geometry, opts) {
     // once the cloud exists can still be zoomed to, not just one that already
     // had a stored anchor when the viewer was created
     focusAt: focusAt,
+    // pull back to the whole cloud, animated — the "leaving" half of focusAt
+    zoomOut: zoomOut,
     getBounds: function () {
       return {
         center: { x: sphere.center.x, y: sphere.center.y, z: sphere.center.z },

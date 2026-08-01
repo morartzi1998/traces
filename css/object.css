@@ -688,6 +688,23 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   pointer-events: none;
 }
 
+/* how far along the scan's download is. Deliberately small and dim: it
+   answers "how much longer" for anyone who looks, without turning the quiet
+   loading state into a progress dialog. */
+.obj-loading-pct {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+  color: rgba(240, 234, 220, 0.5);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
 /* the "visual merge" overlay — the object's dated scans combined into one 3D
    scene, orbitable as a single piece */
 .obj-merge {
@@ -1894,6 +1911,27 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 
 .obj-white-list li span:first-child {
   flex: 1;
+}
+
+/* an annotation row that goes somewhere when clicked — to the note's own point
+   on this capture, or into the connected capture the note belongs to. Styled
+   as the row's own text rather than as a control, so the list still reads as a
+   list; only the underline on hover admits that it is reachable. */
+.obj-white-list-jump {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.obj-white-list-jump:hover,
+.obj-white-list-jump:focus-visible {
+  text-decoration: underline;
 }
 
 .obj-white-list-dash {

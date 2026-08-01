@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fh">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fh">
-<link rel="stylesheet" href="../css/object.css?v=20260727fh">
-<script src="../js/cursor.js?v=20260727fh" defer></script>
-<script src="../js/grain.js?v=20260727fh" defer></script>
-<script src="../js/tilt3d.js?v=20260727fh" defer></script>
-<script src="../js/owner.js?v=20260727fh"></script>
-<script src="../js/config.js?v=20260727fh"></script>
-<script src="../js/archive.js?v=20260727fh"></script>
-<script src="../js/blobstore.js?v=20260727fh"></script>
-<script src="../js/particle-loader.js?v=20260727fh"></script>
-<script src="../js/remote-captures.js?v=20260727fh"></script>
-<script src="../js/community-seed.js?v=20260727fh"></script>
-<script src="../js/flow.js?v=20260727fh" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fh"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fi">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fi">
+<link rel="stylesheet" href="../css/object.css?v=20260727fi">
+<script src="../js/cursor.js?v=20260727fi" defer></script>
+<script src="../js/grain.js?v=20260727fi" defer></script>
+<script src="../js/tilt3d.js?v=20260727fi" defer></script>
+<script src="../js/owner.js?v=20260727fi"></script>
+<script src="../js/config.js?v=20260727fi"></script>
+<script src="../js/archive.js?v=20260727fi"></script>
+<script src="../js/blobstore.js?v=20260727fi"></script>
+<script src="../js/particle-loader.js?v=20260727fi"></script>
+<script src="../js/remote-captures.js?v=20260727fi"></script>
+<script src="../js/community-seed.js?v=20260727fi"></script>
+<script src="../js/flow.js?v=20260727fi" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fi"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fh" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fi" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fh";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fh";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fi";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fi";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fh";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fi";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fh";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fi";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -637,6 +637,10 @@
            still fetching/parsing — reads as the space being built instead of
            the empty placeholder square -->
       <canvas class="obj-loading-particles" id="objLoadingParticles" hidden></canvas>
+      <!-- how much of the scan has actually arrived. The drifting particles
+           say "working"; on a phone connection a 20MB cloud needs them to
+           also say "how much longer" -->
+      <p class="obj-loading-pct" id="objLoadingPct" hidden></p>
     </div>
 
     <!-- "visual merge": the capture's dated scans combined into one 3D scene,
@@ -1549,109 +1553,6 @@
         notifyTimer = setTimeout(function () { if (el) el.remove(); }, 5000);
       }
 
-      var rebuildingCloud = false;
-      function rebuildCloudFromMesh(k) {
-        if (rebuildingCloud) return;
-        var it = catalog[k];
-        if (!it || !it.model) { notify("This capture has no mesh to rebuild from."); return; }
-        var api = (window.TRACES_API || "").replace(/\/$/, "");
-        if (!api || !window.__glbToPoints || !window.__serializeGeometry) {
-          notify("Can't rebuild right now.");
-          return;
-        }
-        // A rebuild REPLACES this capture's cloud with one sampled off its mesh.
-        // That only ever improves a cloud that was itself mesh-derived. Run it
-        // on a real uploaded scan and it throws the original measurements away
-        // and puts a mesh approximation in their place — which is exactly what
-        // it did before this guard existed. Refuse unless the cloud on stage
-        // says it is derived, and make the person confirm either way.
-        var diag = (pcViewer && pcViewer.getDiagnostics) ? pcViewer.getDiagnostics() : null;
-        if (diag && diag.isDerived === false) {
-          if (!window.confirm(
-            "This capture's point cloud is an original scan, not one built from its mesh.\n\n" +
-            "Rebuilding would REPLACE those measurements with points sampled off the mesh — " +
-            "coarser than what you uploaded, and it cannot be undone from here.\n\n" +
-            "Rebuild anyway?")) return;
-        } else if (!diag) {
-          if (!window.confirm(
-            "Open this capture's point cloud first so its type can be checked.\n\n" +
-            "Rebuilding replaces the stored cloud with one sampled off the mesh. Continue anyway?")) return;
-        }
-        // keep the outgoing URL so the previous cloud stays referenced and can
-        // be pointed back at, instead of being orphaned by the overwrite
-        var previousPoints = it.points || null;
-        rebuildingCloud = true;
-        notify("Rebuilding the point cloud…");
-        fetchModelBuffer(String(it.model))
-          .then(function (buf) {
-            if (!buf) throw new Error("the mesh file could not be fetched");
-            return window.__glbToPoints(buf);
-          })
-          .then(function (geometry) {
-            if (!geometry || !geometry.getAttribute("position")) throw new Error("the mesh produced no points");
-            var count = geometry.getAttribute("position").count;
-            // Put the rebuilt cloud on screen NOW, before the upload is even
-            // attempted. Deriving it is the part that fixes the look; saving it
-            // is what makes the fix outlive this page. Tying the two together
-            // meant a rejected upload threw away a cloud that had already been
-            // built correctly, and the old jagged one stayed on screen with
-            // nothing to show for the wait.
-            if (key === k) {
-              try {
-                disposePcViewer();
-                objPoints.hidden = false;
-                photo.hidden = true;
-                modelViewer.hidden = true;
-                stage.dataset.mode = "model";
-                pcViewer = window.__mountPointCloudViewer(objPoints, geometry, { tilt: it.tilt || null });
-                pcViewerKey = k;
-                showPcDebug();
-                setRepToggle(true);
-                notify("Rebuilt with " + count.toLocaleString() + " evenly spread points — saving…");
-              } catch (e) {
-                try { console.error("[traces] could not show the rebuilt cloud", e); } catch (e2) {}
-              }
-            }
-            var bytes = window.__serializeGeometry(geometry, { derived: true });
-            var form = new FormData();
-            form.append("file", new Blob([bytes], { type: "application/octet-stream" }), "derived-points.bin");
-            return fetch(api + "/captures/upload", { method: "POST", body: form })
-              .then(function (r) { return r.ok ? r.json() : null; })
-              .then(function (d) {
-                if (!d || !d.url) throw new Error("the server rejected the upload");
-                // the stored size was chosen against the OLD distribution and
-                // is meaningless for the new one — drop it so the viewer sizes
-                // this cloud from its own scale again
-                var fields = { points: d.url, dual: true, pointSize: null,
-                  pointsPrev: previousPoints || null };
-                [k, k + "-community"].forEach(function (sid) { patchServerRecord(sid, fields); });
-                it.points = d.url;
-                it.dual = true;
-                it.pointSize = null;
-                it.pointsPrev = previousPoints || null;
-                if (window.Archive && Archive.get(k)) Archive.update(k, fields);
-                if (window.Community && Community.get(k)) Community.update(k, fields);
-                // the old cloud is cached under its own blob key for this
-                // session; drop it so the view remounts the rebuilt one
-                if (pointGeomCache) delete pointGeomCache[d.url];
-                notify("Rebuilt and saved — " + count.toLocaleString() + " evenly spread points.");
-              });
-          })
-          // report WHICH stage failed — a bare "couldn't rebuild" gave nothing
-          // to act on, and the likeliest causes (no reachable mesh, a mesh that
-          // yields no geometry, a rejected upload) each need a different fix
-          .catch(function (e) {
-            var msg = (e && e.message) || "unknown";
-            // the cloud may already be on screen — distinguish "never built" from
-            // "built but not saved", which need different things from her
-            var built = /upload|server/i.test(msg);
-            notify(built
-              ? "Rebuilt on screen, but saving failed (" + msg + ") — it will be jagged again on reload."
-              : "Couldn't rebuild: " + msg + ".");
-            try { console.error("[traces] rebuild failed", e); } catch (e2) {}
-          })
-          .then(function () { rebuildingCloud = false; });
-      }
 
       // heal EVERY community capture that reached the server with a mesh but no
       // point cloud, not just the one on screen — so the owner opening the view
@@ -1737,6 +1638,45 @@
         else { closeRemarkCard(); openBlue(a); }
       }
 
+      // "take me to where this note is" — clicking a note in ANY list moves
+      // the camera onto the note's own 3D anchor, instead of only opening its
+      // text while the thing it describes stays off-screen behind you.
+      function focusStageOn(a) {
+        if (!a) return false;
+        if (pcViewer && !objPoints.hidden && a.ppos && pcViewer.focusAt) {
+          pcViewer.focusAt(strToVec3(a.ppos));
+          return true;
+        }
+        if (!modelViewer.hidden && a.pos && modelViewer.getCameraOrbit) {
+          var p = strToVec3(a.pos);
+          var orbit = modelViewer.getCameraOrbit();
+          // frame it against the MESH's own size, so the same click lands the
+          // same distance away on a teacup and on a whole room
+          var dim = modelViewer.getDimensions ? modelViewer.getDimensions() : null;
+          var span = dim ? Math.max(dim.x, dim.y, dim.z) : orbit.radius;
+          var r = Math.max(span * 0.45, 0.05);
+          modelViewer.cameraTarget = p.x.toFixed(4) + "m " + p.y.toFixed(4) + "m " + p.z.toFixed(4) + "m";
+          modelViewer.cameraOrbit = orbit.theta + "rad " + orbit.phi + "rad " + r + "m";
+          return true;
+        }
+        return false;
+      }
+
+      function jumpToAnnotation(a) {
+        if (!a) return;
+        focusStageOn(a);
+        onAnnotationClick(a);
+      }
+
+      // a note picked from a DIFFERENT capture's card (the connected-capture
+      // preview lists its notes too). The capture has to be on stage before
+      // there is any 3D anchor to fly to, so the request is parked here and
+      // spent by renderAnnotations once the marker actually exists.
+      var pendingAnnotationJump = null;
+      function requestAnnotationJump(targetKey, index) {
+        pendingAnnotationJump = { key: targetKey, index: index, at: Date.now() };
+      }
+
       var linkCard = document.getElementById("linkCard");
       var openLinkTarget = null;
       var openLinkRef = null; // the actual link object, so move/delete can act on it
@@ -1800,10 +1740,22 @@
         var ul = document.getElementById("linkCardAnnotations");
         ul.innerHTML = "";
         if (item.annotations.length) {
-          item.annotations.forEach(function (a) {
+          item.annotations.forEach(function (a, i) {
             var li = document.createElement("li");
-            var text = document.createElement("span");
+            // a note listed here belongs to the CONNECTED capture, not the one
+            // on stage — reading it means going there, so the entry opens that
+            // capture and lands the camera on the note's own point
+            var text = document.createElement("button");
+            text.type = "button";
+            text.className = "obj-white-list-jump";
             text.textContent = a.title;
+            text.setAttribute("aria-label", "Show this annotation on " + item.title);
+            text.addEventListener("click", function (e) {
+              e.stopPropagation();
+              var t = link.target;
+              closeLinkCard();
+              if (t && catalog[t]) { requestAnnotationJump(t, i); show(t); }
+            });
             li.appendChild(text);
             ul.appendChild(li);
           });
@@ -2164,7 +2116,7 @@
           var spk = space.points.indexOf("idb:") === 0 ? space.points.slice(4) : null;
           var spblob = spk && window.BlobStore
             ? window.BlobStore.get(spk)
-            : fetch(space.points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+            : fetchBlobWithProgress(space.points).catch(function () { return null; });
           if (window.__deserializeGeometry && window.__mountPointCloudViewer) {
             spblob.then(function (blob) {
               if (!SPACE_VIEW_ACTIVE) { endLoading(); return null; }
@@ -2217,7 +2169,13 @@
 
       menuToggleView.addEventListener("click", function () {
         menu.hidden = true;
-        if (SPACE_VIEW_ACTIVE) { show(key); } else { showSpaceView(); }
+        if (!SPACE_VIEW_ACTIVE) { showSpaceView(); return; }
+        // entering the space flew IN to this object; leaving it flies back OUT
+        // to the whole room first, so the two views read as one continuous
+        // move instead of a hard cut back to the object
+        var back = function () { if (SPACE_VIEW_ACTIVE) show(key); };
+        if (pcViewer && !objPoints.hidden && pcViewer.zoomOut) pcViewer.zoomOut(520, back);
+        else back();
       });
 
       // Why a cloud renders the way it does is decided by half a dozen
@@ -2225,6 +2183,24 @@
       // views), and a screenshot shows none of them. Open any capture with
       // ?pcdebug=1 to read the actual numbers off the actual machine.
       var PC_DEBUG = /[?&]pcdebug=1/.test(window.location.search);
+      // Everything on this screen lives inside one closure, which is right for
+      // the exhibition but leaves an automated check with nothing to hold onto
+      // — it can only click through the whole flow to reach any one state.
+      // Under the SAME ?pcdebug=1 flag as the diagnostics box, hand out the
+      // few internals a check needs. Never present on a normal visit.
+      if (PC_DEBUG) {
+        window.__traces = {
+          catalog: catalog,
+          openLinkCard: function (l) { return openLinkCard(l); },
+          fillWhite: function (it) { return fillWhite(it); },
+          setLoadingProgress: function (f) { return setLoadingProgress(f); },
+          spendAnnotationJump: function () { return spendAnnotationJump(); },
+          focusStageOn: function (a) { return focusStageOn(a); },
+          get key() { return key; },
+          get pendingJump() { return pendingAnnotationJump; },
+          set pendingJump(v) { pendingAnnotationJump = v; },
+        };
+      }
       function showPcDebug() {
         if (!PC_DEBUG || !pcViewer || !pcViewer.getDiagnostics) return;
         var box = document.getElementById("pcDebugBox");
@@ -2447,6 +2423,10 @@
         tags.querySelectorAll(".obj-tag").forEach(function (n) { n.remove(); });
         clearHotspots();
         clearPcFrameSubs();
+        // every marker element was just removed, so the cached references are
+        // dangling — a stale one would make a pending jump think its marker
+        // was already placed and fire before the capture is really on stage
+        (catalog[key].annotations || []).forEach(function (a) { a.__btn = null; });
         var isModel = !!catalog[key].model && !modelViewer.hidden;
         var ready = isModel && modelViewer.loaded;
         var isPoints = !!pcViewer && !objPoints.hidden;
@@ -2511,6 +2491,24 @@
           });
           tags.appendChild(b);
         });
+        spendAnnotationJump();
+      }
+
+      // A jump asked for from another capture's card can only be honoured once
+      // THIS render has actually placed the note's marker — until then there is
+      // no anchor to fly to. Every later render retries it; a request that
+      // never becomes placeable (a note with no usable anchor, a capture that
+      // failed to load) expires rather than firing at some unrelated moment.
+      function spendAnnotationJump() {
+        if (!pendingAnnotationJump) return;
+        if (pendingAnnotationJump.key !== key) { pendingAnnotationJump = null; return; }
+        var a = (catalog[key].annotations || [])[pendingAnnotationJump.index];
+        if (a && a.__btn) {
+          pendingAnnotationJump = null;
+          jumpToAnnotation(a);
+          return;
+        }
+        if (Date.now() - pendingAnnotationJump.at > 20000) pendingAnnotationJump = null;
       }
 
       var openRemarkAnnotation = null;
@@ -2671,11 +2669,19 @@
           anns.forEach(function (a) {
             var li = document.createElement("li");
             var text = document.createElement("span");
+            text.className = "obj-white-list-jump";
             text.textContent = a.title;
             text.style.cursor = "pointer";
             if (mayEdit) {
               text.setAttribute("aria-label", "Edit annotation");
-              text.addEventListener("click", function () { white.hidden = true; openBlueEdit(a); });
+              text.addEventListener("click", function () {
+                white.hidden = true;
+                // opening the note is only half of it: fly to the point it
+                // was pinned on, so the text and the thing it describes are
+                // on screen together
+                focusStageOn(a);
+                openBlueEdit(a);
+              });
               var dash = document.createElement("button");
               dash.type = "button";
               dash.className = "obj-white-list-dash";
@@ -2691,7 +2697,11 @@
             } else {
               // a visitor reads the story, never the edit form
               text.setAttribute("aria-label", "Read annotation");
-              text.addEventListener("click", function () { white.hidden = true; openBlueView(a); });
+              text.addEventListener("click", function () {
+                white.hidden = true;
+                focusStageOn(a);
+                openBlueView(a);
+              });
               li.appendChild(text);
             }
             ul.appendChild(li);
@@ -2741,6 +2751,42 @@
       function endLoading() {
         stage.classList.remove("obj-stage--loading", "obj-stage--particles");
         if (loadingParticles) { loadingParticles.stop(); loadingParticles = null; }
+        setLoadingProgress(null);
+      }
+
+      // The share of the scan that has arrived, 0..1, or null to say nothing.
+      // Only shown once it is actually meaningful — a figure that appears at
+      // 100% for a quarter of a second is noise, not reassurance.
+      function setLoadingProgress(frac) {
+        var el = document.getElementById("objLoadingPct");
+        if (!el) return;
+        if (frac == null || !isFinite(frac)) { el.hidden = true; el.textContent = ""; return; }
+        var pct = Math.max(0, Math.min(99, Math.round(frac * 100)));
+        el.textContent = pct + "%";
+        el.hidden = false;
+      }
+
+      // Taking .blob() swallows the whole download in one gulp with nothing to
+      // report along the way. Reading the body as a stream gives a real byte
+      // count to show against Content-Length; without that header (a chunked
+      // or compressed response) it falls straight back to the plain path.
+      function fetchBlobWithProgress(url, init) {
+        return fetch(url, init).then(function (r) {
+          if (!r.ok) return null;
+          var total = +(r.headers.get("Content-Length") || 0);
+          if (!total || !r.body || !r.body.getReader) return r.blob();
+          var reader = r.body.getReader();
+          var chunks = [], got = 0;
+          return (function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) return new Blob(chunks);
+              chunks.push(res.value);
+              got += res.value.length;
+              setLoadingProgress(got / total);
+              return pump();
+            });
+          })();
+        });
       }
 
       modelViewer.addEventListener("load", function () {
@@ -3165,17 +3211,17 @@
           var fetchServerCloud = function () {
             var ck = "srvcloud:" + points;
             if (!window.BlobStore) {
-              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+              return fetchBlobWithProgress(points).catch(function () { return null; });
             }
             return window.BlobStore.get(ck).then(function (cached) {
               if (cached) return cached;
-              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; })
+              return fetchBlobWithProgress(points)
                 .then(function (blob) {
                   if (blob) window.BlobStore.set(ck, blob).catch(function () {});
                   return blob;
                 });
             }).catch(function () {
-              return fetch(points).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+              return fetchBlobWithProgress(points).catch(function () { return null; });
             });
           };
           var pointsBlob = pointsKey && window.BlobStore
