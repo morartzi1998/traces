@@ -1393,25 +1393,35 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
 }
 
 
-/* the shared description style scrolls inside the white panel, but the link
-   card scrolls its whole content column instead — a nested scroller there
-   just traps the wheel over the text. */
+/* the description takes the leftover room and scrolls inside it */
 .obj-link-card .obj-white-feeling {
-  overflow: visible;
-  flex: 0 0 auto;
-}
-.obj-link-card-content {
-  /* scrolls within the card so the actions below it stay reachable. Without
-     this the description simply pushed "Open" past the bottom edge, and with
-     the card itself no longer scrolling there was no way to reach it short of
-     zooming the whole browser out. */
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 3em;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-right: 8px;
+}
+/* the annotation list is capped and scrolls on its own, so a long list cannot
+   push the rows below it out of place */
+.obj-link-card .obj-white-list {
+  max-height: 22vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+}
+
+.obj-link-card-content {
+  /* NOT a scroller. One scroll over the whole column clipped whatever happened
+     to sit at its edges — the type row was sliced in half at the top — and left
+     the pinned rows below sitting flush against it with nothing between them.
+     The two variable-length parts (description, annotations) scroll inside
+     themselves instead, so every fixed row keeps its place and its spacing. */
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow: hidden;
 }
 
 .obj-link-card-section {
@@ -1424,7 +1434,10 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    annotations/visibility sections below */
 .obj-link-card-section--description {
   flex: 1;
-  /* min-height auto, same reasoning as .obj-white-section--description */
+  /* min-height:0 so the description inside can actually shrink — a flex item
+     defaults to min-height:auto, which refuses to go below its content and
+     leaves an inner scroller nothing to scroll against */
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -1462,6 +1475,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    without hunting for them, which is the whole point of not scrolling the card */
 .obj-link-card > .obj-link-card-section--visibility {
   flex-shrink: 0;
+  /* was sitting directly on the annotations above it — the two read as one
+     collapsed block with no separation at all */
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(10, 37, 180, 0.25);
 }
 
 .obj-link-card-section--actions .obj-white-edit {
