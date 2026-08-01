@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727eb">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727eb">
-<link rel="stylesheet" href="../css/object.css?v=20260727eb">
-<script src="../js/cursor.js?v=20260727eb" defer></script>
-<script src="../js/grain.js?v=20260727eb" defer></script>
-<script src="../js/tilt3d.js?v=20260727eb" defer></script>
-<script src="../js/owner.js?v=20260727eb"></script>
-<script src="../js/config.js?v=20260727eb"></script>
-<script src="../js/archive.js?v=20260727eb"></script>
-<script src="../js/blobstore.js?v=20260727eb"></script>
-<script src="../js/particle-loader.js?v=20260727eb"></script>
-<script src="../js/remote-captures.js?v=20260727eb"></script>
-<script src="../js/community-seed.js?v=20260727eb"></script>
-<script src="../js/flow.js?v=20260727eb" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727eb"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ec">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ec">
+<link rel="stylesheet" href="../css/object.css?v=20260727ec">
+<script src="../js/cursor.js?v=20260727ec" defer></script>
+<script src="../js/grain.js?v=20260727ec" defer></script>
+<script src="../js/tilt3d.js?v=20260727ec" defer></script>
+<script src="../js/owner.js?v=20260727ec"></script>
+<script src="../js/config.js?v=20260727ec"></script>
+<script src="../js/archive.js?v=20260727ec"></script>
+<script src="../js/blobstore.js?v=20260727ec"></script>
+<script src="../js/particle-loader.js?v=20260727ec"></script>
+<script src="../js/remote-captures.js?v=20260727ec"></script>
+<script src="../js/community-seed.js?v=20260727ec"></script>
+<script src="../js/flow.js?v=20260727ec" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ec"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727eb" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ec" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727eb";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727eb";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ec";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ec";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727eb";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ec";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727eb";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ec";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2326,12 +2326,28 @@
       // the most recent real version title, so the header/card stop showing
       // "untitled capture" over a scan that was clearly named
       function captureName(item) {
+        if (!item) return "untitled capture";
         if (item.title && item.title !== "untitled capture") return item.title;
         var vs = item.versions || [];
         for (var i = vs.length - 1; i >= 0; i--) {
           if (vs[i].title && vs[i].title !== "untitled capture") return vs[i].title;
         }
         return item.title || "untitled capture";
+      }
+
+      // The name to show while a particular dated scan is on stage. Every site
+      // that set the header used to write `ver.title || item.title` — but
+      // "untitled capture" is a non-empty STRING, so it satisfied `||` and won
+      // over the capture's real name. A version that was never given its own
+      // title then blanked the name of a scan that plainly had one. Route the
+      // decision through here so an unnamed version falls back like everything
+      // else instead of erasing the name.
+      function versionName(item, ver) {
+        if (ver && ver.title && ver.title !== "untitled capture") return ver.title;
+        return captureName(item);
+      }
+      function setHeaderTitle(item, ver) {
+        document.getElementById("objTitle").textContent = versionName(item, ver);
       }
 
       function fillWhite(item) {
@@ -2343,8 +2359,7 @@
         var vIdx = displayedVersionIndex === -1 ? versions.length - 1 : displayedVersionIndex;
         var ver = versions[vIdx] || null;
         var oldVersion = displayedVersionIndex !== -1;
-        var displayName = (ver && ver.title && ver.title !== "untitled capture")
-          ? ver.title : captureName(item);
+        var displayName = versionName(item, ver);
         document.getElementById("whiteTitle").textContent = displayName;
         // keep the stage header in lockstep with the card: the two were read
         // from slightly different sources and could disagree (header showing a
@@ -3103,7 +3118,7 @@
           syncAnnotationsEverywhere(k);
         }
         clearHotspots();
-        document.getElementById("objTitle").textContent = catalog[k].title;
+        setHeaderTitle(catalog[k], null);
         // default to the point cloud when there is one — it's the crisp view.
         // ONLY a true dual capture (a user-supplied mesh uploaded ALONGSIDE a
         // .ply) opens on the mesh instead; a plain point-cloud capture also
@@ -3346,7 +3361,7 @@
             serverPatchIds(key).forEach(function (sid) { patchServerVersionsMeta(sid, vMeta); });
           }
           exitWhiteEdit();
-          document.getElementById("objTitle").textContent = vSel.title || item.title;
+          setHeaderTitle(item, vSel);
           fillWhite(item);
           return;
         }
@@ -3418,7 +3433,7 @@
           });
         }
         exitWhiteEdit();
-        document.getElementById("objTitle").textContent = item.title;
+        setHeaderTitle(item, null);
         fillWhite(item);
         // a first edit on a static showcase item promotes it to a real shared
         // record, so the rename / description sticks for every visitor
@@ -3650,7 +3665,7 @@
         if (window.Community && Community.get(k)) Community.update(k, patch);
         renderTimeline(k);
         if (versions.length) selectVersion(k, versions.length - 1);
-        document.getElementById("objTitle").textContent = catalog[k].title;
+        setHeaderTitle(catalog[k], null);
       }
 
       function renderTimeline(k) {
@@ -3801,7 +3816,7 @@
           }
           if (last && last.title) {
             catalog[k].title = last.title;
-            document.getElementById("objTitle").textContent = last.title;
+            setHeaderTitle(catalog[k], null);
           }
           // local stores: merge the new year/title/order INTO the store's own
           // version objects (which carry upload bookkeeping like hostedModel)
@@ -3866,7 +3881,7 @@
         // the header title and the open details card both follow the scan the
         // timeline just put on stage — an old version tells ITS story, not
         // the latest one's
-        document.getElementById("objTitle").textContent = v.title || catalog[k].title;
+        setHeaderTitle(catalog[k], v);
         if (!white.hidden) fillWhite(catalog[k]);
         // a version with its own scan swaps the stage; the curated
         // annotation-only history (chandelier) keeps the current scan.
