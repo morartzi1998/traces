@@ -6,19 +6,19 @@
 <title>Traces — Your archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gc">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gc">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727gc">
-<script src="../js/cursor.js?v=20260727gc" defer></script>
-<script src="../js/grain.js?v=20260727gc" defer></script>
-<script src="../js/owner.js?v=20260727gc"></script>
-<script src="../js/config.js?v=20260727gc"></script>
-<script src="../js/archive.js?v=20260727gc"></script>
-<script src="../js/blobstore.js?v=20260727gc"></script>
-<script src="../js/remote-captures.js?v=20260727gc"></script>
-<script src="../js/designer-archive.js?v=20260727gc"></script>
-<script src="../js/gallery-title.js?v=20260727gc" defer></script>
-<script src="../js/flow.js?v=20260727gc" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gd">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gd">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727gd">
+<script src="../js/cursor.js?v=20260727gd" defer></script>
+<script src="../js/grain.js?v=20260727gd" defer></script>
+<script src="../js/owner.js?v=20260727gd"></script>
+<script src="../js/config.js?v=20260727gd"></script>
+<script src="../js/archive.js?v=20260727gd"></script>
+<script src="../js/blobstore.js?v=20260727gd"></script>
+<script src="../js/remote-captures.js?v=20260727gd"></script>
+<script src="../js/designer-archive.js?v=20260727gd"></script>
+<script src="../js/gallery-title.js?v=20260727gd" defer></script>
+<script src="../js/flow.js?v=20260727gd" defer></script>
 </head>
 <body>
 
@@ -532,7 +532,10 @@
             syncStatus: "synced",
             hasTimeline: (c.versions || []).length >= 2,
             hide: function () { hideDesignerItem(c.id); },
-            remove: function () {
+            // these are captures pulled from the shared store, not this
+            // device's own uploads — the delete was unconditional, so a
+            // visitor could remove something that was never theirs
+            remove: window.canManageCapture(c.id) ? function () {
               markDeleted(c.id); // survives reload while the server catches up
               // optimistic: remoteArchiveItems is only fetched once at load,
               // so without this the very next render() would just rebuild
@@ -541,7 +544,7 @@
               remoteArchiveItems = remoteArchiveItems.filter(function (r) { return r.id !== c.id; });
               var api = (window.TRACES_API || "").replace(/\/$/, "");
               if (api) fetch(api + "/captures/" + c.id, { method: "DELETE" }).catch(function () {});
-            },
+            } : null,
           }));
         });
         showcase.forEach(function (d) {

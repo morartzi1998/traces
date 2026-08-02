@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gc">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gc">
-<link rel="stylesheet" href="../css/object.css?v=20260727gc">
-<script src="../js/cursor.js?v=20260727gc" defer></script>
-<script src="../js/grain.js?v=20260727gc" defer></script>
-<script src="../js/tilt3d.js?v=20260727gc" defer></script>
-<script src="../js/owner.js?v=20260727gc"></script>
-<script src="../js/config.js?v=20260727gc"></script>
-<script src="../js/archive.js?v=20260727gc"></script>
-<script src="../js/blobstore.js?v=20260727gc"></script>
-<script src="../js/particle-loader.js?v=20260727gc"></script>
-<script src="../js/remote-captures.js?v=20260727gc"></script>
-<script src="../js/community-seed.js?v=20260727gc"></script>
-<script src="../js/flow.js?v=20260727gc" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gc"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gd">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gd">
+<link rel="stylesheet" href="../css/object.css?v=20260727gd">
+<script src="../js/cursor.js?v=20260727gd" defer></script>
+<script src="../js/grain.js?v=20260727gd" defer></script>
+<script src="../js/tilt3d.js?v=20260727gd" defer></script>
+<script src="../js/owner.js?v=20260727gd"></script>
+<script src="../js/config.js?v=20260727gd"></script>
+<script src="../js/archive.js?v=20260727gd"></script>
+<script src="../js/blobstore.js?v=20260727gd"></script>
+<script src="../js/particle-loader.js?v=20260727gd"></script>
+<script src="../js/remote-captures.js?v=20260727gd"></script>
+<script src="../js/community-seed.js?v=20260727gd"></script>
+<script src="../js/flow.js?v=20260727gd" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gd"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gc" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gd" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gc";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gc";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gd";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gd";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gc";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gd";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gc";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gd";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1609,13 +1609,9 @@
       // who may change this capture's annotations/links on THIS device:
       // the designer's own device, or a visitor viewing their own capture.
       // Everyone else gets a strictly read-only view.
+      // one rule for every screen — see window.canManageCapture in js/owner.js
       function canEditCapture(k) {
-        if (window.isOwnerDevice && window.isOwnerDevice()) return true;
-        // a capture is editable only if it's the viewer's OWN — i.e. it lives
-        // in THIS device's archive. The community store is a local cache of
-        // the WHOLE shared feed (everyone's captures), so testing it here let
-        // any visitor edit strangers' community captures. Own archive only.
-        return !!(window.Archive && Archive.get(k));
+        return !!(window.canManageCapture && window.canManageCapture(k));
       }
 
       // "Connect previous captured object": if we're already looking at a
@@ -2241,6 +2237,7 @@
           openBlueEdit: function (a, spot) { return openBlueEdit(a, spot); },
           show: function (k) { return show(k); },
           savedLandmarksFor: function (v) { return savedLandmarksFor(v); },
+          canEditCapture: function (k) { return canEditCapture(k); },
           saveLandmarks: function (v, m) { return saveLandmarks(v, m); },
           forceDisplayedVersion: function (i) { displayedVersionIndex = i; },
           closeRemarkCard: function () { return closeRemarkCard(); },

@@ -6,20 +6,20 @@
 <title>Traces — Community</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gc">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gc">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727gc">
-<script src="../js/cursor.js?v=20260727gc" defer></script>
-<script src="../js/grain.js?v=20260727gc" defer></script>
-<script src="../js/owner.js?v=20260727gc"></script>
-<script src="../js/config.js?v=20260727gc"></script>
-<script src="../js/archive.js?v=20260727gc"></script>
-<script src="../js/blobstore.js?v=20260727gc"></script>
-<script src="../js/remote-captures.js?v=20260727gc"></script>
-<script src="../js/designer-archive.js?v=20260727gc"></script>
-<script src="../js/community-seed.js?v=20260727gc"></script>
-<script src="../js/gallery-title.js?v=20260727gc" defer></script>
-<script src="../js/flow.js?v=20260727gc" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gd">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gd">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727gd">
+<script src="../js/cursor.js?v=20260727gd" defer></script>
+<script src="../js/grain.js?v=20260727gd" defer></script>
+<script src="../js/owner.js?v=20260727gd"></script>
+<script src="../js/config.js?v=20260727gd"></script>
+<script src="../js/archive.js?v=20260727gd"></script>
+<script src="../js/blobstore.js?v=20260727gd"></script>
+<script src="../js/remote-captures.js?v=20260727gd"></script>
+<script src="../js/designer-archive.js?v=20260727gd"></script>
+<script src="../js/community-seed.js?v=20260727gd"></script>
+<script src="../js/gallery-title.js?v=20260727gd" defer></script>
+<script src="../js/flow.js?v=20260727gd" defer></script>
 </head>
 <body>
 
@@ -392,7 +392,10 @@
           // a remote item (someone else's device, or Mor's own past share)
           // only gets a delete control for Mor herself — a random visitor
           // shouldn't be able to remove another person's shared capture
-          remove: (!c.remote || isOwner) ? function () {
+          // was `!c.remote || isOwner` — "did this come from the server" is not
+          // the same question as "is this mine", and stops being true as soon
+          // as a visitor's own capture is published
+          remove: window.canManageCapture(c.id) ? function () {
             markDeleted(c.id); // stays gone across reloads while KV catches up
             if (c.remote) {
               // a remote item lives only in the shared worker store, under

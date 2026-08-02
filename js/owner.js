@@ -27,6 +27,32 @@ window.isOwnerDevice = function () {
 };
 
 /*
+  Who may change a capture — ONE rule, for every screen.
+
+  A visitor may edit, hide or delete what THEY uploaded, and nothing else.
+  "Theirs" means the capture is in this device's own Archive, which is exactly
+  where an upload from this device lands. The Community store deliberately does
+  NOT count: it is a local cache of the whole shared feed, so everyone has a
+  copy of everyone's captures, and treating that as ownership would hand every
+  visitor the keys to every stranger's memory.
+
+  Mor's own devices (?owner=1) may curate anything — the exhibition has to be
+  editable by the person showing it.
+
+  This lived as four separate ad-hoc conditions on four screens, which had
+  already drifted apart: the object screen had it right, one gallery path let a
+  visitor delete captures that were never theirs, and the community feed used
+  "did this come from the server" as a stand-in for ownership — which stops
+  being true the moment a visitor's own capture is published. One rule, one
+  place, so they cannot drift again.
+*/
+window.canManageCapture = function (id) {
+  if (window.isOwnerDevice()) return true;
+  if (!id) return false;
+  try { return !!(window.Archive && window.Archive.get(id)); } catch (e) { return false; }
+};
+
+/*
   Exhibition "kiosk mode": ?kiosk=1 marks THIS browser as an exhibition kiosk.
   Its only effect is that whatever visitors save to the local archive gets
   uploaded to the shared store (the archive-page sync, normally owner-only),

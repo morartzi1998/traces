@@ -6,19 +6,19 @@
 <title>Traces — My archive</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gc">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gc">
-<link rel="stylesheet" href="../css/gallery.css?v=20260727gc">
-<script src="../js/cursor.js?v=20260727gc" defer></script>
-<script src="../js/grain.js?v=20260727gc" defer></script>
-<script src="../js/owner.js?v=20260727gc"></script>
-<script src="../js/config.js?v=20260727gc"></script>
-<script src="../js/archive.js?v=20260727gc"></script>
-<script src="../js/blobstore.js?v=20260727gc"></script>
-<script src="../js/remote-captures.js?v=20260727gc"></script>
-<script src="../js/designer-archive.js?v=20260727gc"></script>
-<script src="../js/gallery-title.js?v=20260727gc" defer></script>
-<script src="../js/flow.js?v=20260727gc" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gd">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gd">
+<link rel="stylesheet" href="../css/gallery.css?v=20260727gd">
+<script src="../js/cursor.js?v=20260727gd" defer></script>
+<script src="../js/grain.js?v=20260727gd" defer></script>
+<script src="../js/owner.js?v=20260727gd"></script>
+<script src="../js/config.js?v=20260727gd"></script>
+<script src="../js/archive.js?v=20260727gd"></script>
+<script src="../js/blobstore.js?v=20260727gd"></script>
+<script src="../js/remote-captures.js?v=20260727gd"></script>
+<script src="../js/designer-archive.js?v=20260727gd"></script>
+<script src="../js/gallery-title.js?v=20260727gd" defer></script>
+<script src="../js/flow.js?v=20260727gd" defer></script>
 </head>
 <body>
 
@@ -85,11 +85,12 @@
       function wireCard(art, key, onOpen, onDelete) {
         var card = art.querySelector(".gal-card");
         var del = art.querySelector(".gal-delete");
-        // this is Mor's own public "my archive" showcase - only she (owner
-        // device) may manage it. A regular visitor gets a read-only view:
-        // they can open a capture, but long-pressing never reveals a delete
-        // control, so they can't touch her archive at all.
-        var canManage = window.isOwnerDevice && window.isOwnerDevice();
+        // Same rule as everywhere else: this device's own uploads are
+        // manageable, anything else is read-only. In practice that still means
+        // only the owner can manage this showcase — a visitor has nothing of
+        // their own here — but it is now decided per card by the shared rule
+        // rather than by a screen-local assumption that could drift from it.
+        var canManage = !!(window.canManageCapture && window.canManageCapture(key));
         var timer = null, longPressed = false;
         function startPress() {
           if (!canManage) return;
