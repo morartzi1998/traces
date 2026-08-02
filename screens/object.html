@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fw">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fw">
-<link rel="stylesheet" href="../css/object.css?v=20260727fw">
-<script src="../js/cursor.js?v=20260727fw" defer></script>
-<script src="../js/grain.js?v=20260727fw" defer></script>
-<script src="../js/tilt3d.js?v=20260727fw" defer></script>
-<script src="../js/owner.js?v=20260727fw"></script>
-<script src="../js/config.js?v=20260727fw"></script>
-<script src="../js/archive.js?v=20260727fw"></script>
-<script src="../js/blobstore.js?v=20260727fw"></script>
-<script src="../js/particle-loader.js?v=20260727fw"></script>
-<script src="../js/remote-captures.js?v=20260727fw"></script>
-<script src="../js/community-seed.js?v=20260727fw"></script>
-<script src="../js/flow.js?v=20260727fw" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fw"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fx">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fx">
+<link rel="stylesheet" href="../css/object.css?v=20260727fx">
+<script src="../js/cursor.js?v=20260727fx" defer></script>
+<script src="../js/grain.js?v=20260727fx" defer></script>
+<script src="../js/tilt3d.js?v=20260727fx" defer></script>
+<script src="../js/owner.js?v=20260727fx"></script>
+<script src="../js/config.js?v=20260727fx"></script>
+<script src="../js/archive.js?v=20260727fx"></script>
+<script src="../js/blobstore.js?v=20260727fx"></script>
+<script src="../js/particle-loader.js?v=20260727fx"></script>
+<script src="../js/remote-captures.js?v=20260727fx"></script>
+<script src="../js/community-seed.js?v=20260727fx"></script>
+<script src="../js/flow.js?v=20260727fx" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fx"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fw" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fx" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fw";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fw";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fx";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fx";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fw";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fx";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fw";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fx";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2906,11 +2906,31 @@
       function setLoadingProgress(frac) {
         var el = document.getElementById("objLoadingPct");
         if (!el) return;
-        if (frac == null || !isFinite(frac)) { el.hidden = true; el.textContent = ""; return; }
-        var pct = Math.max(0, Math.min(99, Math.round(frac * 100)));
+        var pct = (frac == null || !isFinite(frac)) ? null
+          : Math.max(0, Math.min(99, Math.round(frac * 100)));
+        // The merge is a fixed full-screen overlay well above the stage, so the
+        // stage's own readout is behind it — set there, never seen. While it is
+        // open the figure belongs on its label, which is the only text in front
+        // of the viewer at that moment.
+        var mergeEl = document.getElementById("objMerge");
+        if (mergeEl && !mergeEl.hidden) {
+          var lbl = document.getElementById("objMergeLabel");
+          if (lbl) {
+            if (mergeLabelBase == null) mergeLabelBase = lbl.textContent;
+            lbl.textContent = pct == null ? mergeLabelBase : mergeLabelBase + "  " + pct + "%";
+            if (pct == null) mergeLabelBase = null;
+          }
+          el.hidden = true; el.textContent = "";
+          return;
+        }
+        mergeLabelBase = null;
+        if (pct == null) { el.hidden = true; el.textContent = ""; return; }
         el.textContent = pct + "%";
         el.hidden = false;
       }
+      // the merge label's text without any percentage appended, so repeated
+      // updates don't stack "combining 3 scans… 12% 13% 14%"
+      var mergeLabelBase = null;
 
       // Taking .blob() swallows the whole download in one gulp with nothing to
       // report along the way. Reading the body as a stream gives a real byte
@@ -5266,8 +5286,13 @@
       var mergeViewer = null;
       function fetchRefBuffer(ref) {
         var pk = ref.indexOf("idb:") === 0 ? ref.slice(4) : null;
+        // The merge pulls EVERY dated scan at once — several tens of megabytes,
+        // the longest wait anywhere in the interface — and it was the one place
+        // with no progress at all, because it used a plain fetch of its own.
+        // Route it through the same streaming reader as the main view so the
+        // percentage appears here too.
         var blobP = pk && window.BlobStore ? window.BlobStore.get(pk)
-          : fetch(ref).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+          : fetchBlobWithProgress(ref).catch(function () { return null; });
         return blobP.then(function (b) { return b ? b.arrayBuffer() : null; }).catch(function () { return null; });
       }
       function loadVersionGeometry(v) {
@@ -5385,7 +5410,9 @@
         document.getElementById("objMergeManual").hidden = true;
         document.getElementById("objMergeTint").hidden = true;
         label.textContent = "combining " + vs.length + " scans…";
+        setLoadingProgress(null);
         Promise.all(vs.map(loadVersionGeometry)).then(function (loaded) {
+          setLoadingProgress(null); // the downloads are done; the aligning is not measurable
           // keep the version metadata aligned with the scans that actually
           // loaded, so the legend labels the right colours
           var geoms = [], kept = [];
