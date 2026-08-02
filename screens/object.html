@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ft">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ft">
-<link rel="stylesheet" href="../css/object.css?v=20260727ft">
-<script src="../js/cursor.js?v=20260727ft" defer></script>
-<script src="../js/grain.js?v=20260727ft" defer></script>
-<script src="../js/tilt3d.js?v=20260727ft" defer></script>
-<script src="../js/owner.js?v=20260727ft"></script>
-<script src="../js/config.js?v=20260727ft"></script>
-<script src="../js/archive.js?v=20260727ft"></script>
-<script src="../js/blobstore.js?v=20260727ft"></script>
-<script src="../js/particle-loader.js?v=20260727ft"></script>
-<script src="../js/remote-captures.js?v=20260727ft"></script>
-<script src="../js/community-seed.js?v=20260727ft"></script>
-<script src="../js/flow.js?v=20260727ft" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ft"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fu">
+<link rel="stylesheet" href="../css/object.css?v=20260727fu">
+<script src="../js/cursor.js?v=20260727fu" defer></script>
+<script src="../js/grain.js?v=20260727fu" defer></script>
+<script src="../js/tilt3d.js?v=20260727fu" defer></script>
+<script src="../js/owner.js?v=20260727fu"></script>
+<script src="../js/config.js?v=20260727fu"></script>
+<script src="../js/archive.js?v=20260727fu"></script>
+<script src="../js/blobstore.js?v=20260727fu"></script>
+<script src="../js/particle-loader.js?v=20260727fu"></script>
+<script src="../js/remote-captures.js?v=20260727fu"></script>
+<script src="../js/community-seed.js?v=20260727fu"></script>
+<script src="../js/flow.js?v=20260727fu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ft" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fu" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ft";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ft";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fu";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ft";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ft";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fu";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -828,8 +828,8 @@
       <div class="obj-blue-body" data-editable-rows="blueBody">
         <p class="obj-blue-label">Type of annotation</p>
         <div class="obj-blue-choices">
-          <label><input type="checkbox" id="blueRemark"> remark</label>
-          <label><input type="checkbox" id="blueStory" checked> story</label>
+          <label><input type="checkbox" id="blueRemark" checked> remark</label>
+          <label><input type="checkbox" id="blueStory"> story</label>
         </div>
 
         <div class="obj-blue-fields" id="blueEditFields">
@@ -2220,6 +2220,7 @@
           renderTimeline: function (k) { return renderTimeline(k); },
           openRemarkCard: function (a) { return openRemarkCard(a); },
           selectVersion: function (k, i) { return selectVersion(k, i); },
+          openBlueEdit: function (a, spot) { return openBlueEdit(a, spot); },
           forceDisplayedVersion: function (i) { displayedVersionIndex = i; },
           closeRemarkCard: function () { return closeRemarkCard(); },
           mergeableVersions: function (k) { return mergeableVersions(k); },
@@ -3816,6 +3817,54 @@
         white.hidden = true;
       });
 
+      // Moving along the timeline has to leave edit mode — a form holding one
+      // scan's words while pointed at another is what wrote a story onto the
+      // wrong scan. But simply dropping the form would throw away typing the
+      // person never chose to abandon (they moved the timeline, they didn't
+      // close anything). So keep the work AND keep it truthful: write it to the
+      // scan it was actually written for — the one the form recorded — and only
+      // then leave. Nothing typed is lost, and nothing lands on a scan it was
+      // never about.
+      function commitWhiteEditThenExit() {
+        var target = whiteEditFor;
+        if (!target || target.key !== key) { exitWhiteEdit(); return; }
+        var item = catalog[target.key];
+        var vSel = target.created == null ? null
+          : (item.versions || []).filter(function (v) { return v.created === target.created; })[0];
+        var typedTitle = document.getElementById("whiteTitleInput").value.trim();
+        var typedFeeling = document.getElementById("whiteFeelingInput").value.trim();
+        var was = vSel ? { title: vSel.title, feeling: vSel.feeling || "" }
+                       : { title: item.title, feeling: item.feeling || "" };
+        // untouched form: leave without writing anything at all
+        if (typedTitle === (was.title || "") && typedFeeling === was.feeling) { exitWhiteEdit(); return; }
+        if (vSel) {
+          if (typedTitle) { vSel.title = typedTitle; item.title = typedTitle; }
+          vSel.feeling = typedFeeling;
+          [window.Archive, window.Community].forEach(function (store) {
+            if (!store || !store.get(target.key)) return;
+            var rec = store.get(target.key);
+            var hit = (rec.versions || []).filter(function (v) { return v.created === vSel.created; })[0];
+            if (hit) { hit.title = vSel.title; hit.feeling = vSel.feeling; }
+            var patch = { versions: rec.versions };
+            if (typedTitle) patch.title = typedTitle;
+            store.update(target.key, patch);
+          });
+          if (window.isOwnerDevice && window.isOwnerDevice()) {
+            var vMeta = (item.versions || []).map(function (v) {
+              return { created: v.created, year: v.year, dateLabel: v.dateLabel || null, title: v.title,
+                feeling: v.created === vSel.created ? vSel.feeling : undefined };
+            });
+            serverPatchIds(target.key).forEach(function (sid) { patchServerVersionsMeta(sid, vMeta); });
+          }
+        } else {
+          if (typedTitle) item.title = typedTitle;
+          item.feeling = typedFeeling;
+          persist(target.key);
+        }
+        notifyOwner("Saved to " + (vSel ? (vSel.dateLabel || vSel.year) : "this capture") + ".");
+        exitWhiteEdit();
+      }
+
       // ----- edit the capture in place (no jump to the scan screen) -----
       var whiteEditIds = ["whiteObj", "whiteSpace", "whitePet", "whitePrivate", "whiteCommunity"];
       function setWhiteInputsDisabled(dis) {
@@ -4077,7 +4126,12 @@
           "Describe your thought and memories in this particular annotations";
         blueStoryBox.disabled = false;
         blueRemarkBox.disabled = false;
-        var type = annotation ? annotation.type : "story";
+        // A NEW note starts as a remark. Most notes pinned on a capture are a
+        // short observation about that spot, not a long piece of writing, and
+        // remark is the first of the two choices — so it is both the commoner
+        // case and the one the reading order already puts first. An existing
+        // note keeps whatever it was saved as.
+        var type = annotation ? annotation.type : "remark";
         blueStoryBox.checked = type !== "remark";
         blueRemarkBox.checked = type === "remark";
         document.getElementById("blueName").value = annotation ? annotation.title : "";
@@ -4493,7 +4547,7 @@
         // the box kept the previous version's words while the version being
         // saved to had already changed underneath it. Leave edit mode on any
         // move, so what is in the box always belongs to what is on screen.
-        if (!white.hidden && white.classList.contains("editing")) exitWhiteEdit();
+        if (!white.hidden && white.classList.contains("editing")) commitWhiteEditThenExit();
         if (!white.hidden) fillWhite(catalog[k]);
         // a version with its own scan swaps the stage; the curated
         // annotation-only history (chandelier) keeps the current scan.
