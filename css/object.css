@@ -1477,24 +1477,55 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
    it — without the flex column the paragraph painted straight over the
    annotations/visibility sections below */
 .obj-link-card-section--description {
-  flex: 1;
-  /* min-height:0 so the description inside can actually shrink — a flex item
-     defaults to min-height:auto, which refuses to go below its content and
-     leaves an inner scroller nothing to scroll against.
-     overflow:hidden is not optional alongside it: once the section is allowed
-     to shrink below its content, anything sticking out is PAINTED OVER the
-     section beneath, which put the description straight on top of the
-     annotations. */
-  min-height: 0;
+  /* basis auto, not 0: with a zero basis this section only ever got the
+     leftovers after every other row had claimed its full height, which on a
+     short window was ~100px — less than its own picture. The floor below is
+     what the section actually needs to show a preview, a heading and three
+     lines of story; anything longer scrolls inside the story itself, and the
+     annotation list gives up the difference. */
+  flex: 1 1 auto;
+  /* The floor, not 0. It used to be min-height:0 so an inner scroller had
+     something to scroll against — but that let the section shrink under its
+     own picture, and the heading and story were then laid out below its box
+     and clipped away by the overflow:hidden here. The story scrolls inside
+     ITSELF (.obj-white-feeling), so the section does not need to collapse. */
+  min-height: 252px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .obj-link-card-section--description > .obj-white-rule,
-.obj-link-card-section--description > .obj-link-card-img,
 .obj-link-card-section--description > .obj-white-label {
   flex-shrink: 0;
+}
+
+/* The PREVIEW gives ground before the words do. It used to be unshrinkable at
+   a flat 240px, so on a short window (a laptop with the dock and tab bar
+   eating the height) the picture plus a long annotation list left the
+   description with ~100px — and its label and story text were laid out below
+   the section's own box and clipped away by overflow:hidden. The heading came
+   out sliced in half and the story was simply missing. It can shrink now, to
+   a floor where it still reads as a picture of something. */
+.obj-link-card-section--description > .obj-link-card-img {
+  flex: 0 1 auto;
+  min-height: 110px;
+}
+
+/* ...and the annotation list scrolls rather than pushing the description out.
+   With flex:none a capture with several notes claimed its full height first
+   and the description absorbed the whole shortfall. */
+.obj-link-card-section--annotations {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.obj-link-card-section--annotations > #linkCardAnnotations {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .obj-link-card-section > .obj-white-rule:first-child {

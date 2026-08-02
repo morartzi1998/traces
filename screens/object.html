@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gi">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gi">
-<link rel="stylesheet" href="../css/object.css?v=20260727gi">
-<script src="../js/cursor.js?v=20260727gi" defer></script>
-<script src="../js/grain.js?v=20260727gi" defer></script>
-<script src="../js/tilt3d.js?v=20260727gi" defer></script>
-<script src="../js/owner.js?v=20260727gi"></script>
-<script src="../js/config.js?v=20260727gi"></script>
-<script src="../js/archive.js?v=20260727gi"></script>
-<script src="../js/blobstore.js?v=20260727gi"></script>
-<script src="../js/particle-loader.js?v=20260727gi"></script>
-<script src="../js/remote-captures.js?v=20260727gi"></script>
-<script src="../js/community-seed.js?v=20260727gi"></script>
-<script src="../js/flow.js?v=20260727gi" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gi"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gj">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gj">
+<link rel="stylesheet" href="../css/object.css?v=20260727gj">
+<script src="../js/cursor.js?v=20260727gj" defer></script>
+<script src="../js/grain.js?v=20260727gj" defer></script>
+<script src="../js/tilt3d.js?v=20260727gj" defer></script>
+<script src="../js/owner.js?v=20260727gj"></script>
+<script src="../js/config.js?v=20260727gj"></script>
+<script src="../js/archive.js?v=20260727gj"></script>
+<script src="../js/blobstore.js?v=20260727gj"></script>
+<script src="../js/particle-loader.js?v=20260727gj"></script>
+<script src="../js/remote-captures.js?v=20260727gj"></script>
+<script src="../js/community-seed.js?v=20260727gj"></script>
+<script src="../js/flow.js?v=20260727gj" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gj"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gi" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gj" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gi";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gi";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gj";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gj";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gi";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gj";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gi";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gj";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1580,6 +1580,73 @@
       }
 
 
+      // Same idea, one level down: a DATED VERSION on a timeline has its own
+      // mesh, and until now nothing ever gave it its own stored cloud. The
+      // heal above only ever looked at the capture's top-level record, so a
+      // capture whose latest scan has particles (which is most of them) was
+      // considered healthy while every older year of it still had none — and
+      // each of those was re-derived from a 12MB mesh, from scratch, on every
+      // device that opened it. Derived once here, uploaded, and attached to
+      // that version, so everyone else just downloads the finished cloud.
+      var versionHealTried = {};
+      function healOneVersion(k, v, api) {
+        versionHealTried[v.model] = 1;
+        return fetchModelBuffer(String(v.model))
+          .then(function (buf) {
+            if (!buf) return;
+            return window.__glbToPoints(buf, 300000).then(function (geometry) {
+              if (!geometry) return;
+              // mesh-derived: no outlier pass, same reasoning as above
+              var bytes = window.__serializeGeometry(geometry, { derived: true });
+              var form = new FormData();
+              form.append("file", new Blob([bytes], { type: "application/octet-stream" }), "derived-points.bin");
+              return fetch(api + "/captures/upload", { method: "POST", body: form })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                  if (!d || !d.url) return;
+                  // find THIS version inside the shared record and give it the
+                  // cloud. Matched on `created` (the version's stable id used
+                  // everywhere else in this file) with the mesh ref as a
+                  // fallback, never on array position — the order can differ.
+                  [k, k + "-community"].forEach(function (sid) {
+                    queuedRecordPatch(sid, function (rec) {
+                      var list = rec.versions || [];
+                      var hit = null;
+                      for (var i = 0; i < list.length; i++) {
+                        if (!list[i]) continue;
+                        if (list[i].created === v.created || list[i].model === v.model) { hit = list[i]; break; }
+                      }
+                      // already healed (another device got there first) or
+                      // simply not on this record — skip the write entirely
+                      if (!hit || hit.points) return false;
+                      hit.points = d.url;
+                    });
+                  });
+                  v.points = d.url;
+                  var fields = { versions: (catalog[k] || {}).versions || [] };
+                  if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+                  if (window.Community && Community.get(k)) Community.update(k, fields);
+                });
+            });
+          })
+          .catch(function () {});
+      }
+      // one version at a time — each pulls a whole GLB and samples it, and
+      // several at once would choke the tab and the connection both
+      function maybeHealVersionClouds(k) {
+        if (!(window.isOwnerDevice && window.isOwnerDevice())) return Promise.resolve();
+        var it = catalog[k];
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!it || !api || !window.__glbToPoints || !window.__serializeGeometry) return Promise.resolve();
+        var pending = (it.versions || []).filter(function (v) {
+          return v && v.model && !v.points && !versionHealTried[v.model] &&
+            String(v.model).indexOf("http") === 0;
+        });
+        return pending.reduce(function (chain, v) {
+          return chain.then(function () { return healOneVersion(k, v, api); });
+        }, Promise.resolve());
+      }
+
       // heal EVERY community capture that reached the server with a mesh but no
       // point cloud, not just the one on screen — so the owner opening the view
       // once quietly back-fills particles for the whole feed (visitor uploads
@@ -1597,12 +1664,25 @@
           .filter(function (c) { return c && c.model && !c.points; })
           .map(function (c) { return String(c.id).replace(/-community$/, ""); })
           .filter(function (k) { return catalog[k] && catalog[k].model && !catalog[k].points; });
+        // ...then the same sweep one level down, over every capture that has a
+        // timeline: those never appeared in the queue above, because their
+        // top-level record already has a cloud from the latest scan
+        var vQueue = Object.keys(catalog).filter(function (k) {
+          return (catalog[k].versions || []).some(function (v) {
+            return v && v.model && !v.points;
+          });
+        });
         (function next() {
-          if (!queue.length) return;
-          var k = queue.shift();
-          var p = maybeHealDerivedCloud(k);
-          var done = function () { setTimeout(next, 2000); };
-          if (p && p.then) { p.then(done, done); } else { done(); }
+          if (queue.length) {
+            var k = queue.shift();
+            var p = maybeHealDerivedCloud(k);
+            var done = function () { setTimeout(next, 2000); };
+            if (p && p.then) { p.then(done, done); } else { done(); }
+            return;
+          }
+          if (!vQueue.length) return;
+          maybeHealVersionClouds(vQueue.shift()).then(function () { setTimeout(next, 2000); },
+            function () { setTimeout(next, 2000); });
         })();
       }
 
@@ -3748,6 +3828,8 @@
         // that skipped derivation) fixes ITSELF the next time it's opened on
         // Mor's device — no one has to ask for it
         maybeHealDerivedCloud(k);
+        // ...and every dated version of it that is still cloud-less
+        maybeHealVersionClouds(k);
         // same for annotations: edits used to stop at this browser's overlay,
         // so the shared record kept serving visitors the stale set
         if (window.isOwnerDevice && window.isOwnerDevice()

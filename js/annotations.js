@@ -184,7 +184,11 @@
     showPendingMarker(spot);
     document.getElementById("daName").value = "";
     document.getElementById("daText").value = "";
-    setAnnotationType("story");
+    // A NEW note starts as a remark. This line is what actually decided it —
+    // it runs every time the form opens and overrode the markup's own
+    // default, so setting `checked` in the HTML alone changed nothing and
+    // the type still had to be corrected by hand on nearly every note.
+    setAnnotationType("remark");
     defaultSidebar.hidden = true;
     blueSidebar.hidden = false;
     document.getElementById("daName").focus();
