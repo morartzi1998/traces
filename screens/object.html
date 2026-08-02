@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gl">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gl">
-<link rel="stylesheet" href="../css/object.css?v=20260727gl">
-<script src="../js/cursor.js?v=20260727gl" defer></script>
-<script src="../js/grain.js?v=20260727gl" defer></script>
-<script src="../js/tilt3d.js?v=20260727gl" defer></script>
-<script src="../js/owner.js?v=20260727gl"></script>
-<script src="../js/config.js?v=20260727gl"></script>
-<script src="../js/archive.js?v=20260727gl"></script>
-<script src="../js/blobstore.js?v=20260727gl"></script>
-<script src="../js/particle-loader.js?v=20260727gl"></script>
-<script src="../js/remote-captures.js?v=20260727gl"></script>
-<script src="../js/community-seed.js?v=20260727gl"></script>
-<script src="../js/flow.js?v=20260727gl" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gl"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gm">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gm">
+<link rel="stylesheet" href="../css/object.css?v=20260727gm">
+<script src="../js/cursor.js?v=20260727gm" defer></script>
+<script src="../js/grain.js?v=20260727gm" defer></script>
+<script src="../js/tilt3d.js?v=20260727gm" defer></script>
+<script src="../js/owner.js?v=20260727gm"></script>
+<script src="../js/config.js?v=20260727gm"></script>
+<script src="../js/archive.js?v=20260727gm"></script>
+<script src="../js/blobstore.js?v=20260727gm"></script>
+<script src="../js/particle-loader.js?v=20260727gm"></script>
+<script src="../js/remote-captures.js?v=20260727gm"></script>
+<script src="../js/community-seed.js?v=20260727gm"></script>
+<script src="../js/flow.js?v=20260727gm" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gm"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gl" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gm" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gl";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gl";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gm";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gm";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gl";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gm";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gl";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gm";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1231,17 +1231,27 @@
       // it simply being in this browser's community store.
       function isCommunityPiece(k) {
         if (browsingCommunity) return true;
-        // your own archive is your own archive, whatever else the capture is
-        try { if (window.Archive && Archive.get(k)) return false; } catch (e) {}
+        // A key that IS a community scope settles it outright, ahead of every
+        // other test. The fixed showcase pieces are keyed "communityHighChair"
+        // and a shared record is "<id>-community" — those are community pieces
+        // full stop. Asking about this browser's Archive first (as this did at
+        // first) got it wrong the moment a showcase piece had also been saved
+        // locally at some point: "high chair" came up on the archive's black
+        // while sitting in the community feed.
+        var ks = String(k || "");
+        if (ks.indexOf("community") === 0 || ks.indexOf("-community") !== -1) return true;
         var it = (catalog && catalog[k]) || {};
-        if (it.visibility === "community" || it.scope === "community") return true;
         // set while the shared lists merge in, whenever a "<id>-community"
         // record exists for this capture — the one signal that is true for a
         // visitor who lands on a community piece without ever having opened
         // the community screen, so nothing is cached locally to go on
         if (it.onServerCommunity) return true;
-        var ks = String(k || "");
-        if (ks.indexOf("community") === 0 || ks.indexOf("-community") !== -1) return true;
+        // Past this line the capture has no community identity of its own, so
+        // your own archive wins: one of Mor's captures that she happens to
+        // have marked as shared still looks like her archive when she opens it
+        // from there.
+        try { if (window.Archive && Archive.get(k)) return false; } catch (e) {}
+        if (it.visibility === "community" || it.scope === "community") return true;
         try { if (window.Community && Community.get(k)) return true; } catch (e) {}
         return false;
       }
