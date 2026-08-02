@@ -15,7 +15,7 @@
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727gb";
+import * as THREE from "./vendor/three/three.module.js?v=20260727gc";
 
 // Draco decoder — loaded once, on demand, only when a GLB actually carries
 // KHR_draco_mesh_compression (most Tripo scans do NOT; ready-made uploads
@@ -153,7 +153,10 @@ export function glbToPoints(arrayBuffer) {
           var cx = cnv.getContext("2d");
           cx.drawImage(bmp, 0, 0, w, h);
           return cx.getImageData(0, 0, w, h);
-        }).catch(function () { return null; });
+        }).catch(function (e) {
+          try { console.error("[traces] a mesh texture could not be decoded — its points fall back to plain colour", e); } catch (e2) {}
+          return null;
+        });
       });
       return texCache[imgIdx];
     }
@@ -183,6 +186,7 @@ export function glbToPoints(arrayBuffer) {
     // COLOR / index data lives compressed in one bufferView, not the plain
     // accessors. Decode each such primitive up front and drop the results into
     // dracoAccessorCache so accessorData() serves them transparently below.
+    var dracoFailures = 0;
     function decodeDracoPrim(draco, prim) {
       var ext = prim.extensions.KHR_draco_mesh_compression;
       var bv = gltf.bufferViews[ext.bufferView];
@@ -232,7 +236,13 @@ export function glbToPoints(arrayBuffer) {
           draco._free(iptr);
           dracoAccessorCache[prim.indices] = { data: idx, comps: 1, count: numIndices };
         }
-      } catch (e) { /* leave this primitive undecoded; it just yields no points */ }
+      } catch (e) {
+        // leave this primitive undecoded; it just yields no points. On a
+        // multi-part mesh that means a whole region silently missing — which
+        // reads as a bad scan rather than a decode failure, so leave a trail.
+        dracoFailures++;
+        try { console.error("[traces] a Draco primitive failed to decode", e); } catch (e2) {}
+      }
       finally {
         if (mesh) draco.destroy(mesh);
         draco.destroy(db);
@@ -250,7 +260,12 @@ export function glbToPoints(arrayBuffer) {
       if (!dracoPrims.length) return Promise.resolve();
       return loadDraco().then(function (draco) {
         dracoPrims.forEach(function (pr) { decodeDracoPrim(draco, pr); });
-      }).catch(function () { /* decoder unavailable — those prims stay empty */ });
+      }).catch(function (e) {
+        // the decoder itself never loaded — EVERY compressed primitive is now
+        // empty, which is very different from "this mesh has no geometry"
+        dracoFailures += dracoPrims.length;
+        try { console.error("[traces] the Draco decoder is unavailable — compressed parts of this mesh cannot be read", e); } catch (e2) {}
+      });
     }
 
     return decodeAllDraco().then(function () {
@@ -412,8 +427,24 @@ export function glbToPoints(arrayBuffer) {
       var g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      // a mesh that decoded only partly still produces a plausible-looking
+      // cloud with a whole region missing — record it so the diagnostics box
+      // can say so instead of it reading as a bad scan
+      if (dracoFailures) g.userData.dracoFailures = dracoFailures;
       return g;
-    }).catch(function () { return null; });
-    }).catch(function () { return null; });
-  } catch (e) { return null; }
+    }).catch(function (e) {
+      try { console.error("[traces] glbToPoints: sampling the mesh failed", e); } catch (e2) {}
+      return null;
+    });
+    }).catch(function (e) {
+      try { console.error("[traces] glbToPoints: the GLB could not be read", e); } catch (e2) {}
+      return null;
+    });
+  } catch (e) {
+    // Every failure in this file used to collapse into the same silent null, so
+    // "this capture has no mesh" and "the parser hit a bug" were indistinguishable
+    // from the outside — including to whoever is debugging the exhibition.
+    try { console.error("[traces] glbToPoints failed outright", e); } catch (e2) {}
+    return null;
+  }
 }
