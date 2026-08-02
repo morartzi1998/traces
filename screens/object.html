@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gp">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gp">
-<link rel="stylesheet" href="../css/object.css?v=20260727gp">
-<script src="../js/cursor.js?v=20260727gp" defer></script>
-<script src="../js/grain.js?v=20260727gp" defer></script>
-<script src="../js/tilt3d.js?v=20260727gp" defer></script>
-<script src="../js/owner.js?v=20260727gp"></script>
-<script src="../js/config.js?v=20260727gp"></script>
-<script src="../js/archive.js?v=20260727gp"></script>
-<script src="../js/blobstore.js?v=20260727gp"></script>
-<script src="../js/particle-loader.js?v=20260727gp"></script>
-<script src="../js/remote-captures.js?v=20260727gp"></script>
-<script src="../js/community-seed.js?v=20260727gp"></script>
-<script src="../js/flow.js?v=20260727gp" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gp"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gq">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gq">
+<link rel="stylesheet" href="../css/object.css?v=20260727gq">
+<script src="../js/cursor.js?v=20260727gq" defer></script>
+<script src="../js/grain.js?v=20260727gq" defer></script>
+<script src="../js/tilt3d.js?v=20260727gq" defer></script>
+<script src="../js/owner.js?v=20260727gq"></script>
+<script src="../js/config.js?v=20260727gq"></script>
+<script src="../js/archive.js?v=20260727gq"></script>
+<script src="../js/blobstore.js?v=20260727gq"></script>
+<script src="../js/particle-loader.js?v=20260727gq"></script>
+<script src="../js/remote-captures.js?v=20260727gq"></script>
+<script src="../js/community-seed.js?v=20260727gq"></script>
+<script src="../js/flow.js?v=20260727gq" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gq"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gp" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gq" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gp";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gp";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gq";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gq";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gp";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gq";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gp";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gq";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -3485,6 +3485,24 @@
         clearTimeout(meshWarmTimer);
         if (meshWarmAbort) { try { meshWarmAbort.abort(); } catch (e) {} meshWarmAbort = null; }
       }
+      // the worker sends no cache header on a stored file (see blobstore.js),
+      // so a plain `fetch` here — the warm-up used to just read the body and
+      // throw it away — bought nothing beyond the current tab, and a reload
+      // paid for the same 55-120MB mesh again. Cached in IndexedDB, keyed by
+      // the mesh's own URL, the same way a stored point cloud already is
+      // ("srvcloud:") — one real download per mesh, ever, on this device.
+      function cachedMeshBlob(ref, signal) {
+        var netFetch = function () {
+          return fetch(ref, signal ? { signal: signal } : undefined)
+            .then(function (r) { return r.ok ? r.blob() : null; });
+        };
+        if (!window.BlobStore) return netFetch();
+        var ck = "srvmesh:" + ref;
+        return window.BlobStore.get(ck).then(function (blob) {
+          if (blob) return blob;
+          return netFetch().then(function (b) { if (b) window.BlobStore.set(ck, b).catch(function () {}); return b; });
+        }).catch(function () { return netFetch(); });
+      }
       function warmCurrentMesh(k) {
         var it = catalog[k];
         if (!it || !it.dual || !it.model || String(it.model).indexOf("idb:") === 0) return;
@@ -3496,7 +3514,10 @@
           meshWarmed[mdl] = true;
           try {
             meshWarmAbort = new AbortController();
-            fetch(mdl, { signal: meshWarmAbort.signal }).then(function (r) { return r.ok ? r.blob() : null; }).then(function () {}).catch(function () {});
+            // AbortController only cancels a plain fetch, not the cache lookup
+            // in front of it — but a cache hit resolves near-instantly, so an
+            // abort during that phase can never actually happen in practice
+            cachedMeshBlob(mdl, meshWarmAbort.signal).catch(function () {});
           } catch (e) {}
         }, 4000);
       }
@@ -3805,7 +3826,17 @@
                 if (blob && key === k) modelViewer.src = URL.createObjectURL(blob);
               });
             } else {
-              modelViewer.src = model;
+              // Route a hosted mesh through the same IndexedDB cache the
+              // warm-up fills (cachedMeshBlob) instead of handing model-viewer
+              // a live URL directly — the worker sends no cache header, so a
+              // direct src assignment re-downloaded the full mesh (55-120MB)
+              // on every single toggle and every page reload, cache or no
+              // cache. A miss here still resolves to the same live fetch, so
+              // nothing regresses on the very first view of a mesh.
+              cachedMeshBlob(model).then(function (blob) {
+                if (key !== k || model !== currentModelRef) return; // moved on
+                modelViewer.src = blob ? URL.createObjectURL(blob) : model;
+              });
             }
           }
         } else {
