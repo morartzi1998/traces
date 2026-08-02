@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fr">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fr">
-<link rel="stylesheet" href="../css/object.css?v=20260727fr">
-<script src="../js/cursor.js?v=20260727fr" defer></script>
-<script src="../js/grain.js?v=20260727fr" defer></script>
-<script src="../js/tilt3d.js?v=20260727fr" defer></script>
-<script src="../js/owner.js?v=20260727fr"></script>
-<script src="../js/config.js?v=20260727fr"></script>
-<script src="../js/archive.js?v=20260727fr"></script>
-<script src="../js/blobstore.js?v=20260727fr"></script>
-<script src="../js/particle-loader.js?v=20260727fr"></script>
-<script src="../js/remote-captures.js?v=20260727fr"></script>
-<script src="../js/community-seed.js?v=20260727fr"></script>
-<script src="../js/flow.js?v=20260727fr" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fr"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fs">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fs">
+<link rel="stylesheet" href="../css/object.css?v=20260727fs">
+<script src="../js/cursor.js?v=20260727fs" defer></script>
+<script src="../js/grain.js?v=20260727fs" defer></script>
+<script src="../js/tilt3d.js?v=20260727fs" defer></script>
+<script src="../js/owner.js?v=20260727fs"></script>
+<script src="../js/config.js?v=20260727fs"></script>
+<script src="../js/archive.js?v=20260727fs"></script>
+<script src="../js/blobstore.js?v=20260727fs"></script>
+<script src="../js/particle-loader.js?v=20260727fs"></script>
+<script src="../js/remote-captures.js?v=20260727fs"></script>
+<script src="../js/community-seed.js?v=20260727fs"></script>
+<script src="../js/flow.js?v=20260727fs" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fs"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fr" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fs" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fr";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fr";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fs";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fs";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fr";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fs";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fr";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fs";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2212,6 +2212,8 @@
           focusStageOn: function (a) { return focusStageOn(a); },
           get key() { return key; },
           renderTimeline: function (k) { return renderTimeline(k); },
+          openRemarkCard: function (a) { return openRemarkCard(a); },
+          closeRemarkCard: function () { return closeRemarkCard(); },
           mergeableVersions: function (k) { return mergeableVersions(k); },
           get pendingJump() { return pendingAnnotationJump; },
           set pendingJump(v) { pendingAnnotationJump = v; },
@@ -2577,6 +2579,11 @@
               p.style.display = proj.behind ? "none" : "";
               p.style.left = proj.x * 100 + "%";
               p.style.top = proj.y * 100 + "%";
+              // the mesh view keeps an open card glued through model-viewer's
+              // camera-change; the cloud has no such event, so it happens here
+              // — otherwise the card stays where it opened while the marker
+              // it belongs to drifts away underneath it
+              if (remarkTrackBtn === p && !remarkCard.hidden) positionRemarkCardTo(p);
             };
             updateProjection();
             pcFrameUnsubs.push(pcViewer.onFrame(updateProjection));
@@ -2627,8 +2634,18 @@
         var hotRect = hotspotEl.getBoundingClientRect();
         var hx = hotRect.left + hotRect.width / 2 - stageRect.left;
         var hy = hotRect.top + hotRect.height / 2 - stageRect.top;
-        remarkCard.style.left = (hx + 12) + "px";
-        remarkCard.style.top = hy + "px";
+        // Keep the whole card on the stage. Pinned blindly to the right of a
+        // marker near the edge, it used to hang off the side (or below the
+        // bottom) with its text unreadable — so flip it to the marker's other
+        // side when there isn't room, and hold it clear of the edges.
+        var cardRect = remarkCard.getBoundingClientRect();
+        var cw = cardRect.width || 300, ch = cardRect.height || 120;
+        var left = hx + 12;
+        if (left + cw > stageRect.width - 8) left = hx - 12 - cw;
+        left = Math.max(8, Math.min(left, stageRect.width - cw - 8));
+        var top = Math.max(8, Math.min(hy, stageRect.height - ch - 8));
+        remarkCard.style.left = left + "px";
+        remarkCard.style.top = top + "px";
       }
 
       function openRemarkCard(annotation) {
@@ -2637,7 +2654,14 @@
         // stacking context than this card, so it can never paint above the
         // card where they overlap — offset the card clear of the marker
         // instead of letting it get swallowed underneath
-        if (annotation.__btn && annotation.pos) {
+        // Glue the card to whatever marker is actually on stage. This used to
+        // also require `pos` — the MESH anchor — so in the point-cloud view,
+        // where a note is anchored by `ppos` instead, it fell through to the
+        // note's flat stored x/y and opened stranded at the bottom of the
+        // screen, nowhere near the point it belongs to. The marker element is
+        // a real node in BOTH views, so its own rect is the right answer for
+        // both.
+        if (annotation.__btn) {
           remarkTrackBtn = annotation.__btn;
           positionRemarkCardTo(remarkTrackBtn);
         } else {
@@ -2777,14 +2801,18 @@
             text.textContent = a.title;
             text.style.cursor = "pointer";
             if (mayEdit) {
-              text.setAttribute("aria-label", "Edit annotation");
+              text.setAttribute("aria-label", "Show annotation");
               text.addEventListener("click", function () {
                 white.hidden = true;
                 // opening the note is only half of it: fly to the point it
                 // was pinned on, so the text and the thing it describes are
-                // on screen together
+                // on screen together. And then show it exactly as clicking
+                // the marker itself does — a remark opens its small card AT
+                // the point, rather than swapping one full-height panel for
+                // another and losing sight of what the note is about. Editing
+                // is still one press away, on the card.
                 focusStageOn(a);
-                openBlueEdit(a);
+                onAnnotationClick(a);
               });
               var dash = document.createElement("button");
               dash.type = "button";
@@ -2799,12 +2827,12 @@
               li.appendChild(text);
               li.appendChild(dash);
             } else {
-              // a visitor reads the story, never the edit form
-              text.setAttribute("aria-label", "Read annotation");
+              // a visitor reads the note, never the edit form
+              text.setAttribute("aria-label", "Show annotation");
               text.addEventListener("click", function () {
                 white.hidden = true;
                 focusStageOn(a);
-                openBlueView(a);
+                onAnnotationClick(a);
               });
               li.appendChild(text);
             }
