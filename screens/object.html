@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gk">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gk">
-<link rel="stylesheet" href="../css/object.css?v=20260727gk">
-<script src="../js/cursor.js?v=20260727gk" defer></script>
-<script src="../js/grain.js?v=20260727gk" defer></script>
-<script src="../js/tilt3d.js?v=20260727gk" defer></script>
-<script src="../js/owner.js?v=20260727gk"></script>
-<script src="../js/config.js?v=20260727gk"></script>
-<script src="../js/archive.js?v=20260727gk"></script>
-<script src="../js/blobstore.js?v=20260727gk"></script>
-<script src="../js/particle-loader.js?v=20260727gk"></script>
-<script src="../js/remote-captures.js?v=20260727gk"></script>
-<script src="../js/community-seed.js?v=20260727gk"></script>
-<script src="../js/flow.js?v=20260727gk" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gk"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gl">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gl">
+<link rel="stylesheet" href="../css/object.css?v=20260727gl">
+<script src="../js/cursor.js?v=20260727gl" defer></script>
+<script src="../js/grain.js?v=20260727gl" defer></script>
+<script src="../js/tilt3d.js?v=20260727gl" defer></script>
+<script src="../js/owner.js?v=20260727gl"></script>
+<script src="../js/config.js?v=20260727gl"></script>
+<script src="../js/archive.js?v=20260727gl"></script>
+<script src="../js/blobstore.js?v=20260727gl"></script>
+<script src="../js/particle-loader.js?v=20260727gl"></script>
+<script src="../js/remote-captures.js?v=20260727gl"></script>
+<script src="../js/community-seed.js?v=20260727gl"></script>
+<script src="../js/flow.js?v=20260727gl" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gl"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gk" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gl" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gk";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gk";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gl";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gl";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gk";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gl";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gk";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gl";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1223,6 +1223,29 @@
       // so arrow-browsing stays within that set until a fresh page load says
       // otherwise (e.g. arriving here some other way)
       var browsingCommunity = cameFromCommunity;
+      // Is the capture on screen a COMMUNITY piece? Four ways to be one, so no
+      // single missing signal can drop it back onto the archive's black:
+      // arriving through the community screen, the capture saying so itself,
+      // its key carrying the community scope (the fixed showcase pieces are
+      // "communityHangingPodChair"; a shared record is "<id>-community"), or
+      // it simply being in this browser's community store.
+      function isCommunityPiece(k) {
+        if (browsingCommunity) return true;
+        // your own archive is your own archive, whatever else the capture is
+        try { if (window.Archive && Archive.get(k)) return false; } catch (e) {}
+        var it = (catalog && catalog[k]) || {};
+        if (it.visibility === "community" || it.scope === "community") return true;
+        // set while the shared lists merge in, whenever a "<id>-community"
+        // record exists for this capture — the one signal that is true for a
+        // visitor who lands on a community piece without ever having opened
+        // the community screen, so nothing is cached locally to go on
+        if (it.onServerCommunity) return true;
+        var ks = String(k || "");
+        if (ks.indexOf("community") === 0 || ks.indexOf("-community") !== -1) return true;
+        try { if (window.Community && Community.get(k)) return true; } catch (e) {}
+        return false;
+      }
+
       // when we arrived from the community screen it stashed the EXACT set it
       // was showing (its live remote captures included). Browse that same
       // ring, so prev/next matches what the visitor was just scrolling —
@@ -3854,12 +3877,21 @@
         // Delayed so it never competes with the capture that's loading now.
         clearTimeout(prefetchTimer);
         prefetchTimer = setTimeout(prefetchNeighbors, 2500);
-        // the blue-purple backdrop is about HOW you got here, not what the
-        // capture itself is — opening the same shared capture from your own
-        // Archive should look like your Archive; only actually browsing
-        // from the community screen (stays on through prev/next, same
-        // lifetime as browsingCommunity itself) gets the community look
-        document.querySelector(".obj-screen").classList.toggle("obj-screen--community", browsingCommunity);
+        // The blue-purple backdrop belongs to community pieces, the way the
+        // polaroids on the community screen are blue-purple and the archive's
+        // are not. It used to hang entirely on HOW you got here — a one-shot
+        // sessionStorage flag set by community.html — which meant any route
+        // that lost the flag dropped a community capture onto the archive's
+        // black, with nothing on screen to explain why. The route still counts
+        // (it is what keeps the look through prev/next), but what the capture
+        // IS now decides it too, so a community piece is blue-purple wherever
+        // you reached it from.
+        // The one thing that always wins the other way: a capture sitting in
+        // THIS browser's own Archive is your own archive piece, and your
+        // archive is black — that is what keeps Mor's own shared captures
+        // looking like her archive when she opens them from it.
+        document.querySelector(".obj-screen")
+          .classList.toggle("obj-screen--community", isCommunityPiece(k));
         // editing actions (rescan, annotate, connect, set default view,
         // straighten, point size) don't make sense on someone else's shared
         // capture — but browsingCommunity alone doesn't mean "someone
