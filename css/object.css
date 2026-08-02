@@ -11,16 +11,19 @@ html, body { overflow: hidden; }
   position: relative;
   height: 100vh;
   overflow: hidden;
-  /* .obj-stage below paints this same colour, opaque, edge-to-edge over the
-     object itself — so THIS is the value that actually decides what a visitor
-     sees behind the scan, not just the sliver of padding around it. Defined
-     as a variable so .obj-screen--community can retint the stage along with
-     its own backdrop, instead of just a few pixels at the margin. */
+  /* .obj-stage below paints these same two variables, opaque, edge-to-edge
+     over the object itself — so THESE are the values that actually decide
+     what a visitor sees behind the scan, not just the sliver of padding
+     around it. Variables so .obj-screen--community can retint the stage
+     along with its own backdrop, instead of just a few pixels at the margin. */
   --obj-backdrop: #14130f;
-  background-color: var(--obj-backdrop);
-  /* a denser scattered starfield so the backdrop reads as open space,
-     not a flat black box; a soft central glow lifts it off pure black */
-  background-image:
+  /* a denser scattered starfield so the backdrop reads as open space, not a
+     flat black box; a soft central glow lifts it off pure black. This was
+     declared directly as background-image before — which only ever painted
+     .obj-screen itself. .obj-stage sits on top of it, opaque, covering the
+     entire frame including every star, so as long as an object was on
+     screen (which is always) not one of them was ever actually visible. */
+  --obj-backdrop-image:
     radial-gradient(120% 90% at 50% 42%, rgba(46, 44, 40, 0.55), transparent 70%),
     radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.7), transparent),
@@ -36,6 +39,8 @@ html, body { overflow: hidden; }
     radial-gradient(1px 1px at 38% 8%, rgba(255, 255, 255, 0.5), transparent),
     radial-gradient(1px 1px at 5% 62%, rgba(255, 255, 255, 0.45), transparent),
     radial-gradient(1px 1px at 72% 82%, rgba(255, 255, 255, 0.5), transparent);
+  background-color: var(--obj-backdrop);
+  background-image: var(--obj-backdrop-image);
   background-repeat: no-repeat, repeat, repeat, repeat, repeat, repeat, repeat,
     repeat, repeat, repeat, repeat, repeat, repeat, repeat;
   background-size: 100% 100%, 240px 240px, 240px 240px, 240px 240px, 240px 240px,
@@ -51,8 +56,7 @@ html, body { overflow: hidden; }
    default near-black — same accent as its card on the community gallery */
 .obj-screen--community {
   --obj-backdrop: #1c1440;
-  background-color: var(--obj-backdrop);
-  background-image:
+  --obj-backdrop-image:
     radial-gradient(120% 90% at 50% 42%, rgba(90, 63, 209, 0.45), transparent 70%),
     radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.9), transparent),
     radial-gradient(1px 1px at 32% 68%, rgba(255, 255, 255, 0.7), transparent),
@@ -68,6 +72,8 @@ html, body { overflow: hidden; }
     radial-gradient(1px 1px at 38% 8%, rgba(255, 255, 255, 0.5), transparent),
     radial-gradient(1px 1px at 5% 62%, rgba(255, 255, 255, 0.45), transparent),
     radial-gradient(1px 1px at 72% 82%, rgba(255, 255, 255, 0.5), transparent);
+  background-color: var(--obj-backdrop);
+  background-image: var(--obj-backdrop-image);
 }
 
 .obj-chrome {
@@ -666,7 +672,19 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
      a few pixels. --obj-backdrop is .obj-screen's own value (retinted by
      .obj-screen--community below it), so the stage now carries whichever
      backdrop the capture actually belongs to. */
-  background: var(--obj-backdrop, var(--color-bg));
+  background-color: var(--obj-backdrop, var(--color-bg));
+  /* the star field lives as a variable on .obj-screen (see above) precisely
+     so it can be repeated here — this is the layer actually covering the
+     frame, so the stars have to be painted on IT, not on the ancestor they
+     hide. background-image on a var() with no fallback resolves to nothing
+     (not an error) on a page that never defines --obj-backdrop-image, so
+     this is harmless if object.css is ever reused without it. */
+  background-image: var(--obj-backdrop-image);
+  background-repeat: no-repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+    repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+  background-size: 100% 100%, 240px 240px, 240px 240px, 240px 240px, 240px 240px,
+    240px 240px, 240px 240px, 240px 240px, 190px 190px, 190px 190px, 190px 190px,
+    190px 190px, 190px 190px, 190px 190px;
 }
 
 /* a real capture's photo/model/points can take real time to fetch - an
