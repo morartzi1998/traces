@@ -11,7 +11,13 @@ html, body { overflow: hidden; }
   position: relative;
   height: 100vh;
   overflow: hidden;
-  background-color: #14130f;
+  /* .obj-stage below paints this same colour, opaque, edge-to-edge over the
+     object itself — so THIS is the value that actually decides what a visitor
+     sees behind the scan, not just the sliver of padding around it. Defined
+     as a variable so .obj-screen--community can retint the stage along with
+     its own backdrop, instead of just a few pixels at the margin. */
+  --obj-backdrop: #14130f;
+  background-color: var(--obj-backdrop);
   /* a denser scattered starfield so the backdrop reads as open space,
      not a flat black box; a soft central glow lifts it off pure black */
   background-image:
@@ -44,7 +50,8 @@ html, body { overflow: hidden; }
 /* a capture shared to the community shows blue-purple here instead of the
    default near-black — same accent as its card on the community gallery */
 .obj-screen--community {
-  background-color: #1c1440;
+  --obj-backdrop: #1c1440;
+  background-color: var(--obj-backdrop);
   background-image:
     radial-gradient(120% 90% at 50% 42%, rgba(90, 63, 209, 0.45), transparent 70%),
     radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.9), transparent),
@@ -649,8 +656,17 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
      renderer is torn down and the other has not painted its first frame —
      whatever the browser put there showed through as a white flash. Carrying
      the page's own background means the gap between the two is simply the
-     page, not a blank sheet. */
-  background: var(--color-bg);
+     page, not a blank sheet.
+     THIS element is what a visitor actually sees behind the object — it sits
+     absolutely over the whole screen, opaque, above .obj-screen's own
+     background. Using the site-wide --color-bg here meant a community piece
+     was blue-purple only in the thin margin of padding around the stage; the
+     object itself, which is most of the frame, always sat on the same flat
+     near-black regardless — barely visible on a phone, where that margin is
+     a few pixels. --obj-backdrop is .obj-screen's own value (retinted by
+     .obj-screen--community below it), so the stage now carries whichever
+     backdrop the capture actually belongs to. */
+  background: var(--obj-backdrop, var(--color-bg));
 }
 
 /* a real capture's photo/model/points can take real time to fetch - an
