@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fx">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fx">
-<link rel="stylesheet" href="../css/object.css?v=20260727fx">
-<script src="../js/cursor.js?v=20260727fx" defer></script>
-<script src="../js/grain.js?v=20260727fx" defer></script>
-<script src="../js/tilt3d.js?v=20260727fx" defer></script>
-<script src="../js/owner.js?v=20260727fx"></script>
-<script src="../js/config.js?v=20260727fx"></script>
-<script src="../js/archive.js?v=20260727fx"></script>
-<script src="../js/blobstore.js?v=20260727fx"></script>
-<script src="../js/particle-loader.js?v=20260727fx"></script>
-<script src="../js/remote-captures.js?v=20260727fx"></script>
-<script src="../js/community-seed.js?v=20260727fx"></script>
-<script src="../js/flow.js?v=20260727fx" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fx"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727fy">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727fy">
+<link rel="stylesheet" href="../css/object.css?v=20260727fy">
+<script src="../js/cursor.js?v=20260727fy" defer></script>
+<script src="../js/grain.js?v=20260727fy" defer></script>
+<script src="../js/tilt3d.js?v=20260727fy" defer></script>
+<script src="../js/owner.js?v=20260727fy"></script>
+<script src="../js/config.js?v=20260727fy"></script>
+<script src="../js/archive.js?v=20260727fy"></script>
+<script src="../js/blobstore.js?v=20260727fy"></script>
+<script src="../js/particle-loader.js?v=20260727fy"></script>
+<script src="../js/remote-captures.js?v=20260727fy"></script>
+<script src="../js/community-seed.js?v=20260727fy"></script>
+<script src="../js/flow.js?v=20260727fy" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fy"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fx" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fy" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fx";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fx";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fy";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fy";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fx";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fy";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fx";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727fy";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1034,6 +1034,8 @@
             pointSize: c.pointSize || null,
             tilt: c.tilt || null,
             meshTilt: c.meshTilt || null,
+            // hand-marked merge anchors, kept so the alignment survives a reload
+            mergeLandmarks: c.mergeLandmarks || null,
             connected: c.connected || "",
             connectedKey: c.connectedKey || null,
             feeling: c.feeling || "",
@@ -2222,6 +2224,8 @@
           selectVersion: function (k, i) { return selectVersion(k, i); },
           openBlueEdit: function (a, spot) { return openBlueEdit(a, spot); },
           show: function (k) { return show(k); },
+          savedLandmarksFor: function (v) { return savedLandmarksFor(v); },
+          saveLandmarks: function (v, m) { return saveLandmarks(v, m); },
           forceDisplayedVersion: function (i) { displayedVersionIndex = i; },
           closeRemarkCard: function () { return closeRemarkCard(); },
           mergeableVersions: function (k) { return mergeableVersions(k); },
@@ -4090,6 +4094,7 @@
               annotations: c.annotations || [], versions: c.versions || [],
               defaultView: c.defaultView || null, pointSize: c.pointSize != null ? c.pointSize : null,
               tilt: c.tilt || null, dual: !!c.dual, openOn: c.openOn || null,
+              mergeLandmarks: c.mergeLandmarks || null,
               connectedKey: c.connectedKey || null, links: c.links || [],
             });
             inLocal = window.Archive.get(key);
@@ -5165,6 +5170,7 @@
           pointSize: c.pointSize || null,
           tilt: c.tilt || null,
           meshTilt: c.meshTilt || null,
+          mergeLandmarks: c.mergeLandmarks || null,
           annotations: Array.isArray(c.annotations) ? c.annotations : [],
           links: Array.isArray(c.links) ? c.links : [],
           by: c.by || "", country: c.country || "",
@@ -5399,6 +5405,34 @@
           ? "one impossible object, sliced together from every scan — drag to turn"
           : "every scan of this object, aligned and combined into one — drag to turn";
       });
+      // Anchors marked by hand were used for exactly one re-merge and then
+      // dropped on the floor — close the merge and the work was gone. They are
+      // stored per capture, keyed by each scan's `created` stamp rather than by
+      // its position, so adding, hiding or reordering scans can never shift one
+      // scan's anchors onto another.
+      function savedLandmarksFor(versions) {
+        var store = (catalog[key] || {}).mergeLandmarks;
+        if (!store) return null;
+        var out = versions.map(function (v) { return store[String(v.created)] || null; });
+        return out.every(function (m) { return Array.isArray(m) && m.length >= 3; }) ? out : null;
+      }
+      function saveLandmarks(versions, marks) {
+        var item = catalog[key];
+        if (!item) return;
+        var store = item.mergeLandmarks || {};
+        versions.forEach(function (v, i) {
+          if (Array.isArray(marks[i]) && marks[i].length >= 3) store[String(v.created)] = marks[i];
+        });
+        item.mergeLandmarks = store;
+        var fields = { mergeLandmarks: store };
+        [window.Archive, window.Community].forEach(function (s) {
+          if (s && s.get(key)) s.update(key, fields);
+        });
+        if (window.isOwnerDevice && window.isOwnerDevice()) {
+          serverPatchIds(key).forEach(function (sid) { patchServerRecord(sid, fields); });
+        }
+      }
+
       function openVisualMerge() {
         var overlay = document.getElementById("objMerge");
         var label = document.getElementById("objMergeLabel");
@@ -5422,14 +5456,20 @@
           }
           lastMergeGeoms = geoms;
           lastMergeVersions = kept;
+          // anchors marked by hand on a previous visit come back automatically
+          // — otherwise the work was thrown away the moment the merge closed
+          var saved = savedLandmarksFor(kept);
           // the alignment (ICP) is heavy and synchronous — let the label
           // actually paint before it starts, or the screen just freezes on
           // the previous text for a few seconds
-          label.textContent = "aligning " + geoms.length + " scans onto each other…";
+          label.textContent = saved
+            ? "aligning by the anchors you marked…"
+            : "aligning " + geoms.length + " scans onto each other…";
           setTimeout(function () {
             // every scan genuinely aligned to the first, then blended into one
-            mountMergedResult(window.__frankensteinMerge(geoms),
-              "every scan of this object, aligned and combined into one — drag to turn");
+            mountMergedResult(window.__frankensteinMerge(geoms, saved ? { landmarks: saved } : {}),
+              saved ? "aligned by your anchors — drag to turn"
+                    : "every scan of this object, aligned and combined into one — drag to turn");
             // hand-alignment works on exactly two scans
             document.getElementById("objMergeManual").hidden = geoms.length < 2;
           }, 60);
@@ -5526,9 +5566,12 @@
           showManualScan(manualAlign.idx);
           return;
         }
-        // every scan marked — re-merge anchored on the triplets
+        // every scan marked — re-merge anchored on the triplets, and KEEP them:
+        // marking three matching spots on every scan is real work, and it used
+        // to survive only until this overlay closed
         var marks = manualAlign.marks;
         manualAlign = null;
+        saveLandmarks(lastMergeVersions || [], marks);
         clearMergeMarks();
         document.getElementById("objMergeLabel").textContent = "aligning by your anchor points…";
         setTimeout(function () {
