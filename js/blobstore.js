@@ -82,7 +82,12 @@ window.BlobStore = (function () {
     if (ref.indexOf("idb:") !== 0) return Promise.resolve(ref);
     return get(ref.slice(4)).then(function (blob) {
       return blob ? URL.createObjectURL(blob) : null;
-    });
+    // A REJECTED promise here left every caller's `.then` unrun — and the
+    // callers are all "img.src = u || fallback", so the image element was
+    // simply never given a src and the browser drew a broken-image icon.
+    // A missing blob and an unreachable IndexedDB now look the same to
+    // callers: null, which every one of them already handles.
+    }).catch(function () { return null; });
   }
 
   // like url(), but for a REMOTE file (a hosted http[s] thumbnail/model on the
