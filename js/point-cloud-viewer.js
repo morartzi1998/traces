@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fz";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fz";
+import * as THREE from "./vendor/three/three.module.js?v=20260727ga";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727ga";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -29,58 +29,76 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // frame — it reads as a "bar", not a cloud filling in. Shuffle the points
   // once up front so any prefix of the buffer is a spatially-uniform sample
   // and the object crystallises evenly from everywhere at once.
+  // The reveal reorders the buffer — and anything ELSE that is indexed by point
+  // has to travel with it. The merge screen keeps parallel arrays in userData
+  // (each point's real colour, its per-scan tint, and which scan it came from)
+  // and those used to be left in the original order while the points moved.
+  // After that, "colour by scan" painted every tint onto the wrong point, and
+  // switching back painted the real colours onto the wrong point too — garbled,
+  // in both directions, permanently. Permute them alongside.
   (function orderPoints() {
     if (opts.buildIn === false || geometry.index) return;
     var pos = geometry.getAttribute("position");
     if (!pos) return;
+    var n = pos.count;
     var p = pos.array;
     var colAttr = geometry.getAttribute("color");
     var c = colAttr ? colAttr.array : null;
+
     // revealFrom turns the intro into an EXPANSION: sorted by distance from a
     // given point, any prefix of the buffer is the sphere of cloud nearest it,
     // so the build-in grows outward from that spot instead of filling in
     // everywhere at once. Used when a space is opened on one of its objects —
     // the object appears first and the room assembles around it.
+    // Otherwise a plain shuffle, so any prefix is a spatially-uniform sample
+    // and the object crystallises evenly from everywhere at once (a
+    // mesh-derived cloud is stored in mesh order, and revealing THAT in order
+    // sweeps a solid strip across the frame — it reads as a bar, not a cloud).
+    var order = new Uint32Array(n);
+    for (var oi0 = 0; oi0 < n; oi0++) order[oi0] = oi0;
     if (opts.revealFrom) {
       var ax = opts.revealFrom.x, ay = opts.revealFrom.y, az = opts.revealFrom.z;
-      var n = pos.count;
       var d2 = new Float32Array(n);
-      var order = new Uint32Array(n);
       for (var qi = 0; qi < n; qi++) {
-        order[qi] = qi;
         var qx = p[qi * 3] - ax, qy = p[qi * 3 + 1] - ay, qz = p[qi * 3 + 2] - az;
         d2[qi] = qx * qx + qy * qy + qz * qz;
       }
       order.sort(function (a, b) { return d2[a] - d2[b]; });
-      // permute into fresh buffers, then copy back — an in-place permutation
-      // needs cycle tracking and is not worth it for a one-off
-      var op = new Float32Array(n * 3);
-      var oc = c ? new Float32Array(n * 3) : null;
-      for (var oi = 0; oi < n; oi++) {
-        var src = order[oi] * 3, dst = oi * 3;
-        op[dst] = p[src]; op[dst + 1] = p[src + 1]; op[dst + 2] = p[src + 2];
-        if (oc) { oc[dst] = c[src]; oc[dst + 1] = c[src + 1]; oc[dst + 2] = c[src + 2]; }
-      }
-      p.set(op);
-      if (c) c.set(oc);
-      pos.needsUpdate = true;
-      if (colAttr) colAttr.needsUpdate = true;
-      return;
-    }
-    for (var i = pos.count - 1; i > 0; i--) {
-      var j = (Math.random() * (i + 1)) | 0;
-      var pi = i * 3, pj = j * 3, t;
-      t = p[pi]; p[pi] = p[pj]; p[pj] = t;
-      t = p[pi + 1]; p[pi + 1] = p[pj + 1]; p[pj + 1] = t;
-      t = p[pi + 2]; p[pi + 2] = p[pj + 2]; p[pj + 2] = t;
-      if (c) {
-        t = c[pi]; c[pi] = c[pj]; c[pj] = t;
-        t = c[pi + 1]; c[pi + 1] = c[pj + 1]; c[pj + 1] = t;
-        t = c[pi + 2]; c[pi + 2] = c[pj + 2]; c[pj + 2] = t;
+    } else {
+      for (var i = n - 1; i > 0; i--) {
+        var j = (Math.random() * (i + 1)) | 0;
+        var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
       }
     }
+
+    // permute into fresh buffers, then copy back — an in-place permutation
+    // needs cycle tracking and is not worth it for a one-off
+    function permuteVec3(arr) {
+      if (!arr || arr.length < n * 3) return null;
+      var out = new Float32Array(n * 3);
+      for (var k = 0; k < n; k++) {
+        var src = order[k] * 3, dst = k * 3;
+        out[dst] = arr[src]; out[dst + 1] = arr[src + 1]; out[dst + 2] = arr[src + 2];
+      }
+      return out;
+    }
+    var np = permuteVec3(p);
+    if (np) p.set(np);
+    if (c) { var nc = permuteVec3(c); if (nc) c.set(nc); }
     pos.needsUpdate = true;
     if (colAttr) colAttr.needsUpdate = true;
+
+    // the merge's parallel per-point arrays travel with the points
+    var ud = geometry.userData || {};
+    ["origColors", "altColors"].forEach(function (keyName) {
+      var moved = permuteVec3(ud[keyName]);
+      if (moved) ud[keyName] = moved;
+    });
+    if (ud.origin && ud.origin.length >= n) {
+      var no = new (ud.origin.constructor || Array)(n);
+      for (var m = 0; m < n; m++) no[m] = ud.origin[order[m]];
+      ud.origin = no;
+    }
   })();
 
   // a low-powered exhibition laptop (weak integrated GPU, little RAM) can
@@ -140,7 +158,29 @@ export function mountPointCloudViewer(container, geometry, opts) {
     var thin = new THREE.BufferGeometry();
     thin.setAttribute("position", new THREE.BufferAttribute(np, 3));
     if (nc) thin.setAttribute("color", new THREE.BufferAttribute(nc, 3));
-    thin.userData = geometry.userData;
+    // carrying userData across by reference left the merge's per-point arrays
+    // at the ORIGINAL length while the points were sampled down — the same
+    // colour/point mismatch as the reveal ordering, just reached another way.
+    // Sample them on the identical stride.
+    var srcUd = geometry.userData || {};
+    var thinUd = {};
+    Object.keys(srcUd).forEach(function (kName) { thinUd[kName] = srcUd[kName]; });
+    ["origColors", "altColors"].forEach(function (kName) {
+      var arr = srcUd[kName];
+      if (!arr || arr.length < posCount * 3) return;
+      var out = new Float32Array(kept * 3);
+      for (var q = 0; q < kept; q++) {
+        var sq = q * stride * 3;
+        out[q * 3] = arr[sq]; out[q * 3 + 1] = arr[sq + 1]; out[q * 3 + 2] = arr[sq + 2];
+      }
+      thinUd[kName] = out;
+    });
+    if (srcUd.origin && srcUd.origin.length >= posCount) {
+      var oOut = new (srcUd.origin.constructor || Array)(kept);
+      for (var w = 0; w < kept; w++) oOut[w] = srcUd.origin[w * stride];
+      thinUd.origin = oOut;
+    }
+    thin.userData = thinUd;
     geometry = thin;
   }
   renderer.domElement.style.width = "100%";
