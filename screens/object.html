@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ga">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ga">
-<link rel="stylesheet" href="../css/object.css?v=20260727ga">
-<script src="../js/cursor.js?v=20260727ga" defer></script>
-<script src="../js/grain.js?v=20260727ga" defer></script>
-<script src="../js/tilt3d.js?v=20260727ga" defer></script>
-<script src="../js/owner.js?v=20260727ga"></script>
-<script src="../js/config.js?v=20260727ga"></script>
-<script src="../js/archive.js?v=20260727ga"></script>
-<script src="../js/blobstore.js?v=20260727ga"></script>
-<script src="../js/particle-loader.js?v=20260727ga"></script>
-<script src="../js/remote-captures.js?v=20260727ga"></script>
-<script src="../js/community-seed.js?v=20260727ga"></script>
-<script src="../js/flow.js?v=20260727ga" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ga"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gb">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gb">
+<link rel="stylesheet" href="../css/object.css?v=20260727gb">
+<script src="../js/cursor.js?v=20260727gb" defer></script>
+<script src="../js/grain.js?v=20260727gb" defer></script>
+<script src="../js/tilt3d.js?v=20260727gb" defer></script>
+<script src="../js/owner.js?v=20260727gb"></script>
+<script src="../js/config.js?v=20260727gb"></script>
+<script src="../js/archive.js?v=20260727gb"></script>
+<script src="../js/blobstore.js?v=20260727gb"></script>
+<script src="../js/particle-loader.js?v=20260727gb"></script>
+<script src="../js/remote-captures.js?v=20260727gb"></script>
+<script src="../js/community-seed.js?v=20260727gb"></script>
+<script src="../js/flow.js?v=20260727gb" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gb"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ga" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gb" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ga";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ga";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gb";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gb";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ga";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gb";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727ga";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gb";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1107,8 +1107,24 @@
       function loadStore() {
         try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; }
       }
+      // Every OTHER write path on this screen says something when it fails.
+      // This one — which carries titles, feelings, annotations, link markers,
+      // connected spaces and saved views for this device — threw its failures
+      // away, so a full or restricted localStorage let an edit look saved,
+      // right up until the next reload showed it had never happened.
+      var storeWriteFailed = false;
       function saveStore(s) {
-        try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
+        try {
+          localStorage.setItem(STORE, JSON.stringify(s));
+          storeWriteFailed = false;
+        } catch (e) {
+          try { console.error("[traces] could not write local store", e); } catch (e2) {}
+          // say it once, not on every keystroke that triggers a save
+          if (!storeWriteFailed) {
+            storeWriteFailed = true;
+            notifyOwner("Couldn't save that on this device — storage may be full or restricted.");
+          }
+        }
       }
       (function applyStore() {
         var s = loadStore();
@@ -2675,14 +2691,7 @@
         // screen, nowhere near the point it belongs to. The marker element is
         // a real node in BOTH views, so its own rect is the right answer for
         // both.
-        if (annotation.__btn) {
-          remarkTrackBtn = annotation.__btn;
-          positionRemarkCardTo(remarkTrackBtn);
-        } else {
-          remarkTrackBtn = null;
-          remarkCard.style.left = "calc(" + (annotation.x * 100) + "% + 12px)";
-          remarkCard.style.top = annotation.y * 100 + "%";
-        }
+        remarkTrackBtn = annotation.__btn || null;
         document.getElementById("remarkTitle").textContent = annotation.title;
         document.getElementById("remarkText").textContent = annotation.text;
         // the card now shows BOTH kinds, so the type has to be read off the
@@ -2695,7 +2704,19 @@
         var remarkMayEdit = canEditCapture(key);
         document.getElementById("remarkEdit").hidden = !remarkMayEdit;
         document.getElementById("remarkDelete").hidden = !remarkMayEdit;
+        // Unhide BEFORE positioning. A hidden element measures as 0x0, so the
+        // edge-avoidance clamp was falling back to a guessed 300x120 — fine for
+        // a one-line remark, badly wrong for a story card three times that
+        // tall, which could then hang off the bottom of the stage. In the cloud
+        // view the per-frame reprojection hid the mistake; on a mesh nothing
+        // re-measures until the visitor happens to rotate it.
         remarkCard.hidden = false;
+        if (remarkTrackBtn) {
+          positionRemarkCardTo(remarkTrackBtn);
+        } else {
+          remarkCard.style.left = "calc(" + (annotation.x * 100) + "% + 12px)";
+          remarkCard.style.top = annotation.y * 100 + "%";
+        }
         openRemarkAnnotation = annotation;
         // the marker stays put but simplifies to a white square with a blue
         // line while its remark card is open (the card itself carries the label)
@@ -4360,7 +4381,18 @@
           btn.dataset.index = i;
           // an exact date (typed in "edit years") shows in full so two scans
           // from the SAME year read as distinct moments, not two "2026"s
-          btn.innerHTML = "<span>" + (v.dateLabel || v.year) + "</span><i class=\"obj-dot\"></i>";
+          // Built as elements, NOT as an HTML string. dateLabel is free text
+          // typed in "edit years" and stored on a record anyone can write, so
+          // concatenating it into innerHTML let markup in that field run as
+          // script in every later viewer's browser. Every other capture-derived
+          // string on this screen already goes through textContent; this was
+          // the one that didn't.
+          var yearText = document.createElement("span");
+          yearText.textContent = v.dateLabel || v.year;
+          var yearDot = document.createElement("i");
+          yearDot.className = "obj-dot";
+          btn.appendChild(yearText);
+          btn.appendChild(yearDot);
           // a custom tooltip (not the native title attribute) - the browser's
           // own tooltip box looked jarring against the rest of the interface,
           // and on some mobile browsers it was popping up mid long-press,
@@ -4924,6 +4956,21 @@
         } catch (e) {}
       }
 
+      // The viewer deliberately returns null rather than an opaque white sheet
+      // when the GPU read-back comes back blank — that signal was being handed
+      // straight to saveThumbnail, which threw on null deep inside blobstore,
+      // synchronously, before any catch could see it. The button simply did
+      // nothing, with no message: the same blank-read-back bug reappearing on a
+      // path the earlier fix never reached.
+      function saveThumbnailFromCloud() {
+        var shot = pcViewer && pcViewer.screenshot ? pcViewer.screenshot() : null;
+        if (!shot) {
+          notifyOwner("Couldn't get a clean image of the cloud just now — turn it slightly and try again.");
+          return;
+        }
+        saveThumbnail(shot);
+      }
+
       function saveThumbnail(dataUrl) {
         // a capture Mor sent straight to the community (see js/flow.js's
         // "sterile archive" note) never lands in Archive at all — this used
@@ -4966,7 +5013,13 @@
             // the update.
             var willUpload = isOwner && (window.TRACES_API || "").length > 0;
             showThumbToast(willUpload ? "saving image…" : "display image updated");
-          }).catch(function () {});
+          }).catch(function (e) {
+            // for a visitor there is no server step after this, so THIS is the
+            // whole save — failing it in silence left them with neither a
+            // confirmation nor an error, unable to tell the two apart
+            try { console.error("[traces] could not store the display image locally", e); } catch (e2) {}
+            showThumbToast("couldn't save the new image here — try again");
+          });
         }
         // 2) update the SHARED server record too — but ONLY its img field (a
         // light patch that reuses the existing model/points URLs). A full
@@ -5814,7 +5867,7 @@
         persist(key);
         syncViewToServer();
         if (pcViewer && !objPoints.hidden) {
-          saveThumbnail(pcViewer.screenshot());
+          saveThumbnailFromCloud();
         } else {
           modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
             var reader = new FileReader();
@@ -5836,7 +5889,7 @@
       document.getElementById("menuSetImage").addEventListener("click", function () {
         menu.hidden = true;
         if (pcViewer && !objPoints.hidden) {
-          saveThumbnail(pcViewer.screenshot());
+          saveThumbnailFromCloud();
         } else if (catalog[key].model && !modelViewer.hidden && modelViewer.loaded) {
           modelViewer.toBlob({ idealAspect: true }).then(function (blob) {
             var reader = new FileReader();

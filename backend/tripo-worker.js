@@ -369,6 +369,22 @@ export default {
         // stops mattering. Nothing about how files are STORED changes, so every
         // file already up there — including the ones too big to serve until now
         // — starts working without being re-uploaded.
+        // Check that every chunk is PRESENT before promising a 200 and a
+        // Content-Length. Streaming let the old all-or-nothing check go, so a
+        // file with a hole started fine and then aborted mid-transfer — worse
+        // than the old clean 404, and paired with an immutable Cache-Control
+        // that a truncated body has no business being served under. Listing
+        // keys is cheap; it is assembling the BYTES in memory that had to go.
+        const present = new Set();
+        let cursor;
+        do {
+          const page = await env.CAPTURES.list({ prefix: "file:" + fileId + ":", cursor });
+          page.keys.forEach((k) => present.add(k.name));
+          cursor = page.list_complete ? null : page.cursor;
+        } while (cursor);
+        for (let i = 0; i < meta.chunks; i++) {
+          if (!present.has("file:" + fileId + ":" + i)) return json({ error: "not found" }, 404);
+        }
         const first = await env.CAPTURES.get("file:" + fileId + ":0", "arrayBuffer");
         if (!first) return json({ error: "not found" }, 404);
         let next = 1;
