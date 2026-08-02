@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gf">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727gf">
-<script src="../js/cursor.js?v=20260727gf" defer></script>
-<script src="../js/grain.js?v=20260727gf" defer></script>
-<script src="../js/tilt3d.js?v=20260727gf" defer></script>
-<script src="../js/annotations.js?v=20260727gf" defer></script>
-<script src="../js/owner.js?v=20260727gf"></script>
-<script src="../js/config.js?v=20260727gf"></script>
-<script src="../js/archive.js?v=20260727gf"></script>
-<script src="../js/blobstore.js?v=20260727gf"></script>
-<script src="../js/remote-captures.js?v=20260727gf"></script>
-<script src="../js/flow.js?v=20260727gf" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gf"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gg">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727gg">
+<script src="../js/cursor.js?v=20260727gg" defer></script>
+<script src="../js/grain.js?v=20260727gg" defer></script>
+<script src="../js/tilt3d.js?v=20260727gg" defer></script>
+<script src="../js/annotations.js?v=20260727gg" defer></script>
+<script src="../js/owner.js?v=20260727gg"></script>
+<script src="../js/config.js?v=20260727gg"></script>
+<script src="../js/archive.js?v=20260727gg"></script>
+<script src="../js/blobstore.js?v=20260727gg"></script>
+<script src="../js/remote-captures.js?v=20260727gg"></script>
+<script src="../js/flow.js?v=20260727gg" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gg"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gf" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gg" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gf";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gf";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gf";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gg";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gg";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gg";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -152,8 +152,8 @@
 
       <p class="field-label">Type of annotation</p>
       <div class="choice-row">
-        <label class="choice"><input type="checkbox" id="daRemark"> remark</label>
-        <label class="choice"><input type="checkbox" id="daStory" checked> story</label>
+        <label class="choice"><input type="checkbox" id="daRemark" checked> remark</label>
+        <label class="choice"><input type="checkbox" id="daStory"> story</label>
       </div>
       <hr class="rule rule--inset">
 

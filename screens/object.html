@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gf">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gf">
-<link rel="stylesheet" href="../css/object.css?v=20260727gf">
-<script src="../js/cursor.js?v=20260727gf" defer></script>
-<script src="../js/grain.js?v=20260727gf" defer></script>
-<script src="../js/tilt3d.js?v=20260727gf" defer></script>
-<script src="../js/owner.js?v=20260727gf"></script>
-<script src="../js/config.js?v=20260727gf"></script>
-<script src="../js/archive.js?v=20260727gf"></script>
-<script src="../js/blobstore.js?v=20260727gf"></script>
-<script src="../js/particle-loader.js?v=20260727gf"></script>
-<script src="../js/remote-captures.js?v=20260727gf"></script>
-<script src="../js/community-seed.js?v=20260727gf"></script>
-<script src="../js/flow.js?v=20260727gf" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gf"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gg">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gg">
+<link rel="stylesheet" href="../css/object.css?v=20260727gg">
+<script src="../js/cursor.js?v=20260727gg" defer></script>
+<script src="../js/grain.js?v=20260727gg" defer></script>
+<script src="../js/tilt3d.js?v=20260727gg" defer></script>
+<script src="../js/owner.js?v=20260727gg"></script>
+<script src="../js/config.js?v=20260727gg"></script>
+<script src="../js/archive.js?v=20260727gg"></script>
+<script src="../js/blobstore.js?v=20260727gg"></script>
+<script src="../js/particle-loader.js?v=20260727gg"></script>
+<script src="../js/remote-captures.js?v=20260727gg"></script>
+<script src="../js/community-seed.js?v=20260727gg"></script>
+<script src="../js/flow.js?v=20260727gg" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gg"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gf" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gg" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gf";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gf";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gg";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gg";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gf";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gg";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gf";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gg";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2238,6 +2238,8 @@
           show: function (k) { return show(k); },
           savedLandmarksFor: function (v) { return savedLandmarksFor(v); },
           canEditCapture: function (k) { return canEditCapture(k); },
+          toggleRepresentation: function () { return toggleRepresentation(); },
+          setDisplayedVersion: function (i) { displayedVersionIndex = i; },
           saveLandmarks: function (v, m) { return saveLandmarks(v, m); },
           forceDisplayedVersion: function (i) { displayedVersionIndex = i; },
           closeRemarkCard: function () { return closeRemarkCard(); },
@@ -5685,6 +5687,15 @@
       function showDerivedPoints(k) {
         if (derivingPoints) return;
         derivingPoints = true;
+        // Which scan is actually on the timeline right now. This used to sample
+        // the CAPTURE's top-level mesh regardless — so scrubbing to an older
+        // dated scan and switching to points built a cloud out of the LATEST
+        // mesh, and the fallback below then put that latest mesh on screen too.
+        // The timeline said 2023 while a 2026 sofa was showing.
+        var vDer = displayedVersionIndex >= 0
+          ? (catalog[k].versions || [])[displayedVersionIndex] : null;
+        var derModel = (vDer && vDer.model) || catalog[k].model;
+        var derImg = (vDer && vDer.img) || catalog[k].img;
         stage.dataset.mode = "model";
         photo.hidden = true;
         modelViewer.hidden = true;
@@ -5695,7 +5706,7 @@
           // NEVER strand the stage empty: any failure returns to the mesh view
           endLoading();
           derivingPoints = false;
-          swapScan(k, catalog[k].model, catalog[k].img, null);
+          swapScan(k, derModel, derImg, null);
           var sw2 = document.getElementById("objRepSwitch");
           var lbl2 = document.getElementById("objRepLabel");
           if (sw2) sw2.setAttribute("aria-checked", "false");
@@ -5708,12 +5719,12 @@
         // change. Memory cache (this session) → local blob → derive fresh.
         // keyed by the MODEL reference, not the capture key: replacing a
         // capture's scan changes the ref, so a stale cloud is never re-served
-        var LOCAL_CLOUD_KEY = "derivedcloud:" + (catalog[k].model || k);
+        var LOCAL_CLOUD_KEY = "derivedcloud:" + (derModel || k);
         function deriveFresh() {
           // proxy-aware + capped so a slow/cross-origin model can't leave
           // the stage stuck on the loading dot: on any miss it resolves
           // null and backToMesh() puts the mesh back rather than nothing
-          return withTimeout(fetchModelBuffer(catalog[k].model), 20000, null)
+          return withTimeout(fetchModelBuffer(derModel), 20000, null)
             .then(function (buf) { return (buf && window.__glbToPoints) ? window.__glbToPoints(buf) : null; })
             .then(function (g) {
               if (g) {
