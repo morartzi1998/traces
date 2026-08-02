@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gm">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gm">
-<link rel="stylesheet" href="../css/object.css?v=20260727gm">
-<script src="../js/cursor.js?v=20260727gm" defer></script>
-<script src="../js/grain.js?v=20260727gm" defer></script>
-<script src="../js/tilt3d.js?v=20260727gm" defer></script>
-<script src="../js/owner.js?v=20260727gm"></script>
-<script src="../js/config.js?v=20260727gm"></script>
-<script src="../js/archive.js?v=20260727gm"></script>
-<script src="../js/blobstore.js?v=20260727gm"></script>
-<script src="../js/particle-loader.js?v=20260727gm"></script>
-<script src="../js/remote-captures.js?v=20260727gm"></script>
-<script src="../js/community-seed.js?v=20260727gm"></script>
-<script src="../js/flow.js?v=20260727gm" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gm"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gn">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gn">
+<link rel="stylesheet" href="../css/object.css?v=20260727gn">
+<script src="../js/cursor.js?v=20260727gn" defer></script>
+<script src="../js/grain.js?v=20260727gn" defer></script>
+<script src="../js/tilt3d.js?v=20260727gn" defer></script>
+<script src="../js/owner.js?v=20260727gn"></script>
+<script src="../js/config.js?v=20260727gn"></script>
+<script src="../js/archive.js?v=20260727gn"></script>
+<script src="../js/blobstore.js?v=20260727gn"></script>
+<script src="../js/particle-loader.js?v=20260727gn"></script>
+<script src="../js/remote-captures.js?v=20260727gn"></script>
+<script src="../js/community-seed.js?v=20260727gn"></script>
+<script src="../js/flow.js?v=20260727gn" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gn"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gm" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gn" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gm";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gm";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gn";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gn";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gm";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gn";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gm";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gn";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1246,12 +1246,20 @@
         // visitor who lands on a community piece without ever having opened
         // the community screen, so nothing is cached locally to go on
         if (it.onServerCommunity) return true;
-        // Past this line the capture has no community identity of its own, so
-        // your own archive wins: one of Mor's captures that she happens to
-        // have marked as shared still looks like her archive when she opens it
-        // from there.
-        try { if (window.Archive && Archive.get(k)) return false; } catch (e) {}
+        // The capture's OWN visibility flag has to be read before the archive
+        // check below, not after — Mor's real captures (not the fixed
+        // showcase) sit in her own Archive AND carry visibility:"community"
+        // once she shares them. Checking Archive first, as this briefly did,
+        // answered "yes, it's mine" and returned before this line ever ran, so
+        // a capture she had deliberately shared reverted to the archive's
+        // black the moment she opened it herself — "antique bookcase" was the
+        // one caught mid-edit, purple then black across two loads with no
+        // other change in between.
         if (it.visibility === "community" || it.scope === "community") return true;
+        // Past this line the capture has no community identity of its own, so
+        // your own archive wins: a capture that was never shared still looks
+        // like her archive when she opens it from there.
+        try { if (window.Archive && Archive.get(k)) return false; } catch (e) {}
         try { if (window.Community && Community.get(k)) return true; } catch (e) {}
         return false;
       }
