@@ -7,14 +7,14 @@
 <title>Traces — Live log (private)</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727ge">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727ge">
-<script src="../js/cursor.js?v=20260727ge" defer></script>
-<script src="../js/grain.js?v=20260727ge" defer></script>
-<script src="../js/owner.js?v=20260727ge"></script>
-<script src="../js/config.js?v=20260727ge"></script>
-<script src="../js/remote-captures.js?v=20260727ge"></script>
-<script src="../js/flow.js?v=20260727ge" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gf">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gf">
+<script src="../js/cursor.js?v=20260727gf" defer></script>
+<script src="../js/grain.js?v=20260727gf" defer></script>
+<script src="../js/owner.js?v=20260727gf"></script>
+<script src="../js/config.js?v=20260727gf"></script>
+<script src="../js/remote-captures.js?v=20260727gf"></script>
+<script src="../js/flow.js?v=20260727gf" defer></script>
 <style>
   .adm {
     min-height: 100vh;
@@ -269,7 +269,14 @@
           card.querySelector(".adm-open").addEventListener("click", function (e) {
             e.preventDefault();
             try {
-              sessionStorage.setItem("traces-item", r.id);
+              // The object screen keys every capture WITHOUT the "-community"
+              // suffix — a community record and its archive twin are one
+              // capture there. Handing it the raw server id meant nothing
+              // matched, and rather than saying so it quietly fell back to the
+              // first capture in the archive: pressing open on a visitor's scan
+              // showed one of Mor's instead, which reads as "I can't open other
+              // people's scans".
+              sessionStorage.setItem("traces-item", String(r.id).replace(/-community$/, ""));
               if (r.scope === "community") sessionStorage.setItem("traces-from-community", "1");
               else sessionStorage.removeItem("traces-from-community");
             } catch (err) {}
