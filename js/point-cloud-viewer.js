@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727gh";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727gh";
+import * as THREE from "./vendor/three/three.module.js?v=20260727gi";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727gi";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -376,6 +376,19 @@ export function mountPointCloudViewer(container, geometry, opts) {
   // the object's center (e.g. from a pan before saving), which reads as
   // "rotating around the wrong point" the moment you orbit afterward.
   controls.target.copy(sphere.center);
+  // How far back the whole cloud sits in frame. 2.4 radii is what every
+  // landscape screen has always used. On a PORTRAIT viewport (a phone held
+  // upright) the HORIZONTAL field is the narrow one, so that same distance
+  // cut a wide object off at both edges — the sofa ran off the sides with
+  // only its middle on screen. Widen by the aspect there; a landscape or
+  // square viewport gets exactly the framing it does today.
+  function fitDistance() {
+    var w = container.clientWidth || 1, h = container.clientHeight || 1;
+    var back = 2.4;
+    if (w < h) back = back * (h / w);
+    return (sphere.radius * back) || 3;
+  }
+
   // a raw scan's own coordinate frame is whatever orientation the phone
   // happened to be in when the capture started — there's no single default
   // angle that reads sensibly across every scan. A saved view (the person's
@@ -432,7 +445,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
       }
     }
     camera.up.copy(upVec);
-    camera.position.copy(sphere.center).add(viewDir.multiplyScalar(sphere.radius * 2.4 || 3));
+    camera.position.copy(sphere.center).add(viewDir.multiplyScalar(fitDistance()));
   }
   // focusOn: arrive already looking AT a particular point rather than at the
   // whole cloud — entering a space through one of its objects should open on
@@ -491,7 +504,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
   function zoomOut(ms, done) {
     var dir = camera.position.clone().sub(sphere.center);
     if (dir.lengthSq() < 1e-8) dir.set(0, 0, 1);
-    dir.normalize().multiplyScalar(sphere.radius * 2.4 || 3);
+    dir.normalize().multiplyScalar(fitDistance());
     var span = ms > 0 ? ms : 520;
     tweenCamera(sphere.center.clone().add(dir), sphere.center.clone(), span);
     if (done) setTimeout(done, span);

@@ -1399,6 +1399,11 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   /* content reuses .obj-white-label/.obj-white-rule, which already carry
      their own margins — no extra gap here, same reasoning as .obj-white */
   pointer-events: auto;
+  /* A drag that starts on the scan and carries into this panel used to select
+     every word in it, leaving the whole card highlighted blue. It is a
+     read-only preview — there is nothing here to select. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .obj-link-card-close {

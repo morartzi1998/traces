@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gh">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gh">
-<link rel="stylesheet" href="../css/object.css?v=20260727gh">
-<script src="../js/cursor.js?v=20260727gh" defer></script>
-<script src="../js/grain.js?v=20260727gh" defer></script>
-<script src="../js/tilt3d.js?v=20260727gh" defer></script>
-<script src="../js/owner.js?v=20260727gh"></script>
-<script src="../js/config.js?v=20260727gh"></script>
-<script src="../js/archive.js?v=20260727gh"></script>
-<script src="../js/blobstore.js?v=20260727gh"></script>
-<script src="../js/particle-loader.js?v=20260727gh"></script>
-<script src="../js/remote-captures.js?v=20260727gh"></script>
-<script src="../js/community-seed.js?v=20260727gh"></script>
-<script src="../js/flow.js?v=20260727gh" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gh"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gi">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gi">
+<link rel="stylesheet" href="../css/object.css?v=20260727gi">
+<script src="../js/cursor.js?v=20260727gi" defer></script>
+<script src="../js/grain.js?v=20260727gi" defer></script>
+<script src="../js/tilt3d.js?v=20260727gi" defer></script>
+<script src="../js/owner.js?v=20260727gi"></script>
+<script src="../js/config.js?v=20260727gi"></script>
+<script src="../js/archive.js?v=20260727gi"></script>
+<script src="../js/blobstore.js?v=20260727gi"></script>
+<script src="../js/particle-loader.js?v=20260727gi"></script>
+<script src="../js/remote-captures.js?v=20260727gi"></script>
+<script src="../js/community-seed.js?v=20260727gi"></script>
+<script src="../js/flow.js?v=20260727gi" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gi"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gh" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gi" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gh";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gh";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gi";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gi";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gh";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gi";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gh";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gi";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1709,6 +1709,9 @@
       var openLinkTarget = null;
       var openLinkRef = null; // the actual link object, so move/delete can act on it
 
+      // which link card is open, so a mesh that finishes downloading after the
+      // panel has moved on to another object cannot reveal itself there
+      var linkCardToken = 0;
       function openLinkCard(link) {
         // a full read-only preview of the connected capture — same layout as
         // the details panel — not positioned at the marker's point
@@ -1729,33 +1732,67 @@
         // the stage: a real uploaded mesh (dual), or a capture that has
         // nothing else. Otherwise the photo, which at least reads as the thing.
         if (item.model && (item.dual || !item.points)) {
-          // live, slowly-turning 3D preview of the connected capture
+          // Live, slowly-turning 3D preview of the connected capture — but NOT
+          // until it is really this capture's mesh on screen. model-viewer
+          // keeps the PREVIOUS model painted until a new src finishes
+          // downloading, and clearing src does not drop it, so opening a second
+          // marker illustrated the new title with the last object for as long
+          // as the download took: a chandelier shown as a vase of flowers.
+          // The capture's own still holds the frame until its mesh has loaded,
+          // and stays for good if the mesh never arrives at all.
+          var myLink = ++linkCardToken;
+          var wantModel = item.model;
           linkImgEl.hidden = true;
           linkMvEl.hidden = false;
-          // model-viewer paints an empty black canvas until the GLB has
-          // downloaded, which on a big mesh is several seconds of what reads as
-          // a broken card. Its own poster covers that gap with the capture's
-          // still image, and stays put if the model never arrives at all.
-          linkMvEl.removeAttribute("poster");
-          if (item.img) {
-            if (window.BlobStore) {
-              window.BlobStore.url(item.img).then(function (u) {
-                if (u && !linkMvEl.hidden) linkMvEl.setAttribute("poster", u);
+          // reveal="manual" is what makes the poster STAY. On the default
+          // setting model-viewer drops it the moment a model is present — and
+          // the model present at that moment is the one from the marker opened
+          // before this one, so the poster vanished off a mesh that had not
+          // been replaced yet. Held manually, the capture's own still covers
+          // the frame until ITS mesh has actually arrived, and is dismissed
+          // only then.
+          // reveal="manual" also DEFERS the download until the poster is
+          // dismissed, which would be never here — loading="eager" keeps the
+          // mesh fetching straight away, exactly as it did before.
+          linkMvEl.setAttribute("reveal", "manual");
+          linkMvEl.setAttribute("loading", "eager");
+          // Order matters: the poster has to be IN PLACE before showPoster(),
+          // and the model must not start arriving before that — calling
+          // showPoster() with no poster set latched an empty one, which is why
+          // the second card opened onto a black rectangle.
+          var startModel = function () {
+            if (myLink !== linkCardToken) return;
+            if (item.model.indexOf("idb:") === 0 && window.BlobStore) {
+              window.BlobStore.get(item.model.slice(4)).then(function (b) {
+                if (b && myLink === linkCardToken) linkMvEl.src = URL.createObjectURL(b);
               }).catch(function () {});
             } else {
-              linkMvEl.setAttribute("poster", item.img);
+              linkMvEl.src = item.model;
             }
-          }
-          if (item.model.indexOf("idb:") === 0 && window.BlobStore) {
-            window.BlobStore.get(item.model.slice(4)).then(function (b) {
-              if (b && !linkMvEl.hidden) linkMvEl.src = URL.createObjectURL(b);
-            }).catch(function () {});
-          } else {
-            linkMvEl.src = item.model;
-          }
+          };
+          var posterReady = (window.BlobStore && item.img)
+            ? window.BlobStore.url(item.img).catch(function () { return null; })
+            : Promise.resolve(item.img || null);
+          posterReady.then(function (u) {
+            if (myLink !== linkCardToken) return;
+            if (u) linkMvEl.setAttribute("poster", u);
+            else linkMvEl.removeAttribute("poster");
+            try { linkMvEl.showPoster(); } catch (e) {}
+            startModel();
+          });
+          var revealModel = function () {
+            // a load that lands after the card moved on belongs to another
+            // capture now — leave the still that is on screen alone
+            if (myLink !== linkCardToken || linkMvEl.__ref !== wantModel) return;
+            try { linkMvEl.dismissPoster(); } catch (e) {}
+          };
+          linkMvEl.__ref = wantModel;
+          linkMvEl.addEventListener("load", revealModel, { once: true });
         } else {
+          linkCardToken++;
           linkMvEl.hidden = true;
           linkMvEl.removeAttribute("src");
+          linkMvEl.__ref = null;
           linkImgEl.hidden = false;
           if (window.BlobStore) {
             window.BlobStore.url(item.img).then(function (u) { linkImgEl.src = u || ""; });
