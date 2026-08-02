@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727fy";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fy";
+import * as THREE from "./vendor/three/three.module.js?v=20260727fz";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727fz";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -655,18 +655,41 @@ export function mountPointCloudViewer(container, geometry, opts) {
   } else {
     INTRO_MS = 0;
   }
-  var qStep = 0, slowStreak = 0, lastT = 0, checked = 0;
-  function stepQualityDown() {
-    qStep++;
-    if (qStep === 1) {
+  // Adaptive quality. This is the "the particles suddenly thinned out" report:
+  // it halves the drawn points, repeatedly, down to 120k out of a million — and
+  // it used to be one-way, so the only cure was a reload. Two things were wrong
+  // with WHEN it fired, both of which point at transitions:
+  //   - it measured from the moment of mount, which is exactly when another
+  //     multi-megabyte cloud is being fetched and parsed on the same thread. The
+  //     frames are slow because of THAT work, not because this cloud is too
+  //     heavy to draw, and the cloud got punished for it.
+  //   - a main-thread block (a parse, a GC pause, switching tabs) produces
+  //     half-second frames. A GPU genuinely struggling produces 50-100ms ones.
+  //     Both counted the same.
+  // So: settle first, ignore stalls, need a longer streak — and let it climb
+  // back up when the machine is plainly coping, instead of waiting for a reload.
+  var qStep = 0, slowStreak = 0, fastStreak = 0, lastT = 0, settleUntil = 0;
+  var basePixelRatio = renderer.getPixelRatio();
+  function applyQuality() {
+    if (qStep <= 0) {
+      renderer.setPixelRatio(basePixelRatio);
+      geometry.setDrawRange(0, drawCap);
+    } else if (qStep === 1) {
       renderer.setPixelRatio(1);
+      geometry.setDrawRange(0, drawCap);
     } else {
+      renderer.setPixelRatio(1);
       var total = geometry.getAttribute("position").count;
       var target = Math.max(120000, Math.floor(total / Math.pow(2, qStep - 1)));
-      geometry.setDrawRange(0, target);
-      material.size = material.size * 1.25; // fewer, slightly bigger points
+      geometry.setDrawRange(0, drawCap === Infinity ? target : Math.min(target, drawCap));
     }
+    // fewer points read as a sparser object unless each one grows a little —
+    // derived from the chosen size rather than multiplied in place, so stepping
+    // back up returns to exactly the size that was chosen, not an accumulation
+    material.size = introBaseSize * Math.pow(1.25, Math.max(0, qStep - 1));
   }
+  function stepQualityDown() { if (qStep < 4) { qStep++; applyQuality(); } }
+  function stepQualityUp() { if (qStep > 0) { qStep--; applyQuality(); } }
   (function frame(t) {
     if (disposed) return;
     if (INTRO_MS) {
@@ -680,12 +703,18 @@ export function mountPointCloudViewer(container, geometry, opts) {
         material.size = introBaseSize;
         INTRO_MS = 0;
       }
-    } else if (lastT && checked < 240 && qStep < 4) {
-      checked++;
+    } else {
+      // give the cloud a moment to settle after mounting before judging it —
+      // the build-in is running and, on a capture switch, the next scan is
+      // still being fetched and parsed on this same thread
+      if (!settleUntil) settleUntil = t + 1500;
       var dt = t - lastT;
-      // ~<15fps sustained means genuinely struggling, not a one-off hitch
-      if (dt > 40) { slowStreak++; } else if (slowStreak > 0) { slowStreak--; }
-      if (slowStreak >= 12) { slowStreak = 0; stepQualityDown(); }
+      if (lastT && t > settleUntil && dt < 200) {
+        if (dt > 40) { slowStreak++; fastStreak = 0; }
+        else { fastStreak++; if (slowStreak > 0) slowStreak--; }
+        if (slowStreak >= 20) { slowStreak = 0; stepQualityDown(); }
+        else if (fastStreak >= 180 && qStep > 0) { fastStreak = 0; stepQualityUp(); }
+      }
     }
     lastT = t;
     stepCameraTween(t);
@@ -706,6 +735,7 @@ export function mountPointCloudViewer(container, geometry, opts) {
       // when it happened. Move the intro's target instead, so it eases toward
       // the newly chosen size and lands on it.
       introBaseSize = size;
+      if (qStep > 0) applyQuality();
     },
     // what is ACTUALLY on screen right now — which is not always the saved
     // size, since a stale one gets replaced by the computed size above. The
