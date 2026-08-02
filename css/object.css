@@ -1297,6 +1297,12 @@ body:not(.no-hover-tip) .obj-year:focus-visible .obj-year-tip {
   line-height: 1.4;
   padding: 3px 10px 8px;
   white-space: normal;
+  /* a "story" can run to several paragraphs, and this card now shows those
+     too. Let the TEXT scroll rather than the card growing until it covers the
+     capture it is describing — the title and the edit/delete row stay put. */
+  max-height: min(34vh, 260px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .remark-card-actions {

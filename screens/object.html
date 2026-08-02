@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727fs">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727fs">
-<link rel="stylesheet" href="../css/object.css?v=20260727fs">
-<script src="../js/cursor.js?v=20260727fs" defer></script>
-<script src="../js/grain.js?v=20260727fs" defer></script>
-<script src="../js/tilt3d.js?v=20260727fs" defer></script>
-<script src="../js/owner.js?v=20260727fs"></script>
-<script src="../js/config.js?v=20260727fs"></script>
-<script src="../js/archive.js?v=20260727fs"></script>
-<script src="../js/blobstore.js?v=20260727fs"></script>
-<script src="../js/particle-loader.js?v=20260727fs"></script>
-<script src="../js/remote-captures.js?v=20260727fs"></script>
-<script src="../js/community-seed.js?v=20260727fs"></script>
-<script src="../js/flow.js?v=20260727fs" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727fs"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727ft">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727ft">
+<link rel="stylesheet" href="../css/object.css?v=20260727ft">
+<script src="../js/cursor.js?v=20260727ft" defer></script>
+<script src="../js/grain.js?v=20260727ft" defer></script>
+<script src="../js/tilt3d.js?v=20260727ft" defer></script>
+<script src="../js/owner.js?v=20260727ft"></script>
+<script src="../js/config.js?v=20260727ft"></script>
+<script src="../js/archive.js?v=20260727ft"></script>
+<script src="../js/blobstore.js?v=20260727ft"></script>
+<script src="../js/particle-loader.js?v=20260727ft"></script>
+<script src="../js/remote-captures.js?v=20260727ft"></script>
+<script src="../js/community-seed.js?v=20260727ft"></script>
+<script src="../js/flow.js?v=20260727ft" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727ft"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727fs" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727ft" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727fs";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727fs";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727ft";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727ft";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727fs";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727ft";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727fs";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727ft";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1641,9 +1641,15 @@
         }
       }
 
+      // Every note opens the same way — the small card, at the point it is
+      // pinned to. A story used to open a full-height panel on the far side of
+      // the screen instead, so the same gesture behaved differently depending
+      // on a type the reader can't see in advance, and the thing the note was
+      // written about went off-screen just as you started reading about it.
+      // The card scrolls when a story is long; editing is one press away on it.
       function onAnnotationClick(a) {
-        if (a.type === "remark") { closeBlue(); openRemarkCard(a); }
-        else { closeRemarkCard(); openBlue(a); }
+        closeBlue();
+        openRemarkCard(a);
       }
 
       // "take me to where this note is" — clicking a note in ANY list moves
@@ -2213,6 +2219,8 @@
           get key() { return key; },
           renderTimeline: function (k) { return renderTimeline(k); },
           openRemarkCard: function (a) { return openRemarkCard(a); },
+          selectVersion: function (k, i) { return selectVersion(k, i); },
+          forceDisplayedVersion: function (i) { displayedVersionIndex = i; },
           closeRemarkCard: function () { return closeRemarkCard(); },
           mergeableVersions: function (k) { return mergeableVersions(k); },
           get pendingJump() { return pendingAnnotationJump; },
@@ -2671,8 +2679,12 @@
         }
         document.getElementById("remarkTitle").textContent = annotation.title;
         document.getElementById("remarkText").textContent = annotation.text;
-        document.getElementById("remarkStoryBox").checked = false;
-        document.getElementById("remarkRemarkBox").checked = true;
+        // the card now shows BOTH kinds, so the type has to be read off the
+        // note rather than assumed — these two boxes are the only thing that
+        // says which kind you are looking at
+        var isStory = annotation.type !== "remark";
+        document.getElementById("remarkStoryBox").checked = isStory;
+        document.getElementById("remarkRemarkBox").checked = !isStory;
         // visitors read the remark; edit/delete stay the curator's
         var remarkMayEdit = canEditCapture(key);
         document.getElementById("remarkEdit").hidden = !remarkMayEdit;
@@ -3809,7 +3821,15 @@
       function setWhiteInputsDisabled(dis) {
         whiteEditIds.forEach(function (id) { document.getElementById(id).disabled = dis; });
       }
-      function exitWhiteEdit() { white.classList.remove("editing"); setWhiteInputsDisabled(true); }
+      // which capture + scan the open edit form was loaded from. A form holding
+      // one scan's words while pointed at another is how a story ended up on
+      // the wrong dated scan, so the save checks this before writing anything.
+      var whiteEditFor = null;
+      function exitWhiteEdit() {
+        white.classList.remove("editing");
+        setWhiteInputsDisabled(true);
+        whiteEditFor = null;
+      }
 
       // private/community behave as an exclusive pair while editing
       function pair(aId, bId) {
@@ -3841,6 +3861,9 @@
         // saving without touching the field wrote the placeholder in.
         document.getElementById("whiteTitleInput").value = versionName(item, vSel);
         document.getElementById("whiteFeelingInput").value = vSel ? (vSel.feeling || "") : (item.feeling || "");
+        // remember exactly which scan these words were loaded from, so the save
+        // can refuse to write them anywhere else
+        whiteEditFor = { key: key, created: vSel ? vSel.created : null };
         document.getElementById("whiteObj").checked = (item.kind !== "space" && item.kind !== "pet");
         document.getElementById("whiteSpace").checked = item.kind === "space";
         document.getElementById("whitePet").checked = item.kind === "pet";
@@ -3853,9 +3876,29 @@
       });
       document.getElementById("whiteSave").addEventListener("click", function () {
         var item = catalog[key];
+        // Nothing is in the middle of being edited, so there is nothing to
+        // save — and the boxes still hold whatever was last loaded into them.
+        // Writing that would push stale text at whatever is on screen now.
+        // (The button is hidden outside edit mode; this is the belt to that
+        // brace, since the cost of being wrong here is a story on the wrong
+        // scan with no way back.)
+        if (!white.classList.contains("editing")) return;
         // an old scan on stage: the save lands on that version alone
         var vList = item.versions || [];
         var vSel = displayedVersionIndex >= 0 ? vList[displayedVersionIndex] : null;
+        // Refuse to write one scan's words onto another. If the form was loaded
+        // from a different capture or a different dated scan than the one now on
+        // screen, saving would silently overwrite that scan's own story with
+        // text that was never about it — which is exactly what happened once,
+        // and could not be undone from here. Say so and reload the form instead.
+        var formFor = whiteEditFor;
+        if (formFor && (formFor.key !== key || formFor.created !== (vSel ? vSel.created : null))) {
+          try { console.error("[traces] edit form belongs to another scan — refusing to save", formFor); } catch (e) {}
+          notifyOwner("That text was written for a different scan — reopening it for the one on screen.");
+          exitWhiteEdit();
+          fillWhite(item);
+          return;
+        }
         if (vSel) {
           var vt = document.getElementById("whiteTitleInput").value.trim();
           // a title typed here is "the name of the scan" in the person's head —
@@ -4444,6 +4487,13 @@
         // timeline just put on stage — an old version tells ITS story, not
         // the latest one's
         setHeaderTitle(catalog[k], v);
+        // Moving along the timeline while the edit form is open is how a scan's
+        // story got written onto the WRONG scan: the form is seeded once, when
+        // Edit is pressed, and fillWhite below only refreshes the read view — so
+        // the box kept the previous version's words while the version being
+        // saved to had already changed underneath it. Leave edit mode on any
+        // move, so what is in the box always belongs to what is on screen.
+        if (!white.hidden && white.classList.contains("editing")) exitWhiteEdit();
         if (!white.hidden) fillWhite(catalog[k]);
         // a version with its own scan swaps the stage; the curated
         // annotation-only history (chandelier) keeps the current scan.
