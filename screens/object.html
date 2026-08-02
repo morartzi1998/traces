@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gg">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gg">
-<link rel="stylesheet" href="../css/object.css?v=20260727gg">
-<script src="../js/cursor.js?v=20260727gg" defer></script>
-<script src="../js/grain.js?v=20260727gg" defer></script>
-<script src="../js/tilt3d.js?v=20260727gg" defer></script>
-<script src="../js/owner.js?v=20260727gg"></script>
-<script src="../js/config.js?v=20260727gg"></script>
-<script src="../js/archive.js?v=20260727gg"></script>
-<script src="../js/blobstore.js?v=20260727gg"></script>
-<script src="../js/particle-loader.js?v=20260727gg"></script>
-<script src="../js/remote-captures.js?v=20260727gg"></script>
-<script src="../js/community-seed.js?v=20260727gg"></script>
-<script src="../js/flow.js?v=20260727gg" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gg"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gh">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gh">
+<link rel="stylesheet" href="../css/object.css?v=20260727gh">
+<script src="../js/cursor.js?v=20260727gh" defer></script>
+<script src="../js/grain.js?v=20260727gh" defer></script>
+<script src="../js/tilt3d.js?v=20260727gh" defer></script>
+<script src="../js/owner.js?v=20260727gh"></script>
+<script src="../js/config.js?v=20260727gh"></script>
+<script src="../js/archive.js?v=20260727gh"></script>
+<script src="../js/blobstore.js?v=20260727gh"></script>
+<script src="../js/particle-loader.js?v=20260727gh"></script>
+<script src="../js/remote-captures.js?v=20260727gh"></script>
+<script src="../js/community-seed.js?v=20260727gh"></script>
+<script src="../js/flow.js?v=20260727gh" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gh"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gg" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gh" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gg";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gg";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gh";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gh";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gg";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gh";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gg";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gh";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -2948,6 +2948,17 @@
           return;
         }
         mergeLabelBase = null;
+        // Only ever a readout for a wait the viewer is ACTUALLY showing. The
+        // owner's background cloud-heal downloads a mesh with nothing loading
+        // on screen, and its bytes were putting a percentage over a finished
+        // stage — a figure counting up next to a scan that is already there.
+        // (the freeze-frame transition counts too: it covers the stage with a
+        // still instead of the loader, but the user is still waiting)
+        if (!stage.classList.contains("obj-stage--loading") &&
+            !stage.querySelector(".obj-freeze")) {
+          el.hidden = true; el.textContent = "";
+          return;
+        }
         if (pct == null) { el.hidden = true; el.textContent = ""; return; }
         el.textContent = pct + "%";
         el.hidden = false;
@@ -4619,8 +4630,18 @@
           // an old version with its own saved angle wins over carrying the
           // current angle — the whole point of saving it was that this
           // version's scan comes in oriented differently
-          swapScan(k, v.model, v.img, onMesh ? null : v.points,
-            (displayedVersionIndex >= 0 && v.defaultView) || carriedView);
+          var useView = (displayedVersionIndex >= 0 && v.defaultView) || carriedView;
+          if (!onMesh && !v.points && v.model) {
+            // Cloud side, and this dated scan has no cloud of its own. It used
+            // to fall through to swapScan with points=null, which quietly put
+            // the MESH on stage — so scrubbing the timeline while watching
+            // particles dropped out of particles entirely ("no matter which
+            // year I click it never shows the points"). Derive this version's
+            // own mesh into a cloud instead, the same way the toggle does.
+            showDerivedPoints(k);
+          } else {
+            swapScan(k, v.model, v.img, onMesh ? null : v.points, useView);
+          }
         }
         closeBlue();
         closeRemarkCard();
@@ -5682,11 +5703,24 @@
       // a model-only capture still gets a "points" side: its mesh surface is
       // sampled into a coloured cloud (textures included — see __glbToPoints)
       // the first time, then cached for instant switching after that
+      // keyed by the MODEL reference, never by the capture key: a capture with
+      // a dated timeline has a DIFFERENT mesh per version, and a cache keyed by
+      // the capture handed every one of them the first cloud that happened to
+      // be built — scrubbing 2010 → 2023 kept showing the 2010 sofa.
       var derivedPointsCache = {};
-      var derivingPoints = false; // an impatient second toggle mid-derivation must not tangle the state
+      // NOTE: deliberately takes no camera view. A derived cloud lives in its
+      // MESH's coordinate space, which has nothing to do with the space of the
+      // cloud that was on stage a moment ago — one scan measures ~1.5 units
+      // across, another ~58. Handing the old camera position to the new cloud
+      // parked the camera INSIDE it (the desk's 2009 scan opened as a wall of
+      // speckle with no object in it). Every derived cloud frames itself.
       function showDerivedPoints(k) {
-        if (derivingPoints) return;
-        derivingPoints = true;
+        // An impatient second move mid-derivation must not tangle the state.
+        // A plain "busy" flag DROPPED the second one, so clicking 2010 and then
+        // 2023 before the first finished left the 2010 cloud on stage under a
+        // 2023 timeline. Claim the same navigation token swapScan uses instead:
+        // the newest move always wins, and every earlier one bows out.
+        var myLoad = ++pcLoadToken;
         // Which scan is actually on the timeline right now. This used to sample
         // the CAPTURE's top-level mesh regardless — so scrubbing to an older
         // dated scan and switching to points built a cloud out of the LATEST
@@ -5699,13 +5733,17 @@
         stage.dataset.mode = "model";
         photo.hidden = true;
         modelViewer.hidden = true;
-        objPoints.hidden = false;
+        // NOTE the order. disposePcViewer() HIDES objPoints — unhiding it
+        // first meant the container was hidden again a line later, and the
+        // derived cloud then mounted into a hidden, zero-sized box: a canvas
+        // that existed, drew nothing anyone could see, and left the stage
+        // blank. It is revealed just before the mount instead, exactly the
+        // way the stored-cloud path does it.
         disposePcViewer();
         beginLoading();
         function backToMesh() {
           // NEVER strand the stage empty: any failure returns to the mesh view
           endLoading();
-          derivingPoints = false;
           swapScan(k, derModel, derImg, null);
           var sw2 = document.getElementById("objRepSwitch");
           var lbl2 = document.getElementById("objRepLabel");
@@ -5720,15 +5758,22 @@
         // keyed by the MODEL reference, not the capture key: replacing a
         // capture's scan changes the ref, so a stale cloud is never re-served
         var LOCAL_CLOUD_KEY = "derivedcloud:" + (derModel || k);
+        var MEM_KEY = derModel || k;
         function deriveFresh() {
           // proxy-aware + capped so a slow/cross-origin model can't leave
           // the stage stuck on the loading dot: on any miss it resolves
-          // null and backToMesh() puts the mesh back rather than nothing
-          return withTimeout(fetchModelBuffer(derModel), 20000, null)
+          // null and backToMesh() puts the mesh back rather than nothing.
+          // The cap used to be 20s, which a 12MB mesh on a home connection
+          // blows straight through — the derivation was being abandoned
+          // mid-download and the mesh put back, which is exactly what
+          // "the timeline never shows me the particles" looked like. The
+          // download now reports a percentage (fetchModelBuffer), so a long
+          // wait reads as progress rather than as a stall.
+          return withTimeout(fetchModelBuffer(derModel), 150000, null)
             .then(function (buf) { return (buf && window.__glbToPoints) ? window.__glbToPoints(buf) : null; })
             .then(function (g) {
               if (g) {
-                derivedPointsCache[k] = g;
+                derivedPointsCache[MEM_KEY] = g;
                 // save the built cloud locally for instant re-shows later
                 if (window.BlobStore && window.__serializeGeometry) {
                   try {
@@ -5741,8 +5786,8 @@
               return g;
             });
         }
-        var ready = derivedPointsCache[k]
-          ? Promise.resolve(derivedPointsCache[k])
+        var ready = derivedPointsCache[MEM_KEY]
+          ? Promise.resolve(derivedPointsCache[MEM_KEY])
           : (window.BlobStore ? window.BlobStore.get(LOCAL_CLOUD_KEY).catch(function () { return null; })
                               : Promise.resolve(null))
               .then(function (blob) {
@@ -5750,7 +5795,7 @@
                   return blob.arrayBuffer().then(function (buf) {
                     var g = window.__deserializeGeometry(buf);
                     if (g && g.getAttribute && g.getAttribute("position")) {
-                      derivedPointsCache[k] = g;
+                      derivedPointsCache[MEM_KEY] = g;
                       return g;
                     }
                     return deriveFresh();
@@ -5759,7 +5804,7 @@
                 return deriveFresh();
               });
         ready.then(function (g) {
-          if (key !== k) { derivingPoints = false; return; }
+          if (key !== k || myLoad !== pcLoadToken) return;
           if (!g) { backToMesh(); return; }
           // point size must scale WITH the model: scans arrive in wildly
           // different world units (one fridge measured 56 units across —
@@ -5767,13 +5812,19 @@
           // as empty)
           g.computeBoundingSphere();
           var rad = (g.boundingSphere && g.boundingSphere.radius) || 1;
+          // reveal the container only now — it must be laid out (non-zero)
+          // before the viewer measures it for the canvas it creates
+          objPoints.hidden = false;
           pcViewerKey = k;
           pcViewer = window.__mountPointCloudViewer(objPoints, g,
             { pointSize: Math.max(0.004, rad * 0.006), tilt: catalog[k].tilt || null });
           showPcDebug();
           endLoading();
-          derivingPoints = false;
-        }).catch(function () { if (key === k) backToMesh(); else derivingPoints = false; });
+          setRepToggle(true); // a derived cloud is a cloud — say so
+          // 3D-anchored markers have to be rebuilt against the viewer that
+          // just mounted, exactly as the real-cloud path does
+          if (!SPACE_VIEW_ACTIVE) { renderAnnotations(); renderLinks(); }
+        }).catch(function () { if (key === k && myLoad === pcLoadToken) backToMesh(); });
       }
       function toggleRepresentation() {
         // when an old dated version is on stage, the switch flips THAT
@@ -6051,8 +6102,22 @@
             : Promise.resolve(null);
         }
         var api = (window.TRACES_API || "").replace(/\/$/, "");
-        var viaProxy = api ? (api + "/proxy?url=" + encodeURIComponent(ref)) : ref;
-        return fetch(viaProxy).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+        // A file the worker STORES is not a cross-origin problem — it already
+        // answers with `access-control-allow-origin: *`. Worse, asking the
+        // worker to proxy its own hostname is a subrequest back into itself,
+        // which Cloudflare answers 404: every stored mesh spent a whole round
+        // trip on a request that could never succeed before falling back. Go
+        // straight at our own files; keep the proxy for genuinely foreign
+        // hosts (a Tripo link, a community upload elsewhere), which is what it
+        // was built for.
+        var ourOwn = api && ref.indexOf(api + "/") === 0;
+        var viaProxy = (api && !ourOwn) ? (api + "/proxy?url=" + encodeURIComponent(ref)) : ref;
+        // read through the streaming reader so the loading percentage counts
+        // these bytes too — deriving a cloud from a 12MB mesh used to show no
+        // figure at all, which is most of what "it just sits there" was
+        return fetchBlobWithProgress(viaProxy)
+          .catch(function () { return null; })
+          .then(function (blob) { return blob ? blob.arrayBuffer() : null; })
           .catch(function () { return null; })
           .then(function (buf) {
             if (buf || viaProxy === ref) return buf;
