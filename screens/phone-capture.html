@@ -6,11 +6,12 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gs">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gs">
-<script src="../js/cursor.js?v=20260727gs" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727gs" defer></script>
-<script src="../js/normalize-image.js?v=20260727gs" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gt">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gt">
+<script src="../js/cursor.js?v=20260727gt" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727gt" defer></script>
+<script src="../js/normalize-image.js?v=20260727gt" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gt"></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -36,10 +37,12 @@
     align-items: center; justify-content: center; gap: 14px;
   }
   .pc-build-pct { font-family: var(--font-display, serif); font-size: 2.6rem; line-height: 1; color: #fff; }
-  .pc-result-img {
+  .pc-result-img,
+  .pc-result-model {
     display: block; width: 100%; max-width: 320px; margin: 0 auto 20px;
     aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
+    --poster-color: transparent;
   }
   .pc-result-actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
   .pc-btn--ghost { opacity: 0.75; }
@@ -86,6 +89,15 @@
     <div class="pc-card" id="pcResult" hidden>
       <h1 class="pc-title">Your model is ready</h1>
       <img class="pc-result-img" id="pcResultImg" alt="your 3D model" hidden>
+      <!-- reveal="manual": the poster (the same photo already sent up) stays
+           up until the GLB has actually finished loading, so the phone shows
+           SOMETHING the instant the build is done — same as the flat photo
+           never sat on a blank frame — rather than a blank box while the
+           model streams in on a slow connection -->
+      <model-viewer class="pc-result-model" id="pcResultModel" tone-mapping="neutral"
+        auto-rotate auto-rotate-delay="0" rotation-per-second="25deg" camera-controls
+        interaction-prompt="none" shadow-intensity="0" disable-pan reveal="manual"
+        loading="eager" hidden></model-viewer>
       <p class="pc-sub">Continue on the computer — and you can save it here too:</p>
       <!-- the 3D file is tens of MB — on a slow connection a silent fetch()
            read as the download having stalled, with no way to tell it apart
@@ -245,20 +257,69 @@
         })
           .then(function (b) {
             if (!b) { window.open(url, "_blank"); dlStatus.hidden = true; return; }
-            var a = document.createElement("a");
-            var u = URL.createObjectURL(b);
-            a.href = u; a.download = filename;
-            document.body.appendChild(a); a.click();
-            setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000);
+            saveBlob(b, filename);
             dlStatus.hidden = true;
           })
           .catch(function () { dlStatus.hidden = true; window.open(url, "_blank"); });
       }
 
+      // <a download> quietly does nothing for a file type the phone's
+      // browser has no built-in handler for — the .glb model, specifically.
+      // Desktop and Android Chrome save it fine; iOS Safari (this is an
+      // iPhone) can accept the click without ever writing anything to Files,
+      // with no error and no visible sign that it didn't work — indistin-
+      // guishable from a slow download that simply finished silently, which
+      // is exactly the "doesn't download the file" report. The Web Share
+      // API hands the same bytes to the OS's own native share sheet instead
+      // ("Save to Files", AirDrop, etc.), which iOS actually honours for any
+      // file type. Used whenever the browser supports sharing files at all;
+      // the anchor-download path remains for everything else.
+      function saveBlob(blob, filename) {
+        var file;
+        try { file = new File([blob], filename, { type: blob.type || "application/octet-stream" }); } catch (e) {}
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] }).catch(function () {
+            // the user backing out of the share sheet also lands here —
+            // not a failure, so no further fallback needed
+          });
+          return;
+        }
+        var a = document.createElement("a");
+        var u = URL.createObjectURL(blob);
+        a.href = u; a.download = filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000);
+      }
+
+      var resultModel = document.getElementById("pcResultModel");
       function showResult(p) {
         showOnly(result);
         var img = document.getElementById("pcResultImg");
-        if (p.thumb) { img.src = p.thumb; img.hidden = false; } else { img.hidden = true; }
+        // the poster IS the same photo already sent up (or the finished
+        // thumb, once relayed) — showing it the instant the build is done,
+        // before the GLB has moved a single byte, is what makes this feel as
+        // immediate as the computer's own reveal. The rotating model then
+        // replaces it in place once it has actually finished loading.
+        var poster = p.thumb || photoPreview || null;
+        if (p.model) {
+          img.hidden = true;
+          resultModel.hidden = false;
+          resultModel.removeAttribute("poster");
+          if (poster) resultModel.setAttribute("poster", poster);
+          try { resultModel.showPoster(); } catch (e) {}
+          resultModel.addEventListener("load", function onLoad() {
+            resultModel.removeEventListener("load", onLoad);
+            try { resultModel.dismissPoster(); } catch (e) {}
+          });
+          resultModel.src = p.model;
+        } else if (poster) {
+          resultModel.hidden = true;
+          img.src = poster;
+          img.hidden = false;
+        } else {
+          resultModel.hidden = true;
+          img.hidden = true;
+        }
         var dlImg = document.getElementById("pcDlImg");
         var dlModel = document.getElementById("pcDlModel");
         dlImg.style.display = p.thumb ? "" : "none";
