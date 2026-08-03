@@ -6,11 +6,11 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gr">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gr">
-<script src="../js/cursor.js?v=20260727gr" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727gr" defer></script>
-<script src="../js/normalize-image.js?v=20260727gr" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gs">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gs">
+<script src="../js/cursor.js?v=20260727gs" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727gs" defer></script>
+<script src="../js/normalize-image.js?v=20260727gs" defer></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -87,6 +87,10 @@
       <h1 class="pc-title">Your model is ready</h1>
       <img class="pc-result-img" id="pcResultImg" alt="your 3D model" hidden>
       <p class="pc-sub">Continue on the computer — and you can save it here too:</p>
+      <!-- the 3D file is tens of MB — on a slow connection a silent fetch()
+           read as the download having stalled, with no way to tell it apart
+           from an actual failure -->
+      <p class="pc-sub" id="pcDlStatus" hidden></p>
       <div class="pc-result-actions">
         <button class="pc-btn pc-btn--solid" type="button" id="pcDlImg">Download image</button>
         <button class="pc-btn" type="button" id="pcDlModel">Download 3D file</button>
@@ -202,22 +206,53 @@
         }, 2500);
       }
 
+      var dlStatus = document.getElementById("pcDlStatus");
+
       // fetch the finished asset (already a worker /proxy URL, so it's
       // CORS-fetchable) and hand it to the phone as a real download; fall back
-      // to just opening it if the fetch is blocked
+      // to just opening it if the fetch is blocked. The GLB alone runs tens of
+      // MB — a plain fetch().blob() gives no sign of progress until the whole
+      // thing lands, which on a slow connection read as the download having
+      // silently stalled. Reading the stream by hand (the same pattern the
+      // desktop's own loaders use) reports real percentages instead.
       function download(url, filename) {
         if (!url) return;
-        fetch(url)
-          .then(function (r) { return r.ok ? r.blob() : null; })
+        dlStatus.hidden = false;
+        dlStatus.textContent = "Downloading…";
+        fetch(url).then(function (r) {
+          if (!r.ok) throw new Error("fetch failed");
+          // the worker's /proxy route (everything here goes through it) sends
+          // no Content-Length — a percentage needs a known total, which this
+          // response never has. A running byte count still proves the
+          // download is actually moving instead of just sitting there, which
+          // is the whole point: "is this stuck or not" needs SOME number
+          // ticking up, not a specific one.
+          var total = +(r.headers.get("Content-Length") || 0);
+          if (!r.body || !r.body.getReader) return r.blob();
+          var reader = r.body.getReader();
+          var chunks = [], got = 0;
+          return (function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) return new Blob(chunks);
+              chunks.push(res.value);
+              got += res.value.length;
+              dlStatus.textContent = total
+                ? "Downloading… " + Math.round((got / total) * 100) + "%"
+                : "Downloading… " + (got / (1024 * 1024)).toFixed(1) + " MB";
+              return pump();
+            });
+          })();
+        })
           .then(function (b) {
-            if (!b) { window.open(url, "_blank"); return; }
+            if (!b) { window.open(url, "_blank"); dlStatus.hidden = true; return; }
             var a = document.createElement("a");
             var u = URL.createObjectURL(b);
             a.href = u; a.download = filename;
             document.body.appendChild(a); a.click();
             setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000);
+            dlStatus.hidden = true;
           })
-          .catch(function () { window.open(url, "_blank"); });
+          .catch(function () { dlStatus.hidden = true; window.open(url, "_blank"); });
       }
 
       function showResult(p) {
