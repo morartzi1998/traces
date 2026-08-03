@@ -6,11 +6,11 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gq">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gq">
-<script src="../js/cursor.js?v=20260727gq" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727gq" defer></script>
-<script src="../js/normalize-image.js?v=20260727gq" defer></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gr">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727gr">
+<script src="../js/cursor.js?v=20260727gr" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727gr" defer></script>
+<script src="../js/normalize-image.js?v=20260727gr" defer></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -62,7 +62,12 @@
     </div>
 
     <div class="pc-card" id="pcSending" hidden>
-      <p class="pc-status">Sending your photo…</p>
+      <p class="pc-status" id="pcSendingStatus">Sending your photo…</p>
+      <!-- a slow connection with nothing counting up read as frozen — the
+           text alone gave no sign of whether it was still working -->
+      <div class="pc-progress" id="pcProgress" hidden>
+        <div class="pc-progress-bar" id="pcProgressBar"></div>
+      </div>
     </div>
 
     <div class="pc-card" id="pcWaiting" hidden>
@@ -115,6 +120,38 @@
       // the small preview of the shot, shown dimmed under the live percentage so
       // the phone mirrors the computer's loader instead of a static word
       var photoPreview = null;
+      var sendingStatus = document.getElementById("pcSendingStatus");
+      var progressWrap = document.getElementById("pcProgress");
+      var progressBar = document.getElementById("pcProgressBar");
+
+      // fetch() has no upload-progress event at all — the request either
+      // hasn't started or has already finished, nothing in between. A big
+      // phone photo on a slow connection spent real minutes in that gap with
+      // "Sending your photo…" the only thing on screen, indistinguishable
+      // from the page having frozen. XHR's upload.onprogress is the one way
+      // to report what a plain multipart POST is actually doing.
+      function uploadWithProgress(url, formData, onProgress) {
+        return new Promise(function (resolve, reject) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", url);
+          xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) onProgress(e.loaded / e.total);
+          };
+          xhr.onload = function () {
+            if (xhr.status < 200 || xhr.status >= 300) { reject(new Error("upload failed")); return; }
+            try { resolve(JSON.parse(xhr.responseText)); } catch (e) { reject(e); }
+          };
+          xhr.onerror = function () { reject(new Error("network error")); };
+          xhr.send(formData);
+        });
+      }
+
+      function setSendProgress(frac) {
+        var pct = Math.max(0, Math.min(100, Math.round(frac * 100)));
+        progressWrap.hidden = false;
+        progressBar.style.width = pct + "%";
+        sendingStatus.textContent = pct >= 100 ? "Almost there…" : "Sending your photo… " + pct + "%";
+      }
 
       function showOnly(el) {
         [start, sending, waiting, result, errorEl].forEach(function (s) { s.hidden = s !== el; });
@@ -228,6 +265,9 @@
         var file = e.target.files && e.target.files[0];
         if (!file || !sessionId || !api) return;
         showOnly(sending);
+        progressWrap.hidden = true;
+        progressBar.style.width = "0%";
+        sendingStatus.textContent = "Preparing your photo…";
 
         var previewThumb = null;
         // the photo is only UPLOADED here — the paid 3D generation starts on
@@ -238,12 +278,12 @@
           return makeThumb(jpegBlob, 640).then(function (thumb) {
             previewThumb = thumb;
             photoPreview = thumb; // shown under the live percentage while building
+            sendingStatus.textContent = "Sending your photo… 0%";
             var fd = new FormData();
             fd.append("file", jpegBlob, "capture.jpg");
-            return fetch(api + "/captures/upload", { method: "POST", body: fd });
+            return uploadWithProgress(api + "/captures/upload", fd, setSendProgress);
           });
         })
-          .then(function (r) { return r.json(); })
           .then(function (d) {
             if (!d || !d.url) { fail("The photo couldn't be processed."); return; }
             // the deployed relay only stores whatever's in `task_id`, so the

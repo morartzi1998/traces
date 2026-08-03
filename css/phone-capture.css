@@ -55,6 +55,24 @@
   opacity: 0.85;
 }
 
+/* fills left-to-right with the actual upload progress — a slow connection
+   with only static text ("Sending your photo…") for minutes was
+   indistinguishable from the page being frozen */
+.pc-progress {
+  width: 220px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(245, 240, 230, 0.18);
+  overflow: hidden;
+}
+
+.pc-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--color-cream);
+  transition: width 0.2s ease;
+}
+
 .pc-btn {
   display: inline-block;
   font-family: var(--font-drawn);
