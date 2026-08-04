@@ -6,20 +6,20 @@
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gu">
-<script src="../js/owner.js?v=20260727gu"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gv">
+<script src="../js/owner.js?v=20260727gv"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260727gu"></script>
+<script src="../js/config.js?v=20260727gv"></script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gu" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gv" } }
 </script>
-<script src="../js/grain.js?v=20260727gu" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gu"></script>
+<script src="../js/grain.js?v=20260727gv" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gv"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -52,7 +52,21 @@
   .studio-bar select { max-width: 220px; }
   .studio-bar select option { color: #111; }
   .studio-bar button:hover { border-color: #f0eeea; }
-  .studio-hint { opacity: 0.55; }
+  .studio-hint { opacity: 0.55; cursor: pointer; }
+  /* the bar assumed a desktop-width window — a select plus six buttons in
+     one unwrapped row ran off both edges of a phone screen, with nothing
+     to scroll to reach the rest: unusable for the one thing a phone visit
+     here is actually for (recording a vertical Story). Wraps and stays
+     within the viewport instead of insisting on one line. */
+  @media (max-width: 640px) {
+    .studio-bar {
+      flex-wrap: wrap;
+      justify-content: center;
+      width: min(94vw, 420px);
+      top: 12px;
+    }
+    .studio-bar select { max-width: 100%; }
+  }
   /* polaroid rain overlay */
   .studio-rain { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
   .studio-card {
@@ -157,12 +171,12 @@
     <button type="button" id="pauseBtn">pause spin</button>
     <button type="button" id="gridBtn">thirds</button>
     <button type="button" id="titleBtn">title space</button>
-    <span class="studio-hint">H hides this bar · hover a card for ◀ ⬇ ▶ ✕</span>
+    <span class="studio-hint" id="hideHint" role="button" tabindex="0">H hides this bar (tap here on a phone) · hover a card for ◀ ⬇ ▶ ✕</span>
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gu";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727gu";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gv";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727gv";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -600,8 +614,22 @@
       titleBtn.textContent = on ? "no title space" : "title space";
     });
 
+    function toggleBar() { bar.classList.toggle("faded"); }
     window.addEventListener("keydown", function (e) {
-      if (e.key === "h" || e.key === "H" || e.key === "י") bar.classList.toggle("faded");
+      if (e.key === "h" || e.key === "H" || e.key === "י") toggleBar();
+    });
+    // there is no keyboard on a phone — this page is used for recording
+    // vertical footage for Instagram Stories from exactly that device, and
+    // the H shortcut alone left no way to ever get the bar out of the shot.
+    // The hint text itself is the hide tap-target; once hidden, the bar has
+    // pointer-events:none (see .studio-bar.faded), so a tap ANYWHERE on the
+    // stage is what brings it back — mirroring pressing H again on desktop.
+    document.getElementById("hideHint").addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleBar();
+    });
+    stage.addEventListener("click", function () {
+      if (bar.classList.contains("faded")) toggleBar();
     });
   </script>
 
