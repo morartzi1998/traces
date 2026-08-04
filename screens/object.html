@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gt">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gt">
-<link rel="stylesheet" href="../css/object.css?v=20260727gt">
-<script src="../js/cursor.js?v=20260727gt" defer></script>
-<script src="../js/grain.js?v=20260727gt" defer></script>
-<script src="../js/tilt3d.js?v=20260727gt" defer></script>
-<script src="../js/owner.js?v=20260727gt"></script>
-<script src="../js/config.js?v=20260727gt"></script>
-<script src="../js/archive.js?v=20260727gt"></script>
-<script src="../js/blobstore.js?v=20260727gt"></script>
-<script src="../js/particle-loader.js?v=20260727gt"></script>
-<script src="../js/remote-captures.js?v=20260727gt"></script>
-<script src="../js/community-seed.js?v=20260727gt"></script>
-<script src="../js/flow.js?v=20260727gt" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gt"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gu">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gu">
+<link rel="stylesheet" href="../css/object.css?v=20260727gu">
+<script src="../js/cursor.js?v=20260727gu" defer></script>
+<script src="../js/grain.js?v=20260727gu" defer></script>
+<script src="../js/tilt3d.js?v=20260727gu" defer></script>
+<script src="../js/owner.js?v=20260727gu"></script>
+<script src="../js/config.js?v=20260727gu"></script>
+<script src="../js/archive.js?v=20260727gu"></script>
+<script src="../js/blobstore.js?v=20260727gu"></script>
+<script src="../js/particle-loader.js?v=20260727gu"></script>
+<script src="../js/remote-captures.js?v=20260727gu"></script>
+<script src="../js/community-seed.js?v=20260727gu"></script>
+<script src="../js/flow.js?v=20260727gu" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gu"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gt" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gu" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gt";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gt";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gu";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gu";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gt";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gu";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gt";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gu";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -6009,15 +6009,22 @@
           // point size must scale WITH the model: scans arrive in wildly
           // different world units (one fridge measured 56 units across —
           // a fixed 0.006 made every point sub-pixel and the screen read
-          // as empty)
+          // as empty). Left unset entirely now, not just rescaled: the
+          // viewer's own auto-size for a derived cloud (radius * 0.008, see
+          // point-cloud-viewer.js) is deliberately bigger — "big enough that
+          // neighbouring points overlap into a continuous surface" — and
+          // this 0.006 override undercut it on every mesh-only capture,
+          // which is exactly why those specific objects (no stored cloud of
+          // their own, deriving live) read as sparser and more see-through
+          // than everything else: a smaller dot at the same point count is
+          // still more visible gap between dots.
           g.computeBoundingSphere();
-          var rad = (g.boundingSphere && g.boundingSphere.radius) || 1;
           // reveal the container only now — it must be laid out (non-zero)
           // before the viewer measures it for the canvas it creates
           objPoints.hidden = false;
           pcViewerKey = k;
           pcViewer = window.__mountPointCloudViewer(objPoints, g,
-            { pointSize: Math.max(0.004, rad * 0.006), tilt: catalog[k].tilt || null });
+            { tilt: catalog[k].tilt || null });
           showPcDebug();
           endLoading();
           setRepToggle(true); // a derived cloud is a cloud — say so
