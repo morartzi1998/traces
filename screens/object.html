@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727h4">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727h4">
-<link rel="stylesheet" href="../css/object.css?v=20260727h4">
-<script src="../js/cursor.js?v=20260727h4" defer></script>
-<script src="../js/grain.js?v=20260727h4" defer></script>
-<script src="../js/tilt3d.js?v=20260727h4" defer></script>
-<script src="../js/owner.js?v=20260727h4"></script>
-<script src="../js/config.js?v=20260727h4"></script>
-<script src="../js/archive.js?v=20260727h4"></script>
-<script src="../js/blobstore.js?v=20260727h4"></script>
-<script src="../js/particle-loader.js?v=20260727h4"></script>
-<script src="../js/remote-captures.js?v=20260727h4"></script>
-<script src="../js/community-seed.js?v=20260727h4"></script>
-<script src="../js/flow.js?v=20260727h4" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h4"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727h5">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727h5">
+<link rel="stylesheet" href="../css/object.css?v=20260727h5">
+<script src="../js/cursor.js?v=20260727h5" defer></script>
+<script src="../js/grain.js?v=20260727h5" defer></script>
+<script src="../js/tilt3d.js?v=20260727h5" defer></script>
+<script src="../js/owner.js?v=20260727h5"></script>
+<script src="../js/config.js?v=20260727h5"></script>
+<script src="../js/archive.js?v=20260727h5"></script>
+<script src="../js/blobstore.js?v=20260727h5"></script>
+<script src="../js/particle-loader.js?v=20260727h5"></script>
+<script src="../js/remote-captures.js?v=20260727h5"></script>
+<script src="../js/community-seed.js?v=20260727h5"></script>
+<script src="../js/flow.js?v=20260727h5" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h5"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h4" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h5" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727h4";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727h4";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727h5";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727h5";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h4";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h5";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727h4";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727h5";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -1212,20 +1212,40 @@
       // arriving here via a community.html link (openCommunityObject) marks
       // it explicitly. One-shot: consumed by the very first show() call
       // (the item just navigated to), not by any later prev/next browsing.
-      var cameFromCommunity = false;
+      // A capture that's ALSO shared to the community still has to read as
+      // archive-black when reached through Mor's own archive-mine.html, not
+      // just when it happens to have no community identity of its own — a
+      // dual-shared capture used to come up purple from the archive too,
+      // exactly like it would from the community screen, because
+      // isCommunityPiece(k) below only ever asked "does this item have a
+      // community side", never "which screen did I actually arrive from".
+      // archive-mine.html now sets the mirror-image flag of community.html's,
+      // resolved together here so an explicit fresh navigation from EITHER
+      // side always overrides a stale sticky key left over from the other.
+      var cameFromCommunity = false, cameFromArchive = false;
       try {
-        var fromFlag = sessionStorage.getItem("traces-from-community") === "1";
-        // the one-shot flag is consumed here, but an auto-refresh reloads THIS
-        // page and would otherwise forget it came from the community — the
-        // backdrop reverts to black, visibility reads wrong, the arrow ring
-        // resets. Pin the community context to the item key so a reload of the
-        // SAME capture stays in community, while opening any OTHER capture
-        // (openObject clears both keys) correctly drops it.
-        var stickyKey = sessionStorage.getItem("traces-community-item");
-        cameFromCommunity = fromFlag || stickyKey === key;
+        var fromCommunityFlag = sessionStorage.getItem("traces-from-community") === "1";
+        var fromArchiveFlag = sessionStorage.getItem("traces-from-archive") === "1";
         sessionStorage.removeItem("traces-from-community");
+        sessionStorage.removeItem("traces-from-archive");
+        // the one-shot flags are consumed above, but an auto-refresh reloads
+        // THIS page and would otherwise forget which side it came from — the
+        // backdrop reverts, visibility reads wrong, the arrow ring resets.
+        // Pin the context to the item key so a reload of the SAME capture
+        // stays put, while opening any OTHER capture (openObject/
+        // openCommunityObject set a fresh flag) correctly drops it.
+        var communityStickyKey = sessionStorage.getItem("traces-community-item");
+        var archiveStickyKey = sessionStorage.getItem("traces-archive-item");
+        if (fromCommunityFlag) { cameFromCommunity = true; }
+        else if (fromArchiveFlag) { cameFromArchive = true; }
+        // no fresh flag from either side this load — fall back to whichever
+        // sticky key (if either) still points at this exact capture
+        else if (communityStickyKey === key) { cameFromCommunity = true; }
+        else if (archiveStickyKey === key) { cameFromArchive = true; }
         if (cameFromCommunity) sessionStorage.setItem("traces-community-item", key);
         else sessionStorage.removeItem("traces-community-item");
+        if (cameFromArchive) sessionStorage.setItem("traces-archive-item", key);
+        else sessionStorage.removeItem("traces-archive-item");
       } catch (e) {}
 
       // prev/next should browse the SAME set of items the community screen
@@ -1242,6 +1262,12 @@
       // it simply being in this browser's community store.
       function isCommunityPiece(k) {
         if (browsingCommunity) return true;
+        // an explicit archive-mine.html navigation always wins, even for a
+        // capture that's also shared to the community — the archive is
+        // supposed to be a strictly black context with no crossover, and
+        // whether an item happens to ALSO exist in the community elsewhere
+        // has nothing to do with which screen this visit came from.
+        if (cameFromArchive) return false;
         // A key that IS a community scope settles it outright, ahead of every
         // other test. The fixed showcase pieces are keyed "communityHighChair"
         // and a shared record is "<id>-community" — those are community pieces
