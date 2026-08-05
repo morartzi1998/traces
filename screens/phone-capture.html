@@ -6,12 +6,12 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727h5">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727h5">
-<script src="../js/cursor.js?v=20260727h5" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727h5" defer></script>
-<script src="../js/normalize-image.js?v=20260727h5" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h5"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727h6">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727h6">
+<script src="../js/cursor.js?v=20260727h6" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727h6" defer></script>
+<script src="../js/normalize-image.js?v=20260727h6" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h6"></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -192,6 +192,10 @@
         waitTitle.textContent = "Sent";
         waitSub.textContent = "Confirm it on your computer — you'll watch it build here, live.";
         clearInterval(pollTimer);
+        // was 2500ms — the live percentage lagging the desktop's own by up to
+        // 2.5s read as the two devices being out of sync. Lightweight KV
+        // read, only active during this brief handoff, so tightening it
+        // costs nothing.
         pollTimer = setInterval(function () {
           fetch(api + "/session/" + sessionId)
             .then(function (r) { return r.json(); })
@@ -215,7 +219,7 @@
               // computer — leave the "Sent" wording as is
             })
             .catch(function () { /* transient — keep polling */ });
-        }, 2500);
+        }, 1000);
       }
 
       var dlStatus = document.getElementById("pcDlStatus");
