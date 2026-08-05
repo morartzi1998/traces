@@ -6,20 +6,20 @@
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727h0">
-<script src="../js/owner.js?v=20260727h0"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727h1">
+<script src="../js/owner.js?v=20260727h1"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260727h0"></script>
+<script src="../js/config.js?v=20260727h1"></script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h0" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h1" } }
 </script>
-<script src="../js/grain.js?v=20260727h0" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h0"></script>
+<script src="../js/grain.js?v=20260727h1" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h1"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -78,11 +78,11 @@
   }
   .studio-card img {
     display: block; width: 100%; aspect-ratio: 1 / 1.06;
+    /* plain centred cover, same as .gal-card img in gallery.css — no custom
+       framing bias, so this crops exactly the way every other thumbnail on
+       the site already does */
     object-fit: cover;
-    /* auto-saved thumbnails carry a wide empty backdrop below the object —
-       bias the square crop toward the top, where the object actually sits */
-    object-position: 50% 22%;
-    background: #3a3a44;
+    background: var(--photo-backdrop, #3a3a44);
   }
   /* the object's own title, written into the blank strip a real polaroid
      leaves for exactly this — without it a falling card is just an anonymous
@@ -115,8 +115,9 @@
   }
   .studio-stack-card img {
     display: block; width: 100%; aspect-ratio: 1 / 1.06;
-    object-fit: cover; object-position: 50% 22%;
-    background: #3a3a44;
+    /* plain centred cover, same as .gal-card img in gallery.css */
+    object-fit: cover;
+    background: var(--photo-backdrop, #3a3a44);
   }
   .studio-stack-card-cap {
     position: absolute; left: 10px; right: 10px; bottom: 8px;
@@ -221,8 +222,8 @@
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h0";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727h0";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h1";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727h1";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -416,73 +417,25 @@
     var rainBtn = document.getElementById("rainBtn");
     var rainPool = [];
     var rainWarmed = false;
-    // many auto-saved thumbnails are mostly empty backdrop with a small
-    // object somewhere inside — find the object by colour (anything that
-    // differs from the corner backdrop) and crop the card to IT
-    function objectCrop(im) {
-      var w = im.naturalWidth, h = im.naturalHeight;
-      if (!w || !h) return im.src;
-      var aw = 96, ah = Math.max(8, Math.round(aw * h / w));
-      var a = document.createElement("canvas");
-      a.width = aw; a.height = ah;
-      var actx = a.getContext("2d");
-      actx.drawImage(im, 0, 0, aw, ah);
-      var d = actx.getImageData(0, 0, aw, ah).data;
-      var bg = [d[0], d[1], d[2]];
-      var minX = aw, minY = ah, maxX = -1, maxY = -1;
-      for (var y = 0; y < ah; y++) {
-        for (var x = 0; x < aw; x++) {
-          var o = (y * aw + x) * 4;
-          if (Math.abs(d[o] - bg[0]) + Math.abs(d[o + 1] - bg[1]) + Math.abs(d[o + 2] - bg[2]) > 48) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-          }
-        }
-      }
-      if (maxX < 0 || maxX - minX < 5 || maxY - minY < 5) return null;
-      // a card that is mostly backdrop (a sparse, empty-reading space scan)
-      // drags the rain down — leave it out of the pool entirely
-      var covered = 0;
-      for (var yy = minY; yy <= maxY; yy++) {
-        for (var xx = minX; xx <= maxX; xx++) {
-          var oo = (yy * aw + xx) * 4;
-          if (Math.abs(d[oo] - bg[0]) + Math.abs(d[oo + 1] - bg[1]) + Math.abs(d[oo + 2] - bg[2]) > 48) covered++;
-        }
-      }
-      if (covered / (aw * ah) < 0.07) return null;
-      var padX = (maxX - minX) * 0.16, padY = (maxY - minY) * 0.16;
-      var sx = Math.max(0, (minX - padX) / aw * w);
-      var sy = Math.max(0, (minY - padY) / ah * h);
-      var sw = Math.min(w - sx, (maxX - minX + 2 * padX) / aw * w);
-      var sh = Math.min(h - sy, (maxY - minY + 2 * padY) / ah * h);
-      var out = document.createElement("canvas");
-      out.width = 480; out.height = Math.round(480 * 1.06);
-      var octx = out.getContext("2d");
-      octx.fillStyle = "#3f3f4a";
-      octx.fillRect(0, 0, out.width, out.height);
-      // COVER, not contain: a wide room crop must fill the whole card
-      // (trimming its sides a little) instead of leaving slate bars
-      var sc = Math.max(out.width / sw, out.height / sh);
-      var dw = sw * sc, dh = sh * sc;
-      octx.drawImage(im, sx, sy, sw, sh, (out.width - dw) / 2, (out.height - dh) / 2, dw, dh);
-      return out.toDataURL("image/jpeg", 0.86);
-    }
     function warmRainPool() {
       if (rainWarmed) return;
       rainWarmed = true;
-      // a capture's own title travels alongside its cropped photo, so a
-      // falling/stacked polaroid can carry a real caption instead of being an
+      // the pool used to run its own colour-based "crop to the object" pass
+      // here, guessing the backdrop from a single corner pixel — fine for a
+      // Tripo render floating in a big blank void, but a real full-frame
+      // product photo (no blank corner to detect against at all) got its
+      // bounding box mis-read and re-centred somewhere it didn't belong,
+      // reading as "the proportions are wrong, doesn't look like it does on
+      // the site". The rest of the site never smart-crops thumbnails at all
+      // (see .gal-card img in gallery.css) — it just lets a plain
+      // object-fit:cover do the square crop on the real image. Matching that
+      // exactly is what "looks like the site" actually means here.
+      // a capture's own title travels alongside its photo, so a falling/
+      // stacked polaroid can carry a real caption instead of being an
       // anonymous photo — same reason a real polaroid gets written on
       captures.filter(function (c) { return c.img; }).forEach(function (c) {
         var im = new Image();
-        im.crossOrigin = "anonymous";
-        im.onload = function () {
-          var cropped = null;
-          try { cropped = objectCrop(im); } catch (e) { cropped = c.img; }
-          if (cropped) rainPool.push({ src: cropped, title: c.title || "" });
-        };
+        im.onload = function () { rainPool.push({ src: c.img, title: c.title || "" }); };
         im.src = c.img;
       });
     }
