@@ -338,6 +338,14 @@
           if (cap.tilt != null) record.tilt = cap.tilt;
           if (cap.dual) record.dual = true; // open on the mesh, not the voxel cloud
           if (cap.openOn) record.openOn = cap.openOn; // heavy mesh: open on the light cloud
+          // the original Tripo task id — describe-capture.html sets this on
+          // the LOCAL record, but this record object here is explicitly
+          // whitelisted field-by-field for the SERVER payload, and this field
+          // was missing from that list. It reached Archive fine; it never
+          // once reached the server, which is why no published capture ever
+          // had it and "Complete missing parts" could never resolve it
+          // automatically for anything, new captures included.
+          if (cap.tripoTaskId) record.tripoTaskId = cap.tripoTaskId;
           // a re-publish must never silently ERASE what the shared record
           // already carries but this device's local copy predates: the
           // server-computed cloud, the dual flag, the fast-open choice, a
@@ -356,6 +364,7 @@
                 if (record.defaultView == null && prev.defaultView != null) record.defaultView = prev.defaultView;
                 if (record.pointSize == null && prev.pointSize != null) record.pointSize = prev.pointSize;
                 if (record.tilt == null && prev.tilt != null) record.tilt = prev.tilt;
+                if (!record.tripoTaskId && prev.tripoTaskId) record.tripoTaskId = prev.tripoTaskId;
                 if (Array.isArray(prev.versions) && Array.isArray(record.versions)) {
                   record.versions.forEach(function (rv) {
                     var pv = prev.versions.filter(function (v) { return v.created === rv.created; })[0];
