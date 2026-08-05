@@ -15,7 +15,7 @@
   processing.html (every NEW mesh capture gets its cloud generated and
   saved at capture time, so particles exist for it everywhere, instantly).
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727gz";
+import * as THREE from "./vendor/three/three.module.js?v=20260727h0";
 
 // Draco decoder — loaded once, on demand, only when a GLB actually carries
 // KHR_draco_mesh_compression (most Tripo scans do NOT; ready-made uploads

@@ -8,7 +8,7 @@ import {
 	WebGLRenderer,
 	CanvasTexture,
 	SRGBColorSpace
-} from './../three/three.module.js?v=20260727gz';
+} from './../three/three.module.js?v=20260727h0';
 
 let _renderer;
 let fullscreenQuadGeometry;
