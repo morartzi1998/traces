@@ -6,20 +6,20 @@
 <title>Traces — Studio</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gv">
-<script src="../js/owner.js?v=20260727gv"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gw">
+<script src="../js/owner.js?v=20260727gw"></script>
 <script>
   // owner-only: a visitor who somehow lands on the studio URL is sent home
   if (!(window.isOwnerDevice && window.isOwnerDevice())) {
     window.location.replace("../index.html");
   }
 </script>
-<script src="../js/config.js?v=20260727gv"></script>
+<script src="../js/config.js?v=20260727gw"></script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gv" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gw" } }
 </script>
-<script src="../js/grain.js?v=20260727gv" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gv"></script>
+<script src="../js/grain.js?v=20260727gw" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gw"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
@@ -88,6 +88,33 @@
     0%   { transform: translateY(0) rotate(var(--tilt, 0deg)); }
     100% { transform: translateY(165vh) rotate(calc(var(--tilt, 0deg) * -1.4)); }
   }
+  /* polaroid STACK: unlike the rain (falls through and vanishes), each card
+     here drops onto a growing pile at the centre and stays, at its own
+     random angle/offset — a photo on a photo on a photo. Loops by clearing
+     the pile and starting over once it gets tall enough. */
+  .studio-stack {
+    position: absolute; inset: 0; z-index: 21; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .studio-stack-card {
+    position: absolute;
+    width: min(240px, 20vw); padding: 10px 10px 34px;
+    background: #f0eeea url("../assets/images/polaroid-paper-1.png") center / cover;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+    animation: studio-stack-in 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+  .studio-stack-card img {
+    display: block; width: 100%; aspect-ratio: 1 / 1.06;
+    object-fit: cover; object-position: 50% 22%;
+    background: #3a3a44;
+  }
+  @keyframes studio-stack-in {
+    0%   { transform: translateY(-70vh) translateX(0) rotate(0deg) scale(0.92); opacity: 0; }
+    55%  { opacity: 1; }
+    100% { transform: translateY(var(--dy, 0)) translateX(var(--dx, 0)) rotate(var(--tilt, 0deg)) scale(1); opacity: 1; }
+  }
+  .studio-stack-fade { animation: studio-stack-out 0.4s ease both; }
+  @keyframes studio-stack-out { to { opacity: 0; transform: scale(0.94); } }
   /* framed mode: every object sits INSIDE a polaroid card, caption included */
   .studio-stage.framed { align-items: center; gap: 3vw; }
   .studio-stage.framed .studio-slot {
@@ -157,6 +184,7 @@
 
   <div class="studio-stage" id="stage"><div class="studio-guide" id="guide" hidden></div></div>
   <div class="studio-rain" id="rain"></div>
+  <div class="studio-stack" id="stack"></div>
 
   <div class="studio-bar" id="bar">
     <select id="pick"></select>
@@ -164,6 +192,7 @@
     <button type="button" id="clearBtn">clear</button>
     <button type="button" id="rebuildBtn">rebuild all</button>
     <button type="button" id="rainBtn">polaroid rain</button>
+    <button type="button" id="stackBtn">polaroid stack</button>
     <button type="button" id="repBtn">show as mesh</button>
     <button type="button" id="frameBtn">frames</button>
     <button type="button" id="bgBtn">background</button>
@@ -175,8 +204,8 @@
   </div>
 
   <script type="module">
-    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gv";
-    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727gv";
+    import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gw";
+    import { deserializeGeometry } from "../js/voxelize-shared.js?v=20260727gw";
 
     var api = (window.TRACES_API || "").replace(/\/$/, "");
     var stage = document.getElementById("stage");
@@ -475,6 +504,57 @@
       dropCard();
       rainTimer = setInterval(dropCard, 650);
       rainBtn.textContent = "stop rain";
+    });
+
+    // polaroid STACK: same photo pool as the rain, but each card lands on a
+    // growing pile at the centre and stays there — a photo on a photo on a
+    // photo, each at its own angle — instead of falling through and vanishing.
+    // Loops: once the pile reaches STACK_MAX, it fades out and starts fresh.
+    var STACK_MAX = 7;
+    var stackTimer = null;
+    var stackEls = [];
+    var stackWrap = document.getElementById("stack");
+    var stackBtn = document.getElementById("stackBtn");
+    function clearStack() {
+      stackEls.forEach(function (el) {
+        el.classList.add("studio-stack-fade");
+        setTimeout(function () { el.remove(); }, 420);
+      });
+      stackEls = [];
+    }
+    function dropStackCard() {
+      if (!rainPool.length) return;
+      if (stackEls.length >= STACK_MAX) { clearStack(); return; } // loop: clear, next tick refills
+      var card = document.createElement("figure");
+      card.className = "studio-stack-card";
+      card.style.margin = "0";
+      // each new photo lands a little off from the last, at its own tilt —
+      // the pile grows outward and rotated instead of a single dead stack
+      var tilt = (Math.random() * 46 - 23).toFixed(1);
+      var dx = (Math.random() * 50 - 25).toFixed(0);
+      var dy = (Math.random() * 30 - 15).toFixed(0);
+      card.style.setProperty("--tilt", tilt + "deg");
+      card.style.setProperty("--dx", dx + "px");
+      card.style.setProperty("--dy", dy + "px");
+      card.style.zIndex = String(stackEls.length + 1);
+      var img = document.createElement("img");
+      img.src = nextRainSrc();
+      card.appendChild(img);
+      stackWrap.appendChild(card);
+      stackEls.push(card);
+    }
+    stackBtn.addEventListener("click", function () {
+      if (stackTimer) {
+        clearInterval(stackTimer);
+        stackTimer = null;
+        stackBtn.textContent = "polaroid stack";
+        return;
+      }
+      warmRainPool();
+      clearStack();
+      dropStackCard();
+      stackTimer = setInterval(dropStackCard, 850);
+      stackBtn.textContent = "stop stack";
     });
 
     // ----- stills: aspect-ratio shot frame -------------------------------
