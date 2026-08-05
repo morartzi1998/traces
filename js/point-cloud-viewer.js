@@ -17,8 +17,8 @@
     pv.setPointSize(0.02);
     pv.dispose();
 */
-import * as THREE from "./vendor/three/three.module.js?v=20260727gw";
-import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727gw";
+import * as THREE from "./vendor/three/three.module.js?v=20260727gx";
+import { OrbitControls } from "./vendor/three/OrbitControls.js?v=20260727gx";
 
 export function mountPointCloudViewer(container, geometry, opts) {
   opts = opts || {};
@@ -290,9 +290,19 @@ export function mountPointCloudViewer(container, geometry, opts) {
   var hasColor = !!geometry.getAttribute("color");
   var isDerived = !!(geometry.userData && geometry.userData.derived);
   // derived clouds render OPAQUE — big enough that neighbouring points
-  // overlap into a continuous surface rather than a speckled see-through one
+  // overlap into a continuous surface rather than a speckled see-through one.
+  // Sized off the cloud's OWN point count, not just its overall radius: a
+  // native mesh dense enough to skip the densification step (glb-points.js
+  // only tops clouds UP TO its 300k target, but a rich scan can arrive with
+  // up to ~600k real vertices) carries genuine extra surface detail that a
+  // size tuned only for the 300k case smeared away — reading as "can't make
+  // out the details" even though the cloud itself was denser than ever.
+  // Spacing between neighbouring points on a roughly spherical surface of N
+  // points scales with radius/sqrt(N), so basing size on both keeps a dense
+  // scan crisp while a sparse, densified-up one still reads solid.
   var LEGACY_UPLOAD_SIZE = 0.013;
-  var scaleSize = sphere.radius * 0.008;
+  var pointCountForSize = geometry.getAttribute("position") ? geometry.getAttribute("position").count : 0;
+  var scaleSize = sphere.radius * Math.min(0.011, Math.max(0.003, 4.6 / Math.sqrt(Math.max(pointCountForSize, 1))));
   // "off scale" = the radius-appropriate size is more than 2x away from the
   // fixed one, a margin wide enough that no normal object trips it
   var offScale = scaleSize > LEGACY_UPLOAD_SIZE * 2 || scaleSize < LEGACY_UPLOAD_SIZE / 2;
