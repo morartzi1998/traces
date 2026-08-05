@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727h8">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727h8">
-<link rel="stylesheet" href="../css/object.css?v=20260727h8">
-<script src="../js/cursor.js?v=20260727h8" defer></script>
-<script src="../js/grain.js?v=20260727h8" defer></script>
-<script src="../js/tilt3d.js?v=20260727h8" defer></script>
-<script src="../js/owner.js?v=20260727h8"></script>
-<script src="../js/config.js?v=20260727h8"></script>
-<script src="../js/archive.js?v=20260727h8"></script>
-<script src="../js/blobstore.js?v=20260727h8"></script>
-<script src="../js/particle-loader.js?v=20260727h8"></script>
-<script src="../js/remote-captures.js?v=20260727h8"></script>
-<script src="../js/community-seed.js?v=20260727h8"></script>
-<script src="../js/flow.js?v=20260727h8" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h8"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727h9">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727h9">
+<link rel="stylesheet" href="../css/object.css?v=20260727h9">
+<script src="../js/cursor.js?v=20260727h9" defer></script>
+<script src="../js/grain.js?v=20260727h9" defer></script>
+<script src="../js/tilt3d.js?v=20260727h9" defer></script>
+<script src="../js/owner.js?v=20260727h9"></script>
+<script src="../js/config.js?v=20260727h9"></script>
+<script src="../js/archive.js?v=20260727h9"></script>
+<script src="../js/blobstore.js?v=20260727h9"></script>
+<script src="../js/particle-loader.js?v=20260727h9"></script>
+<script src="../js/remote-captures.js?v=20260727h9"></script>
+<script src="../js/community-seed.js?v=20260727h9"></script>
+<script src="../js/flow.js?v=20260727h9" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h9"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h8" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727h9" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727h8";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727h8";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727h9";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727h9";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h8";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727h9";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727h8";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727h9";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -6022,7 +6022,7 @@
           c.thumb ? uploadOne(c.thumb, "completed-thumb.jpg") : Promise.resolve(null),
         ]).then(function (r) {
           var modelUrl = r[0], thumbUrl = r[1];
-          if (!modelUrl) { notifyOwner("Couldn't save the completed model — try again later."); return; }
+          if (!modelUrl) { notify("Couldn't save the completed model — try again later."); return; }
           var fields = { model: modelUrl };
           if (thumbUrl) fields.img = thumbUrl;
           // the derived point cloud was built off the OLD (less complete)
@@ -6040,9 +6040,9 @@
           cloudHealTried[k] = 0;
           if (window.Archive && Archive.get(k)) Archive.update(k, fields);
           if (window.Community && Community.get(k)) Community.update(k, fields);
-          notifyOwner("Completed — the model now includes parts the original photo couldn't show.");
+          notify("Completed — the model now includes parts the original photo couldn't show.");
           if (key === k) show(k);
-        }).catch(function () { notifyOwner("Couldn't save the completed model — try again later."); });
+        }).catch(function () { notify("Couldn't save the completed model — try again later."); });
       }
       document.getElementById("menuCompleteMissing").addEventListener("click", function () {
         menu.hidden = true;
@@ -6065,11 +6065,11 @@
           if (!taskId) return;
         }
         if (!api) {
-          notifyOwner("Can't run this — the worker API isn't configured.");
+          notify("Can't run this — the worker API isn't configured.");
           return;
         }
-        if (completionPollTimers[k]) { notifyOwner("Already checking for this capture — hang on."); return; }
-        notifyOwner("Checking for missing parts… this can take a few minutes, feel free to keep browsing.");
+        if (completionPollTimers[k]) { notify("Already checking for this capture — hang on."); return; }
+        notify("Checking for missing parts… this can take a few minutes, feel free to keep browsing.");
         var attempts = 0;
         completionPollTimers[k] = setInterval(function () {
           attempts++;
@@ -6078,7 +6078,7 @@
           if (attempts > 90) {
             clearInterval(completionPollTimers[k]);
             delete completionPollTimers[k];
-            notifyOwner("Still running on Tripo's side — try this again in a few minutes.");
+            notify("Still running on Tripo's side — try this again in a few minutes.");
             return;
           }
           fetch(api + "/status?task_id=" + encodeURIComponent(taskId))
@@ -6088,7 +6088,7 @@
               if (!c) {
                 clearInterval(completionPollTimers[k]);
                 delete completionPollTimers[k];
-                notifyOwner("This capture's original scan is no longer available on Tripo — nothing to complete.");
+                notify("This capture's original scan is no longer available on Tripo — nothing to complete.");
                 return;
               }
               if (c.status === "success" && c.model_url) {
@@ -6098,7 +6098,7 @@
               } else if (c.status === "failed") {
                 clearInterval(completionPollTimers[k]);
                 delete completionPollTimers[k];
-                notifyOwner("The AI completion pass couldn't run for this capture.");
+                notify("The AI completion pass couldn't run for this capture.");
               }
               // otherwise still running — keep polling
             })
