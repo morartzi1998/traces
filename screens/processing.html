@@ -6,27 +6,27 @@
 <title>Traces — Processing</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gx">
-<link rel="stylesheet" href="../css/processing.css?v=20260727gx">
-<script src="../js/owner.js?v=20260727gx"></script>
-<script src="../js/config.js?v=20260727gx"></script>
-<script src="../js/cursor.js?v=20260727gx" defer></script>
-<script src="../js/grain.js?v=20260727gx" defer></script>
-<script src="../js/blobstore.js?v=20260727gx"></script>
-<script src="../js/flow.js?v=20260727gx" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gx"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gy">
+<link rel="stylesheet" href="../css/processing.css?v=20260727gy">
+<script src="../js/owner.js?v=20260727gy"></script>
+<script src="../js/config.js?v=20260727gy"></script>
+<script src="../js/cursor.js?v=20260727gy" defer></script>
+<script src="../js/grain.js?v=20260727gy" defer></script>
+<script src="../js/blobstore.js?v=20260727gy"></script>
+<script src="../js/flow.js?v=20260727gy" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gy"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gx" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gy" } }
 </script>
 <script type="module">
-  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727gx";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gx";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gx";
+  import { buildVoxelGlb, deserializeGeometry, serializeGeometry, cropCloudByRadius } from "../js/voxelize-shared.js?v=20260727gy";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gy";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gy";
   window.__buildVoxelGlb = buildVoxelGlb;
   window.__deserializeGeometry = deserializeGeometry;
   window.__serializeGeometry = serializeGeometry;
@@ -53,7 +53,7 @@
          as the fallback when no photo exists to sample) -->
     <div class="proc-particles" id="procPhotoParticles" hidden></div>
     <script type="module">
-      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727gx";
+      import { mountPhotoParticles } from "../js/photo-particles.js?v=20260727gy";
       window.__mountPhotoParticles = mountPhotoParticles;
     </script>
 
@@ -952,6 +952,46 @@
                   }
                 } catch (e) { complete(); }
                 localStorage.removeItem("traces-inflight-task");
+                // the worker may still be quietly running an AI completion
+                // pass on this same model (fills in whatever a single photo
+                // couldn't show — a tail, the far side of an object) — see
+                // backend/tripo-worker.js's /status `completion` field. Keep
+                // checking for a while after the base model already shows: if
+                // it lands before the visitor hits Save on the next screen,
+                // describe-capture.html's moveBlobs() re-reads this same
+                // BlobStore key at save time and picks up the newer file with
+                // no further wiring needed. If it doesn't land in time, the
+                // base model (already a complete, valid capture) is what gets
+                // saved — nobody is ever blocked waiting on this.
+                if (window.BlobStore) {
+                  var compAttempts = 0;
+                  var compPoll = setInterval(function () {
+                    compAttempts++;
+                    if (compAttempts > 60) { clearInterval(compPoll); return; } // ~5 min at 5s
+                    fetch(api + "/status?task_id=" + encodeURIComponent(task))
+                      .then(function (r) { return r.json(); })
+                      .then(function (cd) {
+                        var c = cd && cd.completion;
+                        if (!c) return;
+                        if (c.status === "success" && c.model_url) {
+                          clearInterval(compPoll);
+                          fetch(api + "/proxy?url=" + encodeURIComponent(c.model_url))
+                            .then(function (r) { return r.ok ? r.blob() : null; })
+                            .then(function (blob) { if (blob) return window.BlobStore.set("capture-pending-model", blob); })
+                            .catch(function () {});
+                          if (c.thumb) {
+                            fetch(api + "/proxy?url=" + encodeURIComponent(c.thumb))
+                              .then(function (r) { return r.ok ? r.blob() : null; })
+                              .then(function (blob) { if (blob) return window.BlobStore.set("capture-pending-thumb", blob); })
+                              .catch(function () {});
+                          }
+                        } else if (c.status === "failed") {
+                          clearInterval(compPoll);
+                        }
+                      })
+                      .catch(function () { /* transient — keep trying */ });
+                  }, 5000);
+                }
               } else if (s === "failed" || s === "cancelled" || s === "banned" || s === "unknown") {
                 clearInterval(poll);
                 localStorage.removeItem("traces-inflight-task");

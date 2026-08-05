@@ -160,6 +160,33 @@ async function callTripo(apiKey, file) {
   return { task_id: taskId };
 }
 
+// A single photo can only ever show one side of an object — Tripo's
+// image_to_model already GUESSES the rest, but its dedicated "mesh
+// completion" pass (the same "AI completion" button Tripo's own Studio
+// exposes) does a real second look specifically at filling in unseen/
+// occluded geometry (a tail, the far side of a shelf's contents, a limb
+// tucked out of frame), not just whatever the first pass smoothed over.
+// It runs on the ALREADY-GENERATED model (original_model_task_id), not on
+// a fresh photo, so it needs no extra effort from whoever's capturing —
+// the /status handler below chains straight into it once the base model
+// finishes, entirely inside the worker.
+const MESH_COMPLETION_MODEL_VERSION = "v1.0-20250506";
+async function callMeshCompletion(apiKey, originalTaskId) {
+  const res = await fetch(TRIPO_BASE + IMAGE_TASK_PATH, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "mesh_completion",
+      original_model_task_id: originalTaskId,
+      model_version: MESH_COMPLETION_MODEL_VERSION,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  const taskId = data?.data?.task_id;
+  if (!taskId) return { error: "mesh completion task creation failed", raw: data, code: data?.code };
+  return { task_id: taskId };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -221,6 +248,63 @@ export default {
         }
         const d = data?.data || {};
         const out = d.output || {};
+
+        // the base model just finished — kick off a mesh-completion pass in
+        // the background (fills in whatever a single photo couldn't show: a
+        // tail, the far side of an object, anything occluded). This does NOT
+        // change status/model_url/thumb below — recover-tasks.html and
+        // fix-recovered.html each do a single one-shot check here and read
+        // "success" as final; holding the response back until completion
+        // finished would have them report a scan that's actually fine as
+        // "gone for good". The completed result surfaces ONLY through the
+        // additive `completion` field below, for a caller that knows to poll
+        // for it (processing.html) — every existing caller is untouched.
+        let completion = null;
+        if (d.status === "success" && env.SESSIONS) {
+          const compKey = "completion-of:" + taskId;
+          let compState = await env.SESSIONS.get(compKey, "json");
+          if (!compState) {
+            const compResult = await callMeshCompletion(apiKey, taskId);
+            // couldn't even start the pass (unsupported model/version, API
+            // hiccup) — the base model already shipped; nothing to fall back
+            // to, just remember not to retry every poll
+            compState = compResult.error ? { skip: true } : { task_id: compResult.task_id, slot };
+            if (!compResult.error) {
+              await env.SESSIONS.put("task-key:" + compResult.task_id, slot, { expirationTtl: 86400 });
+            }
+            // permanent — a capture's completion decision never expires. A
+            // rolling TTL here would re-trigger a brand new (paid) completion
+            // task every time someone reopens an old capture after the window
+            // lapsed, silently burning Tripo credits on work already done.
+            await env.SESSIONS.put(compKey, JSON.stringify(compState));
+          }
+          if (compState && !compState.skip && compState.task_id) {
+            const compApiKey = keyForSlot(env, compState.slot || slot);
+            const compRes = await fetch(`${TRIPO_BASE}/task/${compState.task_id}`, {
+              headers: { Authorization: `Bearer ${compApiKey}` },
+            });
+            const compData = await compRes.json().catch(() => ({}));
+            const cd = compData?.data || {};
+            const cout = cd.output || {};
+            if (cd.status === "success") {
+              completion = {
+                status: "success",
+                model_url: cout.model_url || cout.pbr_model || cout.model || null,
+                thumb: cout.rendered_image || cd.thumbnail || null,
+              };
+            } else if (["failed", "cancelled", "banned", "unknown"].indexOf(cd.status) !== -1) {
+              // the completion pass itself died — the base model already
+              // shipped as "success" above, so there's nothing to fall back
+              // to. Permanent for the same reason as above: never retry a
+              // dead task.
+              await env.SESSIONS.put(compKey, JSON.stringify({ skip: true }));
+              completion = { status: "failed" };
+            } else {
+              completion = { status: cd.status || "running" };
+            }
+          }
+        }
+
         return json({
           status: d.status,
           progress: d.progress || 0,
@@ -230,6 +314,10 @@ export default {
           // to use) doesn't exist, which is why every thumbnail has been
           // silently blank
           thumb: out.rendered_image || d.thumbnail || null,
+          // present only once the base model has succeeded; null/absent
+          // while it's still building, so a caller that ignores this field
+          // (every page except processing.html) sees no change at all
+          completion: completion,
           raw: data,
         });
       }
