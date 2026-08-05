@@ -534,6 +534,11 @@ export default {
         if (body.pointSize != null) record.pointSize = body.pointSize;
         if (body.tilt != null) record.tilt = body.tilt;
         if (body.dual) record.dual = true;
+        // the original Tripo task id, kept ONLY so a later "complete missing
+        // parts" pass can be run against this capture — model/img above get
+        // re-hosted to our own permanent storage right after this, at which
+        // point nothing else on the record still points back to Tripo's task
+        if (body.tripoTaskId) record.tripoTaskId = body.tripoTaskId;
         // link markers (where connected captures sit inside a space) and the
         // object->space connection itself — without these a visitor opening a
         // shared space never sees the objects marked inside it

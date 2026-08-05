@@ -6,31 +6,31 @@
 <title>Traces — Describe what you captured</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gy">
-<link rel="stylesheet" href="../css/describe-capture.css?v=20260727gy">
-<script src="../js/cursor.js?v=20260727gy" defer></script>
-<script src="../js/grain.js?v=20260727gy" defer></script>
-<script src="../js/tilt3d.js?v=20260727gy" defer></script>
-<script src="../js/annotations.js?v=20260727gy" defer></script>
-<script src="../js/owner.js?v=20260727gy"></script>
-<script src="../js/config.js?v=20260727gy"></script>
-<script src="../js/archive.js?v=20260727gy"></script>
-<script src="../js/blobstore.js?v=20260727gy"></script>
-<script src="../js/remote-captures.js?v=20260727gy"></script>
-<script src="../js/flow.js?v=20260727gy" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gy"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gz">
+<link rel="stylesheet" href="../css/describe-capture.css?v=20260727gz">
+<script src="../js/cursor.js?v=20260727gz" defer></script>
+<script src="../js/grain.js?v=20260727gz" defer></script>
+<script src="../js/tilt3d.js?v=20260727gz" defer></script>
+<script src="../js/annotations.js?v=20260727gz" defer></script>
+<script src="../js/owner.js?v=20260727gz"></script>
+<script src="../js/config.js?v=20260727gz"></script>
+<script src="../js/archive.js?v=20260727gz"></script>
+<script src="../js/blobstore.js?v=20260727gz"></script>
+<script src="../js/remote-captures.js?v=20260727gz"></script>
+<script src="../js/flow.js?v=20260727gz" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gz"></script>
 <script type="module">
   customElements.whenDefined("model-viewer").then(function () {
     customElements.get("model-viewer").dracoDecoderLocation = "../js/vendor/draco/";
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gy" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gz" } }
 </script>
 <script type="module">
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gy";
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gy";
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gy";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gz";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gz";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gz";
   window.__deserializeGeometry = deserializeGeometry;
   window.__mountPointCloudViewer = mountPointCloudViewer;
 
@@ -600,6 +600,16 @@
           annotations: annotations
         };
         if (chosenPointSize !== null) payload.pointSize = chosenPointSize;
+        // the ORIGINAL Tripo task id, if this came from a real AI reconstruction —
+        // never previously kept anywhere. Once model/img are re-hosted below to our
+        // own permanent storage, nothing else in the record still points back to
+        // Tripo's own task, which means a later "complete missing parts" pass
+        // (object.html's menu) would have no id left to run it against. Saved here,
+        // once, at the only moment it's still known.
+        try {
+          var tTaskId = sessionStorage.getItem("traces-task");
+          if (tTaskId) payload.tripoTaskId = tTaskId;
+        } catch (e) {}
         // a true mesh+cloud dual upload opens on the mesh in the object view;
         // a plain point cloud (which also has a voxel model) opens on its cloud
         try { if (sessionStorage.getItem("traces-capture-dual") === "1") payload.dual = true; } catch (e) {}

@@ -6,21 +6,21 @@
 <title>Traces — Capture</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727gy">
-<link rel="stylesheet" href="../css/chrome.css?v=20260727gy">
-<link rel="stylesheet" href="../css/object.css?v=20260727gy">
-<script src="../js/cursor.js?v=20260727gy" defer></script>
-<script src="../js/grain.js?v=20260727gy" defer></script>
-<script src="../js/tilt3d.js?v=20260727gy" defer></script>
-<script src="../js/owner.js?v=20260727gy"></script>
-<script src="../js/config.js?v=20260727gy"></script>
-<script src="../js/archive.js?v=20260727gy"></script>
-<script src="../js/blobstore.js?v=20260727gy"></script>
-<script src="../js/particle-loader.js?v=20260727gy"></script>
-<script src="../js/remote-captures.js?v=20260727gy"></script>
-<script src="../js/community-seed.js?v=20260727gy"></script>
-<script src="../js/flow.js?v=20260727gy" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gy"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727gz">
+<link rel="stylesheet" href="../css/chrome.css?v=20260727gz">
+<link rel="stylesheet" href="../css/object.css?v=20260727gz">
+<script src="../js/cursor.js?v=20260727gz" defer></script>
+<script src="../js/grain.js?v=20260727gz" defer></script>
+<script src="../js/tilt3d.js?v=20260727gz" defer></script>
+<script src="../js/owner.js?v=20260727gz"></script>
+<script src="../js/config.js?v=20260727gz"></script>
+<script src="../js/archive.js?v=20260727gz"></script>
+<script src="../js/blobstore.js?v=20260727gz"></script>
+<script src="../js/particle-loader.js?v=20260727gz"></script>
+<script src="../js/remote-captures.js?v=20260727gz"></script>
+<script src="../js/community-seed.js?v=20260727gz"></script>
+<script src="../js/flow.js?v=20260727gz" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727gz"></script>
 <script type="module">
   // serve the Draco decoder locally (the "my old living room" space scan is
   // Draco-compressed) instead of depending on an external CDN.
@@ -29,14 +29,14 @@
   });
 </script>
 <script type="importmap">
-  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gy" } }
+  { "imports": { "three": "../js/vendor/three/three.module.js?v=20260727gz" } }
 </script>
 <script type="module">
-  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gy";
-  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gy";
+  import * as THREE from "../js/vendor/three/three.module.js?v=20260727gz";
+  import { deserializeGeometry, removeOutliers, serializeGeometry } from "../js/voxelize-shared.js?v=20260727gz";
   window.__serializeGeometry = serializeGeometry;
   window.__removeOutliers = removeOutliers;
-  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gy";
+  import { mountPointCloudViewer } from "../js/point-cloud-viewer.js?v=20260727gz";
   window.__deserializeGeometry = deserializeGeometry;
   window.__removeOutliers = removeOutliers;
   window.__mountPointCloudViewer = mountPointCloudViewer;
@@ -49,7 +49,7 @@
   // clouds) still take part in the visual merge: each version's mesh
   // becomes a cloud of its surface points. Returns null when it can't
   // (malformed, empty).
-  import { glbToPoints } from "../js/glb-points.js?v=20260727gy";
+  import { glbToPoints } from "../js/glb-points.js?v=20260727gz";
   window.__glbToPoints = glbToPoints;
 
   // "Make a visual merge from object's history": a true 3D combination of the
@@ -572,6 +572,11 @@
         <!-- points back at the cloud a rebuild replaced, so an unwanted rebuild
              is recoverable instead of permanent -->
         <li id="menuRestoreCloudRow" hidden><button type="button" id="menuRestoreCloud">Restore the previous point cloud</button></li>
+        <!-- runs Tripo's own "AI completion" pass against the ALREADY-generated
+             model (fills in a tail, the far side of an object, anything a
+             single photo couldn't show) — only ever offered when there's a
+             real Tripo task id to run it against, see tripoTaskIdFor() -->
+        <li id="menuCompleteRow" hidden><button type="button" id="menuCompleteMissing">Complete missing parts (AI)</button></li>
       </ul>
       <!-- "Set a display image" file picker: swaps the polaroid thumbnail for
            a chosen image, for any capture Mor can manage (hers, or a shared
@@ -977,6 +982,9 @@
             kind: d.kind || "object", title: d.title, img: d.img,
             onServerArchive: !isCommunityRec, onServerCommunity: isCommunityRec,
             model: d.model, points: d.points, dual: !!d.dual,
+            // the original Tripo task, kept only so "Complete missing parts"
+            // in the menu can run a mesh-completion pass against this capture
+            tripoTaskId: d.tripoTaskId || null,
             openOn: d.openOn || null,
             pointSize: d.pointSize || null, tilt: d.tilt || null,
             meshTilt: d.meshTilt || null,
@@ -1030,6 +1038,9 @@
             openOn: c.openOn || null,
             img: c.img || "../assets/images/photo-room.png",
             model: c.model || null,
+            // the original Tripo task, kept only so "Complete missing parts"
+            // in the menu can run a mesh-completion pass against this capture
+            tripoTaskId: c.tripoTaskId || null,
             points: c.points || null,
             pointSize: c.pointSize || null,
             tilt: c.tilt || null,
@@ -1620,6 +1631,25 @@
         notifyTimer = setTimeout(function () { if (el) el.remove(); }, 5000);
       }
 
+      // the original Tripo task id for this capture, if one can be found —
+      // needed to run a retroactive "complete missing parts" pass, since that
+      // API call runs against the ALREADY-generated model, not a fresh photo.
+      // Two sources: the field saved at capture time (every scan made after
+      // this feature shipped), or — best-effort, for older captures made
+      // before that — a UUID still visible inside a live, not-yet-re-hosted
+      // Tripo proxy link (the same trick fix-recovered.html uses). Once a
+      // model is re-hosted to our own permanent storage, that trace is gone
+      // for good, so this can genuinely return nothing for an old capture.
+      var TRIPO_TASK_UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      function tripoTaskIdFor(it) {
+        if (!it) return null;
+        if (it.tripoTaskId) return it.tripoTaskId;
+        if (typeof it.model === "string" && it.model.indexOf("/proxy?url=") !== -1) {
+          var m = it.model.match(TRIPO_TASK_UUID_RE);
+          if (m) return m[0];
+        }
+        return null;
+      }
 
       // Same idea, one level down: a DATED VERSION on a timeline has its own
       // mesh, and until now nothing ever gave it its own stored cloud. The
@@ -3989,6 +4019,15 @@
         if (menuRestoreCloudRow) {
           menuRestoreCloudRow.hidden = !(menuManageable && catalog[k] && catalog[k].pointsPrev);
         }
+        // retroactive AI completion — only offered when a Tripo task id can
+        // actually be found for this capture (see tripoTaskIdFor). A capture
+        // that was never a Tripo reconstruction (a manual upload, a raw point
+        // cloud) or one whose original task id was never saved has nothing to
+        // run this against.
+        var menuCompleteRow = document.getElementById("menuCompleteRow");
+        if (menuCompleteRow) {
+          menuCompleteRow.hidden = !(menuManageable && catalog[k] && tripoTaskIdFor(catalog[k]));
+        }
         // a 3D "visual merge" only means something with at least two dated
         // point-cloud scans to combine — otherwise the button read as broken
         // (it never had a handler at all). Hidden until there's real history.
@@ -5893,6 +5932,101 @@
         if (pointGeomCache) { delete pointGeomCache[back]; if (replaced) delete pointGeomCache[replaced]; }
         notify("Restored the previous point cloud.");
         show(key);
+      });
+      // retroactively runs Tripo's "AI completion" pass (mesh_completion) on
+      // an already-published capture. This is the SAME backend pass a brand
+      // new capture already gets automatically (see backend/tripo-worker.js's
+      // /status `completion` field) — this menu item just triggers/checks it
+      // for a capture that was made before that existed, or one whose pass
+      // hadn't finished by the time it was saved.
+      var completionPollTimers = {};
+      function finishCompletion(k, c) {
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        var uploadOne = function (url, filename) {
+          return fetch(api + "/proxy?url=" + encodeURIComponent(url))
+            .then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (blob) {
+              if (!blob) return null;
+              var form = new FormData();
+              form.append("file", blob, filename);
+              return fetch(api + "/captures/upload", { method: "POST", body: form })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) { return (d && d.url) || null; });
+            });
+        };
+        Promise.all([
+          uploadOne(c.model_url, "completed-model.glb"),
+          c.thumb ? uploadOne(c.thumb, "completed-thumb.jpg") : Promise.resolve(null),
+        ]).then(function (r) {
+          var modelUrl = r[0], thumbUrl = r[1];
+          if (!modelUrl) { notifyOwner("Couldn't save the completed model — try again later."); return; }
+          var fields = { model: modelUrl };
+          if (thumbUrl) fields.img = thumbUrl;
+          // the derived point cloud was built off the OLD (less complete)
+          // mesh — clear it so the next open re-derives one from the
+          // completed mesh instead of silently keeping the stale cloud
+          // (maybeHealDerivedCloud already re-derives + re-uploads whenever
+          // it sees a model with no points, so nothing else needs to run)
+          if (catalog[k] && catalog[k].points) fields.points = null;
+          [k, k + "-community"].forEach(function (sid) { patchServerRecord(sid, fields); });
+          if (catalog[k]) {
+            catalog[k].model = modelUrl;
+            if (thumbUrl) catalog[k].img = thumbUrl;
+            if (fields.points === null) catalog[k].points = null;
+          }
+          cloudHealTried[k] = 0;
+          if (window.Archive && Archive.get(k)) Archive.update(k, fields);
+          if (window.Community && Community.get(k)) Community.update(k, fields);
+          notifyOwner("Completed — the model now includes parts the original photo couldn't show.");
+          if (key === k) show(k);
+        }).catch(function () { notifyOwner("Couldn't save the completed model — try again later."); });
+      }
+      document.getElementById("menuCompleteMissing").addEventListener("click", function () {
+        menu.hidden = true;
+        var k = key;
+        var it = catalog[k];
+        var taskId = tripoTaskIdFor(it);
+        var api = (window.TRACES_API || "").replace(/\/$/, "");
+        if (!taskId || !api) {
+          notifyOwner("Can't run this — no original scan reference is available for this capture.");
+          return;
+        }
+        if (completionPollTimers[k]) { notifyOwner("Already checking for this capture — hang on."); return; }
+        notifyOwner("Checking for missing parts… this can take a few minutes, feel free to keep browsing.");
+        var attempts = 0;
+        completionPollTimers[k] = setInterval(function () {
+          attempts++;
+          // ~7.5 min at 5s — this is a one-off manual action, not something
+          // to poll forever if Tripo is ever slow or unreachable
+          if (attempts > 90) {
+            clearInterval(completionPollTimers[k]);
+            delete completionPollTimers[k];
+            notifyOwner("Still running on Tripo's side — try this again in a few minutes.");
+            return;
+          }
+          fetch(api + "/status?task_id=" + encodeURIComponent(taskId))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var c = d && d.completion;
+              if (!c) {
+                clearInterval(completionPollTimers[k]);
+                delete completionPollTimers[k];
+                notifyOwner("This capture's original scan is no longer available on Tripo — nothing to complete.");
+                return;
+              }
+              if (c.status === "success" && c.model_url) {
+                clearInterval(completionPollTimers[k]);
+                delete completionPollTimers[k];
+                finishCompletion(k, c);
+              } else if (c.status === "failed") {
+                clearInterval(completionPollTimers[k]);
+                delete completionPollTimers[k];
+                notifyOwner("The AI completion pass couldn't run for this capture.");
+              }
+              // otherwise still running — keep polling
+            })
+            .catch(function () { /* transient — keep trying */ });
+        }, 5000);
       });
       document.getElementById("objMergeClose").addEventListener("click", closeVisualMerge);
       document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeVisualMerge(); });
