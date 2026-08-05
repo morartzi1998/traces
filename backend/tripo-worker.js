@@ -267,8 +267,13 @@ export default {
             const compResult = await callMeshCompletion(apiKey, taskId);
             // couldn't even start the pass (unsupported model/version, API
             // hiccup) — the base model already shipped; nothing to fall back
-            // to, just remember not to retry every poll
-            compState = compResult.error ? { skip: true } : { task_id: compResult.task_id, slot };
+            // to, just remember not to retry every poll. The raw Tripo error
+            // is kept (never surfaced to a visitor, only read via /debug or
+            // this field by whoever's diagnosing) since this whole pass was
+            // never verified against a live Tripo account before shipping.
+            compState = compResult.error
+              ? { skip: true, error: compResult.raw || compResult.error }
+              : { task_id: compResult.task_id, slot };
             if (!compResult.error) {
               await env.SESSIONS.put("task-key:" + compResult.task_id, slot, { expirationTtl: 86400 });
             }
@@ -278,7 +283,9 @@ export default {
             // lapsed, silently burning Tripo credits on work already done.
             await env.SESSIONS.put(compKey, JSON.stringify(compState));
           }
-          if (compState && !compState.skip && compState.task_id) {
+          if (compState && compState.skip) {
+            completion = { status: "failed", reason: compState.error || null };
+          } else if (compState && compState.task_id) {
             const compApiKey = keyForSlot(env, compState.slot || slot);
             const compRes = await fetch(`${TRIPO_BASE}/task/${compState.task_id}`, {
               headers: { Authorization: `Bearer ${compApiKey}` },
@@ -297,8 +304,8 @@ export default {
               // shipped as "success" above, so there's nothing to fall back
               // to. Permanent for the same reason as above: never retry a
               // dead task.
-              await env.SESSIONS.put(compKey, JSON.stringify({ skip: true }));
-              completion = { status: "failed" };
+              await env.SESSIONS.put(compKey, JSON.stringify({ skip: true, error: compData }));
+              completion = { status: "failed", reason: compData };
             } else {
               completion = { status: cd.status || "running" };
             }
@@ -619,6 +626,24 @@ export default {
           key1ActivatedAt: activatedAt ? new Date(Number(activatedAt)).toISOString() : null,
           key1Exhausted: exhausted,
         });
+      }
+
+      // ---- 7) diagnostic: run mesh_completion against a real task id RIGHT
+      // NOW, bypassing the KV cache entirely, and hand back Tripo's raw
+      // response. Never called by any page in the app — this pass has never
+      // been verified against a live Tripo account, so when it's reported as
+      // "not working" this is the direct way to see WHY (wrong field name,
+      // model_version not available on this plan, task too old, etc.)
+      // instead of guessing. GET so it's safe to open straight in a browser.
+      if (url.pathname === "/debug-completion" && request.method === "GET") {
+        const taskId = url.searchParams.get("task_id");
+        if (!taskId) return json({ error: "task_id required" }, 400);
+        let slot = "1";
+        if (env.SESSIONS) slot = (await env.SESSIONS.get("task-key:" + taskId)) || "1";
+        const apiKey = keyForSlot(env, slot);
+        if (!apiKey) return json({ error: "no API key configured for slot " + slot }, 500);
+        const result = await callMeshCompletion(apiKey, taskId);
+        return json({ slot, request_task_id: taskId, model_version: MESH_COMPLETION_MODEL_VERSION, result });
       }
 
       return json({ error: "not found" }, 404);

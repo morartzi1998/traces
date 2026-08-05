@@ -6,12 +6,12 @@
 <title>Traces — Scan with your phone</title>
 <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 <link rel="stylesheet" href="https://use.typekit.net/azd1ais.css">
-<link rel="stylesheet" href="../css/base.css?v=20260727h7">
-<link rel="stylesheet" href="../css/phone-capture.css?v=20260727h7">
-<script src="../js/cursor.js?v=20260727h7" defer></script>
-<script src="../js/vendor/heic2any.js?v=20260727h7" defer></script>
-<script src="../js/normalize-image.js?v=20260727h7" defer></script>
-<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h7"></script>
+<link rel="stylesheet" href="../css/base.css?v=20260727h8">
+<link rel="stylesheet" href="../css/phone-capture.css?v=20260727h8">
+<script src="../js/cursor.js?v=20260727h8" defer></script>
+<script src="../js/vendor/heic2any.js?v=20260727h8" defer></script>
+<script src="../js/normalize-image.js?v=20260727h8" defer></script>
+<script type="module" src="../js/vendor/model-viewer.min.js?v=20260727h8"></script>
 <style>
   /* companion-screen bits: a quiet spinner while the model builds on the
      computer, and a framed preview of the finished result to save from here */
@@ -46,6 +46,7 @@
   }
   .pc-result-actions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
   .pc-btn--ghost { opacity: 0.75; }
+  .pc-spin-btn { display: block; margin: -8px auto 16px; padding: 8px 18px; font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -98,6 +99,11 @@
         auto-rotate auto-rotate-delay="0" rotation-per-second="25deg" camera-controls
         interaction-prompt="none" shadow-intensity="0" disable-pan reveal="manual"
         loading="eager" hidden></model-viewer>
+      <!-- the model spins on its own so it reads well the instant it appears,
+           but there was no way to hold it still to actually look at a detail —
+           dragging with camera-controls orbits the view, it doesn't stop the
+           spin underneath it -->
+      <button type="button" class="pc-btn pc-btn--ghost pc-spin-btn" id="pcSpinToggle" hidden>Stop spinning</button>
       <p class="pc-sub">Continue on the computer — and you can save it here too:</p>
       <!-- the 3D file is tens of MB — on a slow connection a silent fetch()
            read as the download having stalled, with no way to tell it apart
@@ -278,24 +284,49 @@
       // ("Save to Files", AirDrop, etc.), which iOS actually honours for any
       // file type. Used whenever the browser supports sharing files at all;
       // the anchor-download path remains for everything else.
-      function saveBlob(blob, filename) {
-        var file;
-        try { file = new File([blob], filename, { type: blob.type || "application/octet-stream" }); } catch (e) {}
-        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file] }).catch(function () {
-            // the user backing out of the share sheet also lands here —
-            // not a failure, so no further fallback needed
-          });
-          return;
-        }
+      function anchorDownload(blob, filename) {
         var a = document.createElement("a");
         var u = URL.createObjectURL(blob);
         a.href = u; a.download = filename;
         document.body.appendChild(a); a.click();
         setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000);
       }
+      function saveBlob(blob, filename) {
+        var file;
+        try { file = new File([blob], filename, { type: blob.type || "application/octet-stream" }); } catch (e) {}
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          // navigator.share() requires a live "user activation" — but this
+          // only ever runs after download()'s fetch has finished, well past
+          // the tap that started it. Safari can (and does) silently reject
+          // the call once that activation has expired, and the old catch
+          // here did nothing further — the whole download just silently went
+          // nowhere, exactly the "doesn't work" report. Fall back to the
+          // anchor method instead of giving up: worse UX (no native share
+          // sheet) but the file actually saves.
+          navigator.share({ files: [file] }).catch(function (e) {
+            // AbortError = the person backed out of the share sheet on
+            // purpose — leave it alone. Anything else (NotAllowedError from
+            // expired activation, etc.) means the share never actually
+            // happened, so still save the file the other way.
+            if (e && e.name === "AbortError") return;
+            anchorDownload(blob, filename);
+          });
+          return;
+        }
+        anchorDownload(blob, filename);
+      }
 
       var resultModel = document.getElementById("pcResultModel");
+      var spinBtn = document.getElementById("pcSpinToggle");
+      spinBtn.addEventListener("click", function () {
+        if (resultModel.hasAttribute("auto-rotate")) {
+          resultModel.removeAttribute("auto-rotate");
+          spinBtn.textContent = "Resume spinning";
+        } else {
+          resultModel.setAttribute("auto-rotate", "");
+          spinBtn.textContent = "Stop spinning";
+        }
+      });
       function showResult(p) {
         showOnly(result);
         var img = document.getElementById("pcResultImg");
@@ -316,13 +347,18 @@
             try { resultModel.dismissPoster(); } catch (e) {}
           });
           resultModel.src = p.model;
+          spinBtn.hidden = false;
+          resultModel.setAttribute("auto-rotate", "");
+          spinBtn.textContent = "Stop spinning";
         } else if (poster) {
           resultModel.hidden = true;
           img.src = poster;
           img.hidden = false;
+          spinBtn.hidden = true;
         } else {
           resultModel.hidden = true;
           img.hidden = true;
+          spinBtn.hidden = true;
         }
         var dlImg = document.getElementById("pcDlImg");
         var dlModel = document.getElementById("pcDlModel");
